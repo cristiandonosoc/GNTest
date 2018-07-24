@@ -1,0 +1,28 @@
+toolchain("msvc") {
+  tool("cxx") {
+    command = "cl.exe /nologo /FC /FS {{include_dirs}} {{cflags}} {{cflags_cc}} /c {{source}} /Fo{{output}}"
+    outputs = [
+      "{{source_out_dir}}/{{source_name_part}}.o" ,
+    ]
+  }
+
+  tool("link") {
+    command = "link.exe /nologo /OUT:{{output}} /PDB:{{output}}.pdb {{inputs}} {{solibs}} {{libs}}"
+    outputs = [
+      "{{target_out_dir}}/{{target_output_name}}{{output_extension}}"
+    ]
+  }
+
+
+  stamp_path = rebase_path("//build/toolchain/msvc/stamp.py", root_build_dir)
+
+  tool("stamp") {
+    command = "$python_path $stamp_path {{output}}"
+    # description = "STAMP {{output}}"
+  }
+
+  tool("copy") {
+    command = "copy {{source}} {{output}}"
+    # description = "COPY {{source}} {{output}}"
+  }
+}

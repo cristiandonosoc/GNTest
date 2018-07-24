@@ -1,0 +1,43 @@
+if (is_windows) {
+  config("default_include_dirs") {
+    include_dirs = [
+      "//",
+      root_gen_dir,
+    ]
+  }
+
+  config("default_warnings") {
+    cflags = [
+      "/W4",
+      "/WX",
+    ]
+  }
+
+  config("compiler") {
+    cflags = []
+    cflags_cc = []
+
+
+    cflags_cc += [
+      "/EHsc",
+      "/GR-",
+    ]
+
+    # STD
+    cflags_cc += [ "/std:c++14" ]
+  }
+
+  config("no_optimize") {
+    cflags = [ "/Od" ]
+  }
+
+  config("optimize") {
+    cflags = [ "/O2" ]
+  }
+
+  config("symbols") {
+    cflags = [ "/Zi" ]
+  }
+}
+
+

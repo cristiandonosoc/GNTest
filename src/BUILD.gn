@@ -1,0 +1,16 @@
+source_set("networking") {
+  sources = [
+    "socket.cc",
+    "socket.h",
+  ]
+}
+
+
+executable("hello_world") {
+  sources = [
+    "hello_world.cc",
+  ]
+  deps = [
+    ":networking",
+  ]
+}
