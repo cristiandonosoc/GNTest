@@ -47,4 +47,4 @@ set_defaults("source_set") {
   configs = _configs
 }
 
-set_default_toolchain("//build/toolchain/msvc/:msvc")
+set_default_toolchain("//build/toolchain/msvc:msvc")

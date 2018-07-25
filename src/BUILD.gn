@@ -14,3 +14,14 @@ executable("hello_world") {
     ":networking",
   ]
 }
+
+config("win_socks") {
+  libs = [ "Ws2_32.lib" ]
+}
+
+executable("socket_main") {
+  sources = [
+    "socket_main.cc",
+  ]
+  configs += [ ":win_socks" ]
+}
