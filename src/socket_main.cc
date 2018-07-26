@@ -1,26 +1,12 @@
+// Copyright 2018, Cristián Donoso.
+// This code has a BSD license. See LICENSE.
+
 #include <winsock2.h>
 
 #include <cstdio>
 
+#include "src/socket.h"
 
-class SocketInitialization {
- public:
-  SocketInitialization() = default;
-  ~SocketInitialization() {
-    if (valid) {
-      WSACleanup();
-    }
-  }
-
-  bool Initialize() {
-    int res = WSAStartup(MAKEWORD(2,2), &wsa_data);
-    valid = res == NO_ERROR;
-    return valid;
-  }
-
-  WSAData wsa_data;
-  bool valid;
-};
 
 void PrintWSAError(const char *header) {
   int err_no = WSAGetLastError();
@@ -32,9 +18,8 @@ void PrintWSAError(const char *header) {
 
 
 int main() {
-  SocketInitialization sock_init;
-  sock_init.Initialize();
-  if (!sock_init.valid) {
+  sock::WSAHandler wsa_handler;
+  if (!wsa_handler.Init()) {
     fprintf(stderr, "Could not initialize sockets\n");
     return 1;
   }
@@ -56,6 +41,33 @@ int main() {
     PrintWSAError("Could not bind socket");
     return 1;
   }
+
+  // Set non-blocking
+  DWORD nb = 1;
+  int nb_res = ioctlsocket(socket_handle, FIONBIO, &nb);
+  if (nb_res == SOCKET_ERROR) {
+    PrintWSAError("Could not set non-blocking");
+    return 1;
+  }
+
+  if (listen(socket_handle, SOMAXCONN) == SOCKET_ERROR) {
+    PrintWSAError("Error on listen");
+    return 1;
+  }
+
+/*   SOCKET client_socket = INVALID_SOCKET; */
+/*   client_socket = accept(socket_handle, NULL, NULL); */
+/*   if (client_socket == INVALID_SOCKET) { */
+/*     PrintWSAError("Failed to accept connection"); */
+/*     return 1; */
+/*   } */
+
+/*   bool running = true; */
+/*   while (running) { */
+
+/*   } */
+
+
 
   printf("Succesfully created socket\n");
 

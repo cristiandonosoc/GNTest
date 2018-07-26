@@ -1,4 +1,4 @@
-group("gn_test") {
+group("default") {
   deps = [
     "//src:socket_main",
   ]

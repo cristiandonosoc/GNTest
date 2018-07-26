@@ -1,19 +1,10 @@
-source_set("networking") {
+source_set("socket") {
   sources = [
     "socket.cc",
     "socket.h",
   ]
 }
 
-
-executable("hello_world") {
-  sources = [
-    "hello_world.cc",
-  ]
-  deps = [
-    ":networking",
-  ]
-}
 
 config("win_socks") {
   libs = [ "Ws2_32.lib" ]
@@ -24,4 +15,7 @@ executable("socket_main") {
     "socket_main.cc",
   ]
   configs += [ ":win_socks" ]
+  deps = [
+    ":socket",
+  ]
 }
