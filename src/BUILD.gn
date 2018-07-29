@@ -30,3 +30,10 @@ executable("client") {
     ":socket",
   ]
 }
+
+executable("test") {
+  sources = [ "test_main.cc" ]
+  deps = [
+    "//third_party/stb",
+  ]
+}

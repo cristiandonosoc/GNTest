@@ -4,3 +4,9 @@ group("default") {
     "//src:server",
   ]
 }
+
+group("test") {
+  deps = [
+    "//src:test",
+  ]
+}
