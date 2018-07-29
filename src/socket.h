@@ -5,7 +5,7 @@
 
 #include <winsock2.h>
 
-#include "src/err.h"
+#include "status.h"
 
 namespace sock {
 
@@ -33,8 +33,8 @@ class Socket {
  public:
   Socket(int family, int sock_type, int proto);
 
-  Err Bind(int family, uint32_t ip, uint16_t port);
-  Err Listen();
+  Status Bind(int family, uint32_t ip, uint16_t port);
+  Status Listen();
 
   bool valid() const { return handle_ != INVALID_SOCKET; }
 

@@ -5,21 +5,22 @@
 
 namespace sock {
 
-class Err {
+class Status {
  public:
-  enum class Status {
+  enum class Type {
     kOk,
     kError,
   };
 
-  Err();
-  Err(std::string err_msg);   // Will set error status.
-  Err(Status, std::string);
+  Status();
+  Status(std::string err_msg);   // Will set error status.
+  Status(Type, std::string err_msg);
 
  private:
-  Status status_ = Status::kOk;
+  Type type_ = Type::kOk;
   std::string err_msg_;
 };
+
 
 
 }  // namespace sock

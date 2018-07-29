@@ -27,15 +27,14 @@ bool WSAHandler::Init() {
 
 namespace {
 
-Err CreateWSAError(const char *header) {
+Status CreateWSAError(const char *header) {
   int err_no = WSAGetLastError();
   char* buffer;
   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
                 NULL, err_no, 0, (LPSTR)&buffer, 0, NULL);
   fprintf(stderr, "Error -> %s: %s\n", header, buffer);
-  return Err();
+  return Status();
 }
-
 
 }  // namespace
 
@@ -43,8 +42,6 @@ Err CreateWSAError(const char *header) {
 Socket::Socket(int family, int sock_type, int protocol) {
   handle_ = socket(family, sock_type, protocol);
 }
-
-
 
 }  // namespace sock
 

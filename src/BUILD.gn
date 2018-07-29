@@ -1,9 +1,18 @@
+
+source_set("utils") {
+  sources = [
+    "status.cc",
+    "status.h",
+  ]
+}
+
 source_set("socket") {
   sources = [
-    "err.cc",
-    "err.h",
     "socket.cc",
     "socket.h",
+  ]
+  deps = [
+    ":utils",
   ]
 }
 
