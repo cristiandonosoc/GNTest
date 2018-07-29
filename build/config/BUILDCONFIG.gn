@@ -21,7 +21,7 @@ assert(is_windows, "Only windows supported for now.")
 
 # Default configs for every build (cased by OS target)
 _configs = [
-  "//build/config/compiler:default_include_dirs",
+  "//:default_include_dirs",
   "//build/config/compiler:default_warnings",
   "//build/config/compiler:compiler",
 ]

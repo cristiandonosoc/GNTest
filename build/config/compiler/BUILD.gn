@@ -1,13 +1,3 @@
-config("default_include_dirs") {
-  include_dirs = [
-    "//",
-    "//third_party",
-    root_gen_dir,
-  ]
-}
-
-
-
 if (is_windows) {
   config("default_warnings") {
     cflags = [
