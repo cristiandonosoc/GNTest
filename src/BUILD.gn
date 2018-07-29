@@ -43,6 +43,7 @@ executable("client") {
 executable("test") {
   sources = [ "test_main.cc" ]
   deps = [
+    ":utils",
     "//third_party/stb",
   ]
 }
