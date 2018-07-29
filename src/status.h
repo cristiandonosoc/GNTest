@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "macros.h"
+
 namespace sock {
 
 #define STATUS_MSG_BUF_LEN 256
@@ -18,8 +20,8 @@ class Status {
   Status(std::string err_msg);          // Will set error status.
   Status(Type, std::string err_msg);
 
-  Status(const char* fmt, ...);         // Will set error status.
-  Status(Type, const char* fmt, ...);
+  Status(const char* fmt, ...) PRINTF_FORMAT(2, 3);   // Will set error status.
+  Status(Type, const char* fmt, ...) PRINTF_FORMAT(3, 4);
 
   bool ok() const { return type_ == Type::kOk; }
 

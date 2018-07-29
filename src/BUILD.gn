@@ -1,8 +1,12 @@
 
 source_set("utils") {
   sources = [
+    "macros.h",
     "status.cc",
     "status.h",
+  ]
+  deps = [
+    "//third_party/stb",
   ]
 }
 
@@ -44,6 +48,5 @@ executable("test") {
   sources = [ "test_main.cc" ]
   deps = [
     ":utils",
-    "//third_party/stb",
   ]
 }
