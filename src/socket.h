@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <winsock2.h>
+
 #include "src/err.h"
 
 namespace sock {
@@ -27,6 +29,20 @@ class WSAHandler {
 
 // Socket ----------------------------------------------------------------------
 
+class Socket {
+ public:
+  Socket(int family, int sock_type, int proto);
+
+  Err Bind(int family, uint32_t ip, uint16_t port);
+  Err Listen();
+
+  bool valid() const { return handle_ != INVALID_SOCKET; }
+
+
+ private:
+  sockaddr_in addr_;
+  SOCKET handle_ = INVALID_SOCKET;
+};
 
 }  // namespace sock
 

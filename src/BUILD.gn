@@ -1,18 +1,29 @@
 source_set("socket") {
   sources = [
+    "err.cc",
+    "err.h",
     "socket.cc",
     "socket.h",
   ]
 }
 
-
 config("win_socks") {
   libs = [ "Ws2_32.lib" ]
 }
 
-executable("socket_main") {
+executable("server") {
   sources = [
-    "socket_main.cc",
+    "server_main.cc",
+  ]
+  configs += [ ":win_socks" ]
+  deps = [
+    ":socket",
+  ]
+}
+
+executable("client") {
+  sources = [
+    "client_main.cc",
   ]
   configs += [ ":win_socks" ]
   deps = [

@@ -1,4 +1,3 @@
-// Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
 #include <winsock2.h>
@@ -55,17 +54,17 @@ int main() {
     return 1;
   }
 
-/*   SOCKET client_socket = INVALID_SOCKET; */
-/*   client_socket = accept(socket_handle, NULL, NULL); */
-/*   if (client_socket == INVALID_SOCKET) { */
-/*     PrintWSAError("Failed to accept connection"); */
-/*     return 1; */
-/*   } */
+  /*   SOCKET client_socket = INVALID_SOCKET; */
+  /*   client_socket = accept(socket_handle, NULL, NULL); */
+  /*   if (client_socket == INVALID_SOCKET) { */
+  /*     PrintWSAError("Failed to accept connection"); */
+  /*     return 1; */
+  /*   } */
 
-/*   bool running = true; */
-/*   while (running) { */
+  /*   bool running = true; */
+  /*   while (running) { */
 
-/*   } */
+  /*   } */
 
 
 
