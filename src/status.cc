@@ -3,6 +3,9 @@
 
 #include <assert.h>
 
+#include <istream>
+
+#include "log.h"
 #include "status.h"
 #include "string.h"
 
@@ -58,8 +61,10 @@ const std::string& StatusTypeToString(Status::Type type) {
 }
 
 void LogStatus(const Status &status) {
-  fprintf(stderr, "[%s]: %s\n", StatusTypeToString(status.type()).c_str(),
-                                status.err_msg().c_str());
+  auto msg =
+      StringPrintf("[%s]: %s\n", StatusTypeToString(status.type()).c_str(),
+                   status.err_msg().c_str());
+  StdoutAndFlush(msg);
 }
 
 }  // namespace warhol

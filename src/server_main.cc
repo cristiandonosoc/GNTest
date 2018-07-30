@@ -3,14 +3,16 @@
 
 #include <stdio.h>
 
-#include "src/socket.h"
+#include "log.h"
+#include "socket.h"
+#include "string.h"
 
 using namespace warhol;
 
 int main() {
   warhol::WSAHandler wsa_handler;
   if (!wsa_handler.Init()) {
-    fprintf(stderr, "Could not initialize sockets\n");
+    StdoutAndFlush("Could not initialize sockets");
     return 1;
   }
 
@@ -33,7 +35,7 @@ int main() {
     return 1;
   }
 
-  printf("Binded the socket.\n");
+  StdoutAndFlush("Binded the socket.");
 
   status = socket.Listen();
   if (!status.ok()) {
@@ -41,10 +43,7 @@ int main() {
     return 1;
   }
 
-
-  printf("Listening on socket.\n");
-  fflush(stdout);
-
+  StdoutAndFlush("Listening on socket.");
 
   Socket client_socket;
   status = socket.Accept(&client_socket);
@@ -53,16 +52,18 @@ int main() {
     return 1;
   }
 
-  printf("Accepted connection.\n");
+  StdoutAndFlush("Accepted connection.");
 
 
   while (true) {
+    StdoutAndFlush("Waiting to read from socket.");
+
     uint8_t buf[1024];
     int read = 0;
-    printf("Reading from socket.\n");
     status = client_socket.Recv(buf, sizeof(buf), &read);
+
     if (status.type() == Status::Type::kDisconnect) {
-      printf("Client disconnected. Exiting.\n");
+      StdoutAndFlush("Client disconected. Exiting.");
       return 0;
     } else if (!status.ok()) {
       LogStatus(status);
@@ -70,6 +71,6 @@ int main() {
     }
 
     buf[read] = 0;  // 0 ended string.
-    printf("READ: %s\n", buf);
+    StdoutAndFlush(StringPrintf("READ %d bytes: \"%s\"", read, buf));
   }
 }

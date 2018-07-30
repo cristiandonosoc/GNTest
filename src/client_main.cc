@@ -2,16 +2,22 @@
 
 #include <stdio.h>
 
-#include "src/socket.h"
+#include <iostream>
+
+
+#include "log.h"
+#include "socket.h"
 
 #include <windows.h>
+
+const char msg[] = "0123456789";
 
 using namespace warhol;
 
 int main() {
   warhol::WSAHandler wsa_handler;
   if (!wsa_handler.Init()) {
-    fprintf(stderr, "Could not initialize sockets\n");
+    StdoutAndFlush("Could not initialize sockets");
     return 1;
   }
 
@@ -34,17 +40,22 @@ int main() {
     return 1;
   }
 
-  printf("Succesfully connected.\n");
+  StdoutAndFlush("Succesfully connected.");
 
-  const char msg[] = "SUPER MESSAGE TO SEND!";
-  int sent = 0;
-  printf("Sending message.\n");
-  status = socket.Send((uint8_t*)msg, sizeof(msg), &sent);
-  if (!status.ok()) {
-    LogStatus(status);
-    return 1;
+  while (true) {
+
+    StdoutAndFlush("Press any key to send message.");
+    char inbuf[16];
+    std::cin.getline(inbuf, sizeof(inbuf));
+
+    StdoutAndFlush("Sending message.");
+    int sent = 0;
+    status = socket.Send((uint8_t*)msg, sizeof(msg), &sent);
+    if (!status.ok()) {
+      LogStatus(status);
+      return 1;
+    }
+    StdoutAndFlush("Send message");
+
   }
-
-  while (true)
-    Sleep(1000);
 }
