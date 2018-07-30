@@ -4,6 +4,8 @@ source_set("utils") {
     "macros.h",
     "status.cc",
     "status.h",
+    "string.cc",
+    "string.h",
   ]
   deps = [
     "//third_party/stb",

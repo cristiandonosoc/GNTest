@@ -10,7 +10,7 @@ toolchain("msvc") {
   tool("link") {
     command = "link.exe /nologo /OUT:{{output}} /PDB:{{output}}.pdb {{inputs}} {{solibs}} {{libs}}"
     outputs = [
-      "{{root_out_dir}}/{{target_output_name}}{{output_extension}}"
+      "{{root_out_dir}}/{{target_output_name}}.exe"
     ]
     description = "LINK {{output}}"
   }

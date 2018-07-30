@@ -1,74 +1,75 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include <winsock2.h>
-
-#include <cstdio>
+#include <stdio.h>
 
 #include "src/socket.h"
 
-
-void PrintWSAError(const char *header) {
-  int err_no = WSAGetLastError();
-  char* buffer;
-  FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-                NULL, err_no, 0, (LPSTR)&buffer, 0, NULL);
-  fprintf(stderr, "Error -> %s: %s\n", header, buffer);
-}
-
+using namespace warhol;
 
 int main() {
-  sock::WSAHandler wsa_handler;
+  warhol::WSAHandler wsa_handler;
   if (!wsa_handler.Init()) {
     fprintf(stderr, "Could not initialize sockets\n");
     return 1;
   }
 
-  SOCKET socket_handle = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (socket_handle == INVALID_SOCKET) {
-    PrintWSAError("Could not create socket");
+  Socket socket;
+  auto status = socket.Init(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (!status.ok()) {
+    LogStatus(status);
     return 1;
   }
 
-  // Bind the action
-  sockaddr_in addr;
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = INADDR_ANY;
-  addr.sin_port = htons(2345);
+  /* status = socket.SetNonBlocking(); */
+  /* if (!status.ok()) { */
+  /*   LogStatus(status); */
+  /*   return 1; */
+  /* } */
 
-  int bind_res = bind(socket_handle, (const sockaddr*)&addr, sizeof(addr));
-  if (bind_res == SOCKET_ERROR) {
-    PrintWSAError("Could not bind socket");
+  status = socket.Bind(INADDR_ANY, 2345);
+  if (!status.ok()) {
+    LogStatus(status);
     return 1;
   }
 
-  // Set non-blocking
-  DWORD nb = 1;
-  int nb_res = ioctlsocket(socket_handle, FIONBIO, &nb);
-  if (nb_res == SOCKET_ERROR) {
-    PrintWSAError("Could not set non-blocking");
+  printf("Binded the socket.\n");
+
+  status = socket.Listen();
+  if (!status.ok()) {
+    LogStatus(status);
     return 1;
   }
 
-  if (listen(socket_handle, SOMAXCONN) == SOCKET_ERROR) {
-    PrintWSAError("Error on listen");
+
+  printf("Listening on socket.\n");
+  fflush(stdout);
+
+
+  Socket client_socket;
+  status = socket.Accept(&client_socket);
+  if (!status.ok()) {
+    LogStatus(status);
     return 1;
   }
 
-  /*   SOCKET client_socket = INVALID_SOCKET; */
-  /*   client_socket = accept(socket_handle, NULL, NULL); */
-  /*   if (client_socket == INVALID_SOCKET) { */
-  /*     PrintWSAError("Failed to accept connection"); */
-  /*     return 1; */
-  /*   } */
-
-  /*   bool running = true; */
-  /*   while (running) { */
-
-  /*   } */
+  printf("Accepted connection.\n");
 
 
+  while (true) {
+    uint8_t buf[1024];
+    int read = 0;
+    printf("Reading from socket.\n");
+    status = client_socket.Recv(buf, sizeof(buf), &read);
+    if (status.type() == Status::Type::kDisconnect) {
+      printf("Client disconnected. Exiting.\n");
+      return 0;
+    } else if (!status.ok()) {
+      LogStatus(status);
+      return 1;
+    }
 
-  printf("Succesfully created socket\n");
-
+    buf[read] = 0;  // 0 ended string.
+    printf("READ: %s\n", buf);
+  }
 }

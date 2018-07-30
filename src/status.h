@@ -5,15 +5,14 @@
 
 #include "macros.h"
 
-namespace sock {
-
-#define STATUS_MSG_BUF_LEN 256
+namespace warhol {
 
 class Status {
  public:
   enum class Type {
     kOk,
     kError,
+    kDisconnect,    // Server disconnect.
   };
 
   Status();
@@ -33,6 +32,10 @@ class Status {
   std::string err_msg_;
 };
 
+// Utilities -------------------------------------------------------------------
 
+const std::string& StatusTypeToString();
 
-}  // namespace sock
+void LogStatus(const Status&);
+
+}  // namespace warhol

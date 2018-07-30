@@ -1,73 +1,50 @@
 // This code has a BSD license. See LICENSE.
 
-#include <winsock2.h>
-
-#include <cstdio>
+#include <stdio.h>
 
 #include "src/socket.h"
 
+#include <windows.h>
 
-void PrintWSAError(const char *header) {
-  int err_no = WSAGetLastError();
-  char* buffer;
-  FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-                NULL, err_no, 0, (LPSTR)&buffer, 0, NULL);
-  fprintf(stderr, "Error -> %s: %s\n", header, buffer);
-}
-
+using namespace warhol;
 
 int main() {
-  sock::WSAHandler wsa_handler;
+  warhol::WSAHandler wsa_handler;
   if (!wsa_handler.Init()) {
     fprintf(stderr, "Could not initialize sockets\n");
     return 1;
   }
 
-  SOCKET socket_handle = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (socket_handle == INVALID_SOCKET) {
-    PrintWSAError("Could not create socket");
+  Socket socket;
+  auto status = socket.Init(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (!status.ok()) {
+    LogStatus(status);
     return 1;
   }
 
-  // Bind the action
-  sockaddr_in addr;
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = INADDR_ANY;
-  addr.sin_port = htons(2345);
+  /* status = socket.SetNonBlocking(); */
+  /* if (!status.ok()) { */
+  /*   LogStatus(status); */
+  /*   return 1; */
+  /* } */
 
-  int bind_res = bind(socket_handle, (const sockaddr*)&addr, sizeof(addr));
-  if (bind_res == SOCKET_ERROR) {
-    PrintWSAError("Could not bind socket");
+  status = socket.Connect("127.0.0.1", 2345);
+  if (!status.ok()) {
+    LogStatus(status);
     return 1;
   }
 
-  // Set non-blocking
-  DWORD nb = 1;
-  int nb_res = ioctlsocket(socket_handle, FIONBIO, &nb);
-  if (nb_res == SOCKET_ERROR) {
-    PrintWSAError("Could not set non-blocking");
+  printf("Succesfully connected.\n");
+
+  const char msg[] = "SUPER MESSAGE TO SEND!";
+  int sent = 0;
+  printf("Sending message.\n");
+  status = socket.Send((uint8_t*)msg, sizeof(msg), &sent);
+  if (!status.ok()) {
+    LogStatus(status);
     return 1;
   }
 
-  if (listen(socket_handle, SOMAXCONN) == SOCKET_ERROR) {
-    PrintWSAError("Error on listen");
-    return 1;
-  }
-
-  /*   SOCKET client_socket = INVALID_SOCKET; */
-  /*   client_socket = accept(socket_handle, NULL, NULL); */
-  /*   if (client_socket == INVALID_SOCKET) { */
-  /*     PrintWSAError("Failed to accept connection"); */
-  /*     return 1; */
-  /*   } */
-
-  /*   bool running = true; */
-  /*   while (running) { */
-
-  /*   } */
-
-
-
-  printf("Succesfully created socket\n");
-
+  while (true)
+    Sleep(1000);
 }

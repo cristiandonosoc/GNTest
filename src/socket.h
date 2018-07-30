@@ -7,7 +7,7 @@
 
 #include "status.h"
 
-namespace sock {
+namespace warhol {
 
 // WSAHandler ------------------------------------------------------------------
 
@@ -31,19 +31,29 @@ class WSAHandler {
 
 class Socket {
  public:
-  Socket(int family, int sock_type, int proto);
+  Socket();
 
-  Status Bind(int family, uint32_t ip, uint16_t port);
+  Status Init(int16_t family, int sock_type, int proto);
+  Status SetNonBlocking();
+
+  // Server
+  Status Bind(int32_t ip, uint16_t port);
   Status Listen();
+  Status Accept(Socket*);   // out is optional.
 
-  bool valid() const { return handle_ != INVALID_SOCKET; }
+  // Client
+  Status Connect(const std::string& ip, uint16_t port);
 
+  // I/O
+  Status Recv(uint8_t* buf, size_t buf_size, int* out_read);
+  Status Send(const uint8_t* buf, size_t size, int* out_sent);
 
- private:
-  sockaddr_in addr_;
-  SOCKET handle_ = INVALID_SOCKET;
+ public:
+  int16_t sock_family = 0;
+  SOCKET sock_handle = INVALID_SOCKET;
+  sockaddr sock_addr;
 };
 
-}  // namespace sock
+}  // namespace warhol
 
 
