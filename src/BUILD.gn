@@ -1,4 +1,3 @@
-
 source_set("utils") {
   sources = [
     "log.cc",
@@ -53,4 +52,15 @@ executable("test") {
   deps = [
     ":utils",
   ]
+}
+
+config("sdl2_config") {
+  include_dirs = [ "../include.lnk" ]
+  libs = [ "../liblnk/SDL2.lib", "../liblnk/SDL2main.lib" ]
+  ldflags = [ "/SUBSYSTEM:CONSOLE", "/LIBPATH:../liblnk" ]
+}
+
+executable("sdl2_test") {
+  sources = [ "sdl2_main.cc" ]
+  configs += [ ":sdl2_config" ]
 }

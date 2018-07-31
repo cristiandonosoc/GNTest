@@ -42,7 +42,8 @@ flags = [
 '-I', os.getcwd(),
 '-isystem', os.path.join(os.getcwd(), 'third_party'),
 # Fake headers so that YCM doesn't explode win windows
-'-isystem', '/mnt/c/Programming/external/fake-windows-headers-for-ycm'
+'-isystem', '/mnt/c/Programming/external/fake-windows-headers-for-ycm',
+'-isystem', '/mnt/c/Programming/include',
 ]
 
 

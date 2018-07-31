@@ -13,8 +13,8 @@ group("default") {
   ]
 }
 
-group("test") {
+group("sdl2") {
   deps = [
-    "//src:test",
+    "//src:sdl2_test",
   ]
 }
