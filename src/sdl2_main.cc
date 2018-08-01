@@ -29,16 +29,16 @@ int main(int, char**) {
   SDL_SetRenderDrawColor(renderer, 0xAA, 0x20, 0x44, 0xFF);
   SDL_RenderClear(renderer);
 
-  while (true) {
-    SDL_Event e;
-    while (SDL_PollEvent(&e)) {
-      if (e.type == SDL_QUIT)
-        break;
+  /* while (true) { */
+  /*   SDL_Event e; */
+  /*   while (SDL_PollEvent(&e)) { */
+  /*     if (e.type == SDL_QUIT) */
+  /*       break; */
 
-      if ((e.type == SDL_KEYDOWN) && (e.key.keysym.sym == SDLK_ESCAPE))
-        break;
-    }
-  }
+  /*     if ((e.type == SDL_KEYDOWN) && (e.key.keysym.sym == SDLK_ESCAPE)) */
+  /*       break; */
+  /*   } */
+  /* } */
 
   SDL_Quit();
   return 0;

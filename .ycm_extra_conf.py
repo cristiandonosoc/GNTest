@@ -44,6 +44,7 @@ flags = [
 # Fake headers so that YCM doesn't explode win windows
 '-isystem', '/mnt/c/Programming/external/fake-windows-headers-for-ycm',
 '-isystem', '/mnt/c/Programming/include',
+'-isystem', '/mnt/c/Programming/vulkan/Include',
 ]
 
 

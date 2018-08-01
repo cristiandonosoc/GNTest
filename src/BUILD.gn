@@ -55,12 +55,28 @@ executable("test") {
 }
 
 config("sdl2_config") {
-  include_dirs = [ "../include.lnk" ]
-  libs = [ "../liblnk/SDL2.lib", "../liblnk/SDL2main.lib" ]
-  ldflags = [ "/SUBSYSTEM:CONSOLE", "/LIBPATH:../liblnk" ]
+  include_dirs = [ "../includelnk" ]
+  libs = [ "../liblnk/SDL2/SDL2.lib", "../liblnk/SDL2/SDL2main.lib" ]
+  ldflags = [ "/SUBSYSTEM:CONSOLE" ]
 }
 
 executable("sdl2_test") {
   sources = [ "sdl2_main.cc" ]
   configs += [ ":sdl2_config" ]
+}
+
+declare_args() {
+  # Vulkan path. Override if needed.
+  vulkan_path = "bla"
+}
+
+config("vulkan_config") {
+  include_dirs = [ "../includelnk" ]
+  libs  = [ "../liblnk/vulkan/vulkan-1.lib" ]
+}
+
+
+executable("vulkan_test") {
+  sources = [ "vulkan_test.cc" ]
+  configs += [ ":vulkan_config" ]
 }
