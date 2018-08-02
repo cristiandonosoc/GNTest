@@ -56,7 +56,7 @@ executable("test") {
 
 config("sdl2_config") {
   include_dirs = [ "../includelnk" ]
-  libs = [ "../liblnk/SDL2/SDL2.lib", "../liblnk/SDL2/SDL2main.lib" ]
+  libs = [ "../liblnk/SDL2/SDL2.lib" ]
   ldflags = [ "/SUBSYSTEM:CONSOLE" ]
 }
 
@@ -78,5 +78,5 @@ config("vulkan_config") {
 
 executable("vulkan_test") {
   sources = [ "vulkan_test.cc" ]
-  configs += [ ":vulkan_config" ]
+  configs += [ ":vulkan_config", ":sdl2_config" ]
 }

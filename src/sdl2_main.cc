@@ -3,9 +3,12 @@
 
 #include <stdio.h>
 
+#define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 
-int main(int, char**) {
+int main(int argc, char* argv[]) {
+  (void)argc;
+  (void)argv;
   // Setup SDL
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
     printf("Error starting SDL: %s\n", SDL_GetError());
