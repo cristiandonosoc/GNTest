@@ -79,4 +79,7 @@ config("vulkan_config") {
 executable("vulkan_test") {
   sources = [ "vulkan_test.cc" ]
   configs += [ ":vulkan_config", ":sdl2_config" ]
+  deps = [
+    ":utils",
+  ]
 }

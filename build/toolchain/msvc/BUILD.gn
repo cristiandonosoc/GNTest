@@ -4,7 +4,7 @@ toolchain("msvc") {
     outputs = [
       "{{source_out_dir}}/{{source_name_part}}.o" ,
     ]
-    description = "CXX {{output}}"
+    # description = "CXX {{output}}"
   }
 
   tool("link") {
@@ -12,7 +12,7 @@ toolchain("msvc") {
     outputs = [
       "{{root_out_dir}}/{{target_output_name}}.exe"
     ]
-    description = "LINK {{output}}"
+    # description = "LINK {{output}}"
   }
 
 

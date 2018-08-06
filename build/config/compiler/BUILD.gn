@@ -33,6 +33,7 @@ if (is_windows) {
 
   config("symbols") {
     cflags = [ "/Zi" ]
+    ldflags = [ "/DEBUG" ]
   }
 }
 

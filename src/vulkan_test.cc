@@ -12,26 +12,47 @@
 #include <SDL2/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 
-int main() {
-  // Setup SDL2
-  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
-    printf("Error loading SDL: %s\n", SDL_GetError());
-    return 1;
+#include "status.h"
+
+#ifdef NDEBUG
+bool kValidationLayersEnabled = false;
+#else
+bool kValidationLayersEnabled = true;
+#endif
+
+using namespace warhol;
+
+// Checks that the requested validation layers are present in the ones offered
+// by our Vulkan runtime.
+bool
+CheckVulkanValidationLayers(const std::vector<const char *> &requested_layers) {
+  // Check available validation layers.
+  uint32_t layer_count;
+  vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
+  std::vector<VkLayerProperties> available_layers(layer_count);
+  vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
+
+  // We check that the requested layers exist.
+  for (const char* requested_layer : requested_layers) {
+    bool layer_found = false;
+
+    for (const auto& layer : available_layers) {
+      if (strcmp(requested_layer, layer.layerName) == 0) {
+        layer_found = true;
+        break;
+      }
+    }
+
+    if (!layer_found)
+      return false;
   }
 
-  // Data about displays
-  printf("Information from SDL\n");
-  printf("Amount of displays: %d\n", SDL_GetNumVideoDisplays());
+  return true;
+};
 
-  SDL_Window *window = SDL_CreateWindow("Example", SDL_WINDOWPOS_UNDEFINED,
-                                        SDL_WINDOWPOS_UNDEFINED, 640, 480,
-                                        SDL_WINDOW_SHOWN);
-  if (!window) {
-    printf("Error creating window: %s\n", SDL_GetError());
-    return 1;
-  }
-
-  // Vulkan application info
+Status
+SetupVulkanInstance(SDL_Window* window, VkInstance* instance) {
+  // Vulkan application info.
   VkApplicationInfo app_info = {};
   app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
   app_info.pApplicationName = "Vulkan Test";
@@ -42,9 +63,17 @@ int main() {
 
   // Setup extensions.
   uint32_t extension_count;
-  SDL_Vulkan_GetInstanceExtensions(window, &extension_count, NULL);
+  if(!SDL_Vulkan_GetInstanceExtensions(window, &extension_count, NULL)) {
+    return Status("Error getting vulkan extensions: %s\n", SDL_GetError());
+  }
   std::vector<const char*> extensions(extension_count);
   SDL_Vulkan_GetInstanceExtensions(window, &extension_count, extensions.data());
+
+  // Debug output.
+  printf("SDL extensions (count: %d):\n", extension_count);
+  for (size_t i = 0; i < extension_count; i++)
+    printf("- %s\n", extensions[i]);
+  printf("\n");
 
   VkInstanceCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -53,30 +82,54 @@ int main() {
   create_info.ppEnabledExtensionNames = extensions.data();
   create_info.enabledLayerCount = 0;
 
-  printf("SDL extensions (count: %d):\n", extension_count);
-  for (size_t i = 0; i < extension_count; i++)
-    printf("- %s\n", extensions[i]);
-  printf("\n");
+  // Setup validation layers.
+  std::vector<const char*> validation_layers;
+  if (kValidationLayersEnabled) {
+    validation_layers.push_back("VK_LAYER_LUNARG_standard_validation");
+    if (!CheckVulkanValidationLayers(validation_layers))
+      return Status("Not all requested validation layers are available");
 
-  VkInstance instance;
-  VkResult result = vkCreateInstance(&create_info, nullptr, &instance);
-  if (result != VK_SUCCESS) {
-    printf("Error creating vulkan instance\n");
+    create_info.enabledLayerCount = (uint32_t)validation_layers.size();
+    create_info.ppEnabledLayerNames = validation_layers.data();
+  }
+
+
+  // Finally create the VkInstance.
+  VkResult result = vkCreateInstance(&create_info, nullptr, instance);
+  if (result != VK_SUCCESS)
+    return Status("Error creating vulkan instance\n");
+
+  return Status();
+}
+
+int main() {
+  // Setup SDL2.
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
+    printf("Error loading SDL: %s\n", SDL_GetError());
     return 1;
   }
 
-  // We get all the extensions.
-  uint32_t count;
-  vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
-  std::vector<VkExtensionProperties> ext(count);
-  vkEnumerateInstanceExtensionProperties(nullptr, &count, ext.data());
+  // Data about displays.
+  printf("Information from SDL\n");
+  printf("Amount of displays: %d\n", SDL_GetNumVideoDisplays());
 
-  printf("Available extensions:\n");
-  for (size_t i = 0; i < count; i++) {
-    printf("- %s\n", ext[i].extensionName);
+  SDL_Window *window = SDL_CreateWindow("Example", SDL_WINDOWPOS_UNDEFINED,
+                                        SDL_WINDOWPOS_UNDEFINED, 640, 480,
+                                        SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN);
+  if (!window) {
+    printf("Error creating window: %s\n", SDL_GetError());
+    return 1;
   }
 
+  VkInstance instance;
+  Status res = SetupVulkanInstance(window, &instance);
+  if (!res.ok()) {
+    printf("Error creating window: %s\n", res.err_msg().c_str());
+    return 1;
+  }
 
+  vkDestroyInstance(instance, nullptr);
+  SDL_DestroyWindow(window);
   SDL_Quit();
   return 0;
 }
