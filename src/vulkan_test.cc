@@ -13,6 +13,7 @@
 #include <vulkan/vulkan.h>
 
 #include "status.h"
+#include "vulkan_utils.h"
 
 #ifdef NDEBUG
 bool kValidationLayersEnabled = false;
@@ -21,6 +22,25 @@ bool kValidationLayersEnabled = true;
 #endif
 
 using namespace warhol;
+
+Status GetVulkanExtensions(SDL_Window *window,
+                           std::vector<const char *> *extensions) {
+  // Setup extensions.
+  // Get the ones needed by SDL
+  uint32_t extension_count;
+  if(!SDL_Vulkan_GetInstanceExtensions(window, &extension_count, NULL)) {
+    return Status("Error getting vulkan extensions: %s\n", SDL_GetError());
+  }
+  *extensions = std::vector<const char*>(extension_count);
+  SDL_Vulkan_GetInstanceExtensions(window, &extension_count, extensions->data());
+
+  // Extra ones
+  if (kValidationLayersEnabled) {
+    extensions->push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+  }
+
+  return Status();
+}
 
 // Checks that the requested validation layers are present in the ones offered
 // by our Vulkan runtime.
@@ -50,8 +70,21 @@ CheckVulkanValidationLayers(const std::vector<const char *> &requested_layers) {
   return true;
 };
 
+static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCall(
+    VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+    VkDebugUtilsMessageTypeFlagsEXT type,
+    const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
+    void* user_data) {
+  (void)severity;
+  (void)type;
+  (void)user_data;
+  printf("Validation layer message: %s\n", callback_data->pMessage);
+
+  return VK_FALSE;
+}
+
 Status
-SetupVulkanInstance(SDL_Window* window, VkInstance* instance) {
+SetupVulkanInstance(SDL_Window* window, VulkanContext* context) {
   // Vulkan application info.
   VkApplicationInfo app_info = {};
   app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -61,24 +94,15 @@ SetupVulkanInstance(SDL_Window* window, VkInstance* instance) {
   app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
   app_info.apiVersion = VK_API_VERSION_1_1;
 
-  // Setup extensions.
-  uint32_t extension_count;
-  if(!SDL_Vulkan_GetInstanceExtensions(window, &extension_count, NULL)) {
-    return Status("Error getting vulkan extensions: %s\n", SDL_GetError());
-  }
-  std::vector<const char*> extensions(extension_count);
-  SDL_Vulkan_GetInstanceExtensions(window, &extension_count, extensions.data());
-
-  // Debug output.
-  printf("SDL extensions (count: %d):\n", extension_count);
-  for (size_t i = 0; i < extension_count; i++)
-    printf("- %s\n", extensions[i]);
-  printf("\n");
+  std::vector<const char*> extensions;
+  Status res = GetVulkanExtensions(window, &extensions);
+  if (!res.ok())
+    return res;
 
   VkInstanceCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   create_info.pApplicationInfo = &app_info;
-  create_info.enabledExtensionCount = extension_count;
+  create_info.enabledExtensionCount = (uint32_t)extensions.size();
   create_info.ppEnabledExtensionNames = extensions.data();
   create_info.enabledLayerCount = 0;
 
@@ -93,11 +117,30 @@ SetupVulkanInstance(SDL_Window* window, VkInstance* instance) {
     create_info.ppEnabledLayerNames = validation_layers.data();
   }
 
-
   // Finally create the VkInstance.
-  VkResult result = vkCreateInstance(&create_info, nullptr, instance);
+  VkResult result = vkCreateInstance(&create_info, nullptr,
+                                     &context->instance_handle);
   if (result != VK_SUCCESS)
-    return Status("Error creating vulkan instance\n");
+    return Status("Error creating vulkan instance: %s\n",
+                  VkResultToString(result));
+
+  // Setup debug messenger.
+  VkDebugUtilsMessengerCreateInfoEXT messenger_info = {};
+  messenger_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+  messenger_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                                   VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                                   VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+  messenger_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                               VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                               VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+  messenger_info.pfnUserCallback = VulkanDebugCall;
+  messenger_info.pUserData = nullptr;
+
+  Status status =
+      CreateDebugUtilsMessengerEXT(context->instance_handle, &messenger_info,
+                                   nullptr, &context->debug_messenger_handle);
+  if (!status.ok())
+    return status;
 
   return Status();
 }
@@ -121,14 +164,15 @@ int main() {
     return 1;
   }
 
-  VkInstance instance;
-  Status res = SetupVulkanInstance(window, &instance);
-  if (!res.ok()) {
-    printf("Error creating window: %s\n", res.err_msg().c_str());
-    return 1;
+  {
+    VulkanContext context;
+    Status res = SetupVulkanInstance(window, &context);
+    if (!res.ok()) {
+      printf("Error creating window: %s\n", res.err_msg().c_str());
+      return 1;
+    }
   }
 
-  vkDestroyInstance(instance, nullptr);
   SDL_DestroyWindow(window);
   SDL_Quit();
   return 0;

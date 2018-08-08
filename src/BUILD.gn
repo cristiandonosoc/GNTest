@@ -75,11 +75,21 @@ config("vulkan_config") {
   libs  = [ "../liblnk/vulkan/vulkan-1.lib" ]
 }
 
+source_set("vulkan_utils") {
+  sources = [
+    "vulkan_utils.cc",
+    "vulkan_utils.h",
+  ]
+  include_dirs = [ "../includelnk" ]
+
+}
+
 
 executable("vulkan_test") {
   sources = [ "vulkan_test.cc" ]
   configs += [ ":vulkan_config", ":sdl2_config" ]
   deps = [
     ":utils",
+    ":vulkan_utils",
   ]
 }
