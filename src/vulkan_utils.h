@@ -9,11 +9,18 @@
 
 namespace warhol {
 
-const char* VkResultToString(VkResult);
+template <typename VulkanEnum>
+const char* VulkanEnumToString(VulkanEnum) {
+  static_assert(false, "Unimplemented print for: " __PRETTY_FUNCTION__);
+}
 
-#define VK_RETURN_IF_ERROR(result)                               \
-  if (result != VK_SUCCESS) {                                    \
-    return Status("Vulkan Error: %s", VkResultToString(result)); \
+// Specializations
+template<> const char* VulkanEnumToString(VkResult);
+template<> const char* VulkanEnumToString(VkPhysicalDeviceType);
+
+#define VK_RETURN_IF_ERROR(result)                                 \
+  if (result != VK_SUCCESS) {                                      \
+    return Status("Vulkan Error: %s", VulkanEnumToString(result)); \
   }
 
 struct VulkanContext {

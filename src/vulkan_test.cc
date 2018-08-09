@@ -159,7 +159,7 @@ Status SetupVulkanDevices(VulkanContext* context) {
     vkGetPhysicalDeviceProperties(device, &properties);
     printf("--------------------------------------------\n");
     printf("Device Name: %s\n", properties.deviceName);
-    printf("Type: %d\n", properties.deviceType);
+    printf("Type: %s\n", VulkanEnumToString(properties.deviceType));
     printf("API Version: %u\n", properties.apiVersion);
     printf("Driver Version: %u\n", properties.driverVersion);
     printf("Vendor ID: %u\n", properties.vendorID);
