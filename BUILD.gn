@@ -18,3 +18,9 @@ group("sdl2") {
     "//src:sdl2_test",
   ]
 }
+
+group("vulkan_test") {
+  deps = [
+    "//src:vulkan_test",
+  ]
+}

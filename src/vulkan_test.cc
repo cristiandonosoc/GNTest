@@ -25,14 +25,11 @@ using namespace warhol;
 
 Status
 GetVulkanExtensions(SDL_Window* window, std::vector<const char*>* extensions) {
-  // Setup extensions.
-  // Get the ones needed by SDL
-  uint32_t extension_count;
-  if(!SDL_Vulkan_GetInstanceExtensions(window, &extension_count, NULL)) {
-    return Status("Error getting vulkan extensions: %s\n", SDL_GetError());
-  }
-  *extensions = std::vector<const char*>(extension_count);
-  SDL_Vulkan_GetInstanceExtensions(window, &extension_count, extensions->data());
+  // Get the extensions needed by SDL
+  VK_GET_PROPERTIES(SDL_Vulkan_GetInstanceExtensions, window, (*extensions));
+  if (extensions->empty())
+    return Status("Could not get SDL required extensions");
+
 
   // Extra ones
   if (kValidationLayersEnabled) {
@@ -47,10 +44,10 @@ GetVulkanExtensions(SDL_Window* window, std::vector<const char*>* extensions) {
 bool
 CheckVulkanValidationLayers(const std::vector<const char *> &requested_layers) {
   // Check available validation layers.
-  uint32_t layer_count;
-  vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
-  std::vector<VkLayerProperties> available_layers(layer_count);
-  vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
+  std::vector<VkLayerProperties> available_layers;
+  VK_GET_PROPERTIES_NC(vkEnumerateInstanceLayerProperties, available_layers);
+  if (available_layers.empty())
+    return false;
 
   // We check that the requested layers exist.
   for (const char* requested_layer : requested_layers) {
@@ -132,7 +129,7 @@ SetupVulkanInstance(SDL_Window* window, VulkanContext* context) {
                                VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
   messenger_info.pfnUserCallback = VulkanDebugCall;
-  messenger_info.pUserData       = nullptr;
+  messenger_info.pUserData = nullptr;
 
   Status status =
       CreateDebugUtilsMessengerEXT(context->instance, &messenger_info, nullptr,
@@ -142,18 +139,14 @@ SetupVulkanInstance(SDL_Window* window, VulkanContext* context) {
   return Status::Ok();
 }
 
-Status SetupVulkanDevices(VulkanContext* context) {
-  // Check how many devices are present.
-  uint32_t device_count = 0;
-  VkResult res = vkEnumeratePhysicalDevices(context->instance, &device_count,
-                                            nullptr);
-  VK_RETURN_IF_ERROR(res);
-  std::vector<VkPhysicalDevice> devices(device_count);
-  res = vkEnumeratePhysicalDevices(context->instance, &device_count, devices.data());
-  VK_RETURN_IF_ERROR(res);
+Status
+SetupVulkanDevices(VulkanContext* context) {
+  std::vector<VkPhysicalDevice> devices;
+  VK_GET_PROPERTIES(vkEnumeratePhysicalDevices, context->instance, devices);
 
   // Enumarate device properties.
   printf("Found %zu physical devices:\n", devices.size());
+  std::vector<VkPhysicalDevice> suitable_devices;
   for (auto& device : devices) {
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(device, &properties);
@@ -164,7 +157,37 @@ Status SetupVulkanDevices(VulkanContext* context) {
     printf("Driver Version: %u\n", properties.driverVersion);
     printf("Vendor ID: %u\n", properties.vendorID);
     printf("Device ID: %u\n", properties.deviceID);
+
+    /* VkPhysicalDeviceFeatures features; */
+    /* vkGetPhysicalDeviceFeatures(device, &features); */
+    context->devices.push_back(device);
   }
+
+  if (context->devices.empty())
+    return Status("No suitable device found");
+  return Status::Ok();
+}
+
+Status
+SetupQueues(VulkanContext* context) {
+  VkPhysicalDevice& device = context->devices.front();
+  std::vector<VkQueueFamilyProperties> queue_families;
+  VK_GET_PROPERTIES(vkGetPhysicalDeviceQueueFamilyProperties, device,
+                    queue_families);
+
+  int i = 0;
+  for (VkQueueFamilyProperties& queue_family : queue_families) {
+    if (queue_family.queueCount > 0 &&
+        queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+      context->graphics_queue_index = i;
+      break;
+    }
+
+    i++;
+  }
+
+  if (context->graphics_queue_index == -1)
+    return Status("Could not find a graphics queue family");
 
   return Status::Ok();
 }
@@ -195,9 +218,16 @@ int main() {
       printf("Error setting vulkan instance: %s\n", res.err_msg().c_str());
       return 1;
     }
+
     res = SetupVulkanDevices(&context);
     if (!res.ok()) {
       printf("Error setting vulkan devices: %s\n", res.err_msg().c_str());
+      return 1;
+    }
+
+    res = SetupQueues(&context);
+    if (!res.ok()) {
+      printf("Error setting vulkan queue families: %s\n", res.err_msg().c_str());
       return 1;
     }
 
