@@ -12,3 +12,12 @@
 #else
 #define PRINTF_FORMAT(format_param, dots_param)
 #endif
+
+#define NO_COPY_AND_ASSIGN(class_name)                                         \
+  class_name(const class_name &) = delete;                                     \
+  class_name& operator=(const class_name &) = delete;
+
+#define NO_MOVE_AND_ASSIGN(class_name)                                         \
+  class_name(class_name &&) = delete;                                          \
+  class_name &operator=(class_name &&) = delete;
+

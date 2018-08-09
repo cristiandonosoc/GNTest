@@ -23,8 +23,8 @@ bool kValidationLayersEnabled = true;
 
 using namespace warhol;
 
-Status GetVulkanExtensions(SDL_Window *window,
-                           std::vector<const char *> *extensions) {
+Status
+GetVulkanExtensions(SDL_Window* window, std::vector<const char*>* extensions) {
   // Setup extensions.
   // Get the ones needed by SDL
   uint32_t extension_count;
@@ -39,7 +39,7 @@ Status GetVulkanExtensions(SDL_Window *window,
     extensions->push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
 
-  return Status();
+  return Status::Ok();
 }
 
 // Checks that the requested validation layers are present in the ones offered
@@ -70,11 +70,11 @@ CheckVulkanValidationLayers(const std::vector<const char *> &requested_layers) {
   return true;
 };
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCall(
-    VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-    VkDebugUtilsMessageTypeFlagsEXT type,
-    const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-    void* user_data) {
+static VKAPI_ATTR VkBool32 VKAPI_CALL
+VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+                VkDebugUtilsMessageTypeFlagsEXT type,
+                const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
+                void* user_data) {
   (void)severity;
   (void)type;
   (void)user_data;
@@ -86,25 +86,24 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCall(
 Status
 SetupVulkanInstance(SDL_Window* window, VulkanContext* context) {
   // Vulkan application info.
-  VkApplicationInfo app_info = {};
-  app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-  app_info.pApplicationName = "Vulkan Test";
+  VkApplicationInfo app_info  = {};
+  app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+  app_info.pApplicationName   = "Vulkan Test";
   app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
-  app_info.pEngineName = "Warhol";
-  app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
-  app_info.apiVersion = VK_API_VERSION_1_1;
+  app_info.pEngineName        = "Warhol";
+  app_info.engineVersion      = VK_MAKE_VERSION(0, 0, 1);
+  app_info.apiVersion         = VK_API_VERSION_1_1;
 
   std::vector<const char*> extensions;
   Status res = GetVulkanExtensions(window, &extensions);
-  if (!res.ok())
-    return res;
+  if (!res.ok()) return res;
 
-  VkInstanceCreateInfo create_info = {};
-  create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-  create_info.pApplicationInfo = &app_info;
-  create_info.enabledExtensionCount = (uint32_t)extensions.size();
+  VkInstanceCreateInfo create_info    = {};
+  create_info.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+  create_info.pApplicationInfo        = &app_info;
+  create_info.enabledExtensionCount   = (uint32_t)extensions.size();
   create_info.ppEnabledExtensionNames = extensions.data();
-  create_info.enabledLayerCount = 0;
+  create_info.enabledLayerCount       = 0;
 
   // Setup validation layers.
   std::vector<const char*> validation_layers;
@@ -113,36 +112,61 @@ SetupVulkanInstance(SDL_Window* window, VulkanContext* context) {
     if (!CheckVulkanValidationLayers(validation_layers))
       return Status("Not all requested validation layers are available");
 
-    create_info.enabledLayerCount = (uint32_t)validation_layers.size();
+    create_info.enabledLayerCount   = (uint32_t)validation_layers.size();
     create_info.ppEnabledLayerNames = validation_layers.data();
   }
 
   // Finally create the VkInstance.
-  VkResult result = vkCreateInstance(&create_info, nullptr,
-                                     &context->instance_handle);
-  if (result != VK_SUCCESS)
-    return Status("Error creating vulkan instance: %s\n",
-                  VkResultToString(result));
+  VkResult result = vkCreateInstance(&create_info, nullptr, &context->instance);
+  VK_RETURN_IF_ERROR(result);
 
   // Setup debug messenger.
   VkDebugUtilsMessengerCreateInfoEXT messenger_info = {};
-  messenger_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-  messenger_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-                                   VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                                   VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+  messenger_info.sType =
+      VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+  messenger_info.messageSeverity =
+      VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+      VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+      VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
   messenger_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
                                VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
   messenger_info.pfnUserCallback = VulkanDebugCall;
-  messenger_info.pUserData = nullptr;
+  messenger_info.pUserData       = nullptr;
 
   Status status =
-      CreateDebugUtilsMessengerEXT(context->instance_handle, &messenger_info,
-                                   nullptr, &context->debug_messenger_handle);
-  if (!status.ok())
-    return status;
+      CreateDebugUtilsMessengerEXT(context->instance, &messenger_info, nullptr,
+                                   &context->debug_messenger_handle);
+  if (!status.ok()) return status;
 
-  return Status();
+  return Status::Ok();
+}
+
+Status SetupVulkanDevices(VulkanContext* context) {
+  // Check how many devices are present.
+  uint32_t device_count = 0;
+  VkResult res = vkEnumeratePhysicalDevices(context->instance, &device_count,
+                                            nullptr);
+  VK_RETURN_IF_ERROR(res);
+  std::vector<VkPhysicalDevice> devices(device_count);
+  res = vkEnumeratePhysicalDevices(context->instance, &device_count, devices.data());
+  VK_RETURN_IF_ERROR(res);
+
+  // Enumarate device properties.
+  printf("Found %zu physical devices:\n", devices.size());
+  for (auto& device : devices) {
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(device, &properties);
+    printf("--------------------------------------------\n");
+    printf("Device Name: %s\n", properties.deviceName);
+    printf("Type: %d\n", properties.deviceType);
+    printf("API Version: %u\n", properties.apiVersion);
+    printf("Driver Version: %u\n", properties.driverVersion);
+    printf("Vendor ID: %u\n", properties.vendorID);
+    printf("Device ID: %u\n", properties.deviceID);
+  }
+
+  return Status::Ok();
 }
 
 int main() {
@@ -168,9 +192,15 @@ int main() {
     VulkanContext context;
     Status res = SetupVulkanInstance(window, &context);
     if (!res.ok()) {
-      printf("Error creating window: %s\n", res.err_msg().c_str());
+      printf("Error setting vulkan instance: %s\n", res.err_msg().c_str());
       return 1;
     }
+    res = SetupVulkanDevices(&context);
+    if (!res.ok()) {
+      printf("Error setting vulkan devices: %s\n", res.err_msg().c_str());
+      return 1;
+    }
+
   }
 
   SDL_DestroyWindow(window);

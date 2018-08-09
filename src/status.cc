@@ -18,19 +18,21 @@ Status::Status(std::string err_msg)
 Status::Status(Type type, std::string err_msg)
     : type_(type), err_msg_(std::move(err_msg)) {}
 
-Status::Status(const char *fmt, ...) : type_(Type::kError) {
+Status::Status(const char* fmt, ...) : type_(Type::kError) {
   va_list va;
   va_start(va, fmt);
   err_msg_ = StringPrintfV(fmt, va);
   va_end(va);
 }
 
-Status::Status(Type type, const char *fmt, ...) : type_(type) {
+Status::Status(Type type, const char* fmt, ...) : type_(type) {
   va_list va;
   va_start(va, fmt);
   err_msg_ = StringPrintfV(fmt, va);
   va_end(va);
 }
+
+/* Status::OK = {}; */
 
 // Utilities -------------------------------------------------------------------
 
@@ -40,8 +42,8 @@ const std::string kEmpty;
 
 }  // namespace
 
-
-const std::string& StatusTypeToString(Status::Type type) {
+const std::string&
+StatusTypeToString(Status::Type type) {
   switch (type) {
     case Status::Type::kOk: {
       static std::string kOk = "Ok";
@@ -60,7 +62,8 @@ const std::string& StatusTypeToString(Status::Type type) {
   return kEmpty;
 }
 
-void LogStatus(const Status &status) {
+void
+LogStatus(const Status& status) {
   auto msg =
       StringPrintf("[%s]: %s\n", StatusTypeToString(status.type()).c_str(),
                    status.err_msg().c_str());

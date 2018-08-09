@@ -17,6 +17,8 @@ class Status {
     kDisconnect,    // Server disconnect.
   };
 
+  static Status Ok() { return Status(); }
+
   Status();
   Status(std::string err_msg);          // Will set error status.
   Status(Type, std::string err_msg);
