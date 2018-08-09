@@ -36,37 +36,21 @@ Status::Status(Type type, const char* fmt, ...) : type_(type) {
 
 // Utilities -------------------------------------------------------------------
 
-namespace {
-
-const std::string kEmpty;
-
-}  // namespace
-
-const std::string&
+const char*
 StatusTypeToString(Status::Type type) {
   switch (type) {
-    case Status::Type::kOk: {
-      static std::string kOk = "Ok";
-      return kOk;
-    }
-    case Status::Type::kError: {
-      static std::string kError = "Error";
-      return kError;
-    }
-    case Status::Type::kDisconnect: {
-      static std::string kError = "Disconenct";
-      return kError;
-    }
+    case Status::Type::kOk: return "Ok";
+    case Status::Type::kError: return "Error";
+    case Status::Type::kDisconnect: return "Disconnect";
   }
-  assert(!"Error");
-  return kEmpty;
+  assert(!"Unknown option");
+  return "";
 }
 
 void
 LogStatus(const Status& status) {
-  auto msg =
-      StringPrintf("[%s]: %s\n", StatusTypeToString(status.type()).c_str(),
-                   status.err_msg().c_str());
+  auto msg = StringPrintf("[%s]: %s\n", StatusTypeToString(status.type()),
+                          status.err_msg().c_str());
   StdoutAndFlush(msg);
 }
 

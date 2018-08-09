@@ -38,7 +38,7 @@ class Status {
 
 // Utilities -------------------------------------------------------------------
 
-const std::string& StatusTypeToString();
+const char* StatusTypeToString();
 
 void LogStatus(const Status&);
 
