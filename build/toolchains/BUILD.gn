@@ -1,0 +1,64 @@
+# msvc
+# ------------------------------------------------------------------------------
+
+toolchain("msvc") {
+  tool("cxx") {
+    command = "cl.exe /nologo /FC /FS {{include_dirs}} {{cflags}} {{cflags_cc}} /c {{source}} /Fo{{output}}"
+    outputs = [
+      "{{source_out_dir}}/{{source_name_part}}.o" ,
+    ]
+    # description = "CXX {{output}}"
+  }
+
+  tool("link") {
+    command = "link.exe /nologo {{ldflags}} /OUT:{{output}} /PDB:{{output}}.pdb {{inputs}} {{solibs}} {{libs}}"
+    outputs = [
+      "{{root_out_dir}}/{{target_output_name}}.exe"
+    ]
+    # description = "LINK {{output}}"
+  }
+
+
+  stamp_path = rebase_path("//build/toolchains/msvc_stamp.py", root_build_dir)
+
+  tool("stamp") {
+    command = "$python_path $stamp_path {{output}}"
+    description = "STAMP {{output}}"
+  }
+
+  tool("copy") {
+    command = "copy {{source}} {{output}}"
+    description = "COPY {{source}} -> {{output}}"
+  }
+}
+
+# clang
+# ------------------------------------------------------------------------------
+
+toolchain("clang") {
+  tool("cxx") {
+    command = "clang++ {{include_dirs}} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
+    outputs = [
+      "{{source_out_dir}}/{{source_name_part}}.o" ,
+    ]
+    # description = "CXX {{output}}"
+  }
+
+  tool("link") {
+    command = "clang++ {{ldflags}} {{inputs}} {{solibs}} {{libs}} -o {{output}}"
+    outputs = [
+      "{{root_out_dir}}/{{target_output_name}}"
+    ]
+    # description = "LINK {{output}}"
+  }
+
+  tool("stamp") {
+    command = "touch {{output}}"
+    description = "STAMP {{output}}"
+  }
+
+  tool("copy") {
+    command = "cp {{source}} {{output}}"
+    description = "COPY {{source}} -> {{output}}"
+  }
+}

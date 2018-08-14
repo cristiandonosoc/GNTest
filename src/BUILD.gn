@@ -93,3 +93,7 @@ executable("vulkan_test") {
     ":vulkan_utils",
   ]
 }
+
+executable("hello_world") {
+  sources = [ "hello_world.cc" ]
+}

@@ -1,40 +1,71 @@
-if (is_windows) {
+# MSVC
+#-------------------------------------------------------------------------------
+
+if (compiler == "msvc") {
   config("default_warnings") {
     cflags = [
       "/W4",
       "/WX",
-    ]
-  }
-
-  config("compiler") {
-    cflags = [
       # Warning ignores
       "/wd4700",    # Un-initialized variable
       "/wd4702",    # Un-reachable code
     ]
+  }
 
-    cflags_cc = []
-
-
-    cflags_cc += [
+  config("compiler") {
+    cflags_cc = [
       "/std:c++14",
       "/EHsc",
       "/GR-",
     ]
   }
 
-  config("no_optimize") {
-    cflags = [ "/Od" ]
+  config("debug") {
+    cflags = [
+      "/Od",
+      "/Zi",
+    ]
+
+    ldflags = [
+      "/DEBUG",
+    ]
   }
 
-  config("optimize") {
-    cflags = [ "/O2" ]
-  }
-
-  config("symbols") {
-    cflags = [ "/Zi" ]
-    ldflags = [ "/DEBUG" ]
+  config("release") {
+      cflags = [
+        "/O2",
+      ]
   }
 }
 
+# clang
+#-------------------------------------------------------------------------------
 
+if (compiler == "clang") {
+  config("default_warnings") {
+    cflags = [
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+    ]
+  }
+
+  config("compiler") {
+    cflags_cc = [
+      "-std=c++14",
+    ]
+  }
+
+  config("debug") {
+    cflags = [
+      "-g",
+      "-Og",
+    ]
+  }
+
+  config("release") {
+    cflags = [
+      "-O2",
+    ]
+  }
+}

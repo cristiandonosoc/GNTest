@@ -1,41 +1,50 @@
 
-# Args -------------------------------------------------------------------------
+# Args
+# ------------------------------------------------------------------------------
 
 declare_args() {
   is_debug = true
 }
 
-# OS Targets -------------------------------------------------------------------
+# OS/Compiler Targets
+# ------------------------------------------------------------------------------
 
+# If we don't explicitly define a target, we're compiling for the host.
 if (target_os == "") {
   target_os = host_os
 }
 
+# Host to compiler mapping
+compiler = ""
 if (target_os == "win") {
-  is_windows = true
+  compiler = "msvc"
+  set_default_toolchain("//build/toolchains:msvc")
+}
+# TODO: Linux
+if (target_os == "mac") {
+  compiler = "clang"
+  set_default_toolchain("//build/toolchains:clang")
 }
 
-assert(is_windows, "Only windows supported for now.")
+assert(compiler != "", "Unsupported OS")
 
-# Configs ----------------------------------------------------------------------
+# Configs
+# ------------------------------------------------------------------------------
 
 # Default configs for every build (cased by OS target)
 _configs = [
   "//:default_include_dirs",
-  "//build/config/compiler:default_warnings",
   "//build/config/compiler:compiler",
+  "//build/config/compiler:default_warnings",
 ]
 
 if (is_debug) {
   _configs += [
-    "//build/config:debug",
-    "//build/config/compiler:no_optimize",
-    "//build/config/compiler:symbols",
+    "//build/config/compiler:debug",
   ]
 } else {
   _configs += [
-    "//build/config:release",
-    "//build/config/compiler:optimize",
+    "//build/config/compiler:release",
   ]
 }
 
@@ -46,5 +55,3 @@ set_defaults("executable") {
 set_defaults("source_set") {
   configs = _configs
 }
-
-set_default_toolchain("//build/toolchain/msvc:msvc")
