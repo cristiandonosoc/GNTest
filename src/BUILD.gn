@@ -1,3 +1,10 @@
+declare_args() {
+  sdl_include_path = getenv("SDL2_SDK") + "/include"
+  sdl_lib_path = getenv("SDL2_SDK") + "/lib"
+  vulkan_include_path = getenv("VULKAN_SDK") + "/include"
+  vulkan_lib_path = getenv("VULKAN_SDK") + "/lib"
+}
+
 source_set("utils") {
   sources = [
     "log.cc",
@@ -55,9 +62,19 @@ executable("test") {
 }
 
 config("sdl2_config") {
-  include_dirs = [ "../includelnk" ]
-  libs = [ "../liblnk/SDL2/SDL2.lib" ]
-  ldflags = [ "/SUBSYSTEM:CONSOLE" ]
+  if (target_os == "win" && compiler == "msvc") {
+    include_dirs = [ "../includelnk" ]
+    libs = [ "../liblnk/SDL2/SDL2.lib" ]
+    ldflags = [ "/SUBSYSTEM:CONSOLE" ]
+  } else if (target_os == "mac" && compiler == "clang") {
+    # NOTE: SDL2 should be installed as a framework in /Library/Frameworks
+    ldflags = [
+      "-framework", "SDL2",
+    ]
+  } else {
+    print("TARGET OS:", target_os, "COMPILER:", compiler)
+    assert(false, "Unknown OS/Compiler combo")
+  }
 }
 
 executable("sdl2_test") {
@@ -65,14 +82,28 @@ executable("sdl2_test") {
   configs += [ ":sdl2_config" ]
 }
 
-declare_args() {
-  # Vulkan path. Override if needed.
-  vulkan_path = "bla"
-}
-
 config("vulkan_config") {
-  include_dirs = [ "../includelnk" ]
-  libs  = [ "../liblnk/vulkan/vulkan-1.lib" ]
+  if (target_os == "win" && compiler == "msvc") {
+    include_dirs = [ "../includelnk" ]
+    libs  = [ "../liblnk/vulkan/vulkan-1.lib" ]
+  } else if (target_os == "mac" && compiler == "clang") {
+    # IMPORTANT: vulkan for mac requires certain env variables to be set in
+    #            order to work correctly. Eg:
+    #
+    # export VULKAN_SDK="/Users/donosoc/SDKs/vulkansdk-macos-1.1.82.0/macOS"
+    # export VK_ICD_FILENAMES="$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json"
+    # export VK_LAYER_PATH="$VULKAN_SDK/etc/vulkan/explicit_layers.d"
+    print("${vulkan_include_path}")
+    include_dirs = [
+      "$vulkan_include_path",
+    ]
+    libs = [
+      "${vulkan_lib_path}/libvulkan.dylib",
+    ]
+  } else {
+    print("TARGET OS:", target_os, "COMPILER:", compiler)
+    assert(false, "Unknown OS/Compiler combo")
+  }
 }
 
 source_set("vulkan_utils") {
@@ -80,10 +111,10 @@ source_set("vulkan_utils") {
     "vulkan_utils.cc",
     "vulkan_utils.h",
   ]
-  include_dirs = [ "../includelnk" ]
-
+  configs += [
+    ":vulkan_config",
+  ]
 }
-
 
 executable("vulkan_test") {
   sources = [ "vulkan_test.cc" ]

@@ -45,7 +45,7 @@ toolchain("clang") {
   }
 
   tool("link") {
-    command = "clang++ {{ldflags}} {{inputs}} {{solibs}} {{libs}} -o {{output}}"
+    command = "clang++ {{inputs}} {{solibs}} {{ldflags}} {{libs}} -o {{output}}"
     outputs = [
       "{{root_out_dir}}/{{target_output_name}}"
     ]

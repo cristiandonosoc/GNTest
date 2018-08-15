@@ -50,9 +50,7 @@ CREATE_VK_EXT_CALL(DestroyDebugUtilsMessengerEXT);
 
 // Will be explicitly specialized in the .cc
 template <typename VulkanEnum>
-const char* VulkanEnumToString(VulkanEnum) {
-  static_assert(false, "Unimplemented print for: " __PRETTY_FUNCTION__);
-}
+const char* VulkanEnumToString(VulkanEnum);
 
 // Specializations
 template<> const char* VulkanEnumToString(VkResult);

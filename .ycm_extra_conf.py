@@ -45,6 +45,7 @@ flags = [
 '-isystem', '/mnt/c/Programming/external/fake-windows-headers-for-ycm',
 '-isystem', '/mnt/c/Programming/include',
 '-isystem', '/mnt/c/Programming/vulkan/Include',
+'-isystem', os.path.join(os.environ['VULKAN_SDK'], 'include'),
 ]
 
 

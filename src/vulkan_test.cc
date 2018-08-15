@@ -2,7 +2,6 @@
 // This code has a BSD license. See LICENSE.
 
 #include <stdio.h>
-#include <windows.h>
 
 #include <memory>
 #include <vector>
