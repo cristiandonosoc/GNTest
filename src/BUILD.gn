@@ -91,8 +91,14 @@ config("vulkan_config") {
     #            order to work correctly. Eg:
     #
     # export VULKAN_SDK="/Users/donosoc/SDKs/vulkansdk-macos-1.1.82.0/macOS"
-    # export VK_ICD_FILENAMES="$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json"
-    # export VK_LAYER_PATH="$VULKAN_SDK/etc/vulkan/explicit_layers.d"
+
+    # Installable Client Driver interfaces:
+    # The ICD are the drivers available to expose the physical devices.
+    # This env variable allows the loader to find the ICDs molten provides.
+    #   export VK_ICD_FILENAMES="$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json"
+
+#Point the loader to the manifest where the layers are specified.
+#export VK_LAYER_PATH = "$VULKAN_SDK/etc/vulkan/explicit_layers.d"
     print("${vulkan_include_path}")
     include_dirs = [
       "$vulkan_include_path",

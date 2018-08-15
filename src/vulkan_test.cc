@@ -45,6 +45,10 @@ CheckVulkanValidationLayers(const std::vector<const char *> &requested_layers) {
   // Check available validation layers.
   std::vector<VkLayerProperties> available_layers;
   VK_GET_PROPERTIES_NC(vkEnumerateInstanceLayerProperties, available_layers);
+  printf("Got the following validation layers:\n");
+  for (const auto& layer : available_layers) {
+    printf("%s: %s\n", layer.layerName, layer.description);
+  }
   if (available_layers.empty())
     return false;
 
