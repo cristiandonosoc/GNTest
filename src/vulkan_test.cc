@@ -22,54 +22,6 @@ bool kValidationLayersEnabled = true;
 
 using namespace warhol;
 
-Status
-GetVulkanExtensions(SDL_Window* window, std::vector<const char*>* extensions) {
-  // Get the extensions needed by SDL
-  VK_GET_PROPERTIES(SDL_Vulkan_GetInstanceExtensions, window, (*extensions));
-  if (extensions->empty())
-    return Status("Could not get SDL required extensions");
-
-
-  // Extra ones
-  if (kValidationLayersEnabled) {
-    extensions->push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-  }
-
-  return Status::Ok();
-}
-
-// Checks that the requested validation layers are present in the ones offered
-// by our Vulkan runtime.
-bool
-CheckVulkanValidationLayers(const std::vector<const char *> &requested_layers) {
-  // Check available validation layers.
-  std::vector<VkLayerProperties> available_layers;
-  VK_GET_PROPERTIES_NC(vkEnumerateInstanceLayerProperties, available_layers);
-  printf("Got the following validation layers:\n");
-  for (const auto& layer : available_layers) {
-    printf("%s: %s\n", layer.layerName, layer.description);
-  }
-  if (available_layers.empty())
-    return false;
-
-  // We check that the requested layers exist.
-  for (const char* requested_layer : requested_layers) {
-    bool layer_found = false;
-
-    for (const auto& layer : available_layers) {
-      if (strcmp(requested_layer, layer.layerName) == 0) {
-        layer_found = true;
-        break;
-      }
-    }
-
-    if (!layer_found)
-      return false;
-  }
-
-  return true;
-};
-
 static VKAPI_ATTR VkBool32 VKAPI_CALL
 VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
                 VkDebugUtilsMessageTypeFlagsEXT type,
@@ -95,8 +47,13 @@ SetupVulkanInstance(SDL_Window* window, VulkanContext* context) {
   app_info.apiVersion         = VK_API_VERSION_1_1;
 
   std::vector<const char*> extensions;
-  Status res = GetVulkanExtensions(window, &extensions);
-  if (!res.ok()) return res;
+  Status res = GetSDLValidationLayers(window, &extensions);
+  if (!res.ok())
+    return res;
+
+  // Extra ones
+  if (kValidationLayersEnabled)
+    extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
   VkInstanceCreateInfo create_info    = {};
   create_info.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -109,7 +66,7 @@ SetupVulkanInstance(SDL_Window* window, VulkanContext* context) {
   std::vector<const char*> validation_layers;
   if (kValidationLayersEnabled) {
     validation_layers.push_back("VK_LAYER_LUNARG_standard_validation");
-    if (!CheckVulkanValidationLayers(validation_layers))
+    if (!CheckRequiredLayers(validation_layers))
       return Status("Not all requested validation layers are available");
 
     create_info.enabledLayerCount   = (uint32_t)validation_layers.size();
@@ -158,8 +115,8 @@ SetupVulkanDevices(VulkanContext* context) {
     printf("Type: %s\n", VulkanEnumToString(properties.deviceType));
     printf("API Version: %u\n", properties.apiVersion);
     printf("Driver Version: %u\n", properties.driverVersion);
-    printf("Vendor ID: %u\n", properties.vendorID);
-    printf("Device ID: %u\n", properties.deviceID);
+    printf("Vendor ID: %x\n", properties.vendorID);
+    printf("Device ID: %x\n", properties.deviceID);
 
     /* VkPhysicalDeviceFeatures features; */
     /* vkGetPhysicalDeviceFeatures(device, &features); */

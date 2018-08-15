@@ -11,6 +11,7 @@ AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: Inline
 AlwaysBreakAfterReturnType: TopLevel
+AllowShortIfStatementsOnASingleLine: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 # FixNamespaceComments: true
 # IncludeBlocks: Preserve
