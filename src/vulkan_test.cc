@@ -15,9 +15,9 @@
 #include "vulkan_utils.h"
 
 #ifdef NDEBUG
-bool kValidationLayersEnabled = false;
+bool kDebug = false;
 #else
-bool kValidationLayersEnabled = true;
+bool kDebug = true;
 #endif
 
 using namespace warhol;
@@ -52,8 +52,11 @@ int main() {
       return 1;
     }
 
-    // Validation layers
-    if (kValidationLayersEnabled) {
+    if (kDebug) {
+      // Add debug extensions.
+      context.extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+      // Add validation layers
       context.validation_layers.push_back(
           "VK_LAYER_LUNARG_standard_validation");
     }
