@@ -101,7 +101,6 @@ SetupVulkanPhysicalDevices(VulkanContext* context) {
 
   // Enumarate device properties.
   printf("Found %zu physical devices:\n", devices.size());
-  std::vector<VkPhysicalDevice> suitable_devices;
   for (auto& device : devices) {
     PhysicalDeviceContext pd_context;
     pd_context.handle = device;
@@ -119,6 +118,7 @@ SetupVulkanPhysicalDevices(VulkanContext* context) {
     // We setup the queue families data for each device.
     VK_GET_PROPERTIES(vkGetPhysicalDeviceQueueFamilyProperties, device,
                       (pd_context.qf_properties));
+    context->physical_devices.push_back(std::move(pd_context));
   }
 
   if (context->physical_devices.empty())
@@ -159,7 +159,7 @@ SetupVulkanLogicalDevices(VulkanContext* context) {
   dci.pEnabledFeatures = &features;
   // Setup the validation layers.
   dci.enabledLayerCount = (uint32_t)context->validation_layers.size();
-  dci.ppEnabledExtensionNames = context->validation_layers.data();
+  dci.ppEnabledLayerNames = context->validation_layers.data();
 
   VkResult res = vkCreateDevice(pd_context.handle, &dci, nullptr,
                                 &ld_context.handle);

@@ -82,6 +82,8 @@ int main() {
              res.err_msg().c_str());
       return 1;
     }
+
+    printf("SUCCESSFULLY CREATED LOGICAL DEVICE!!!!!!!\n");
   }
 
   SDL_DestroyWindow(window);
