@@ -24,11 +24,14 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
   return VK_FALSE;
 }
 
+
+
 }  // namespace
 
 // Context struct --------------------------------------------------------------
 
-VulkanContext::~VulkanContext() {
+InstanceContext::InstanceContext() = default;
+InstanceContext::~InstanceContext() {
   if (handle == VK_NULL_HANDLE)
     return;
 
@@ -36,18 +39,28 @@ VulkanContext::~VulkanContext() {
   if (debug_messenger_handle != VK_NULL_HANDLE)
     DestroyDebugUtilsMessengerEXT(handle, debug_messenger_handle, nullptr);
 
+  if (surface != VK_NULL_HANDLE)
+    vkDestroySurfaceKHR(handle, surface, nullptr);
+
   vkDestroyInstance(handle, nullptr);
 }
+InstanceContext::InstanceContext(InstanceContext&&) = default;
+InstanceContext& InstanceContext::operator=(InstanceContext&&) = default;
 
+LogicalDeviceContext::LogicalDeviceContext() = default;
 LogicalDeviceContext::~LogicalDeviceContext() {
   if (handle != VK_NULL_HANDLE)
     vkDestroyDevice(handle, nullptr);
 }
 
+LogicalDeviceContext::LogicalDeviceContext(LogicalDeviceContext&&) = default;
+LogicalDeviceContext&
+LogicalDeviceContext::operator=(LogicalDeviceContext&&) = default;
+
 // Device management -----------------------------------------------------------
 
 Status
-SetupSDLVulkanInstance(VulkanContext* context) {
+SetupSDLVulkanInstance(InstanceContext* instance) {
   // Vulkan application info.
   VkApplicationInfo app_info = {};
   app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -61,17 +74,17 @@ SetupSDLVulkanInstance(VulkanContext* context) {
   VkInstanceCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   create_info.pApplicationInfo = &app_info;
-  create_info.enabledExtensionCount = (uint32_t)context->extensions.size();
-  create_info.ppEnabledExtensionNames = context->extensions.data();
+  create_info.enabledExtensionCount = (uint32_t)instance->extensions.size();
+  create_info.ppEnabledExtensionNames = instance->extensions.data();
 
-  if (!CheckRequiredLayers(context->validation_layers))
+  if (!CheckRequiredLayers(instance->validation_layers))
     return Status("Not all requested validation layers are available");
 
-  create_info.enabledLayerCount = (uint32_t)context->validation_layers.size();
-  create_info.ppEnabledLayerNames = context->validation_layers.data();
+  create_info.enabledLayerCount = (uint32_t)instance->validation_layers.size();
+  create_info.ppEnabledLayerNames = instance->validation_layers.data();
 
   // Finally create the VkInstance.
-  VkResult result = vkCreateInstance(&create_info, nullptr, &context->handle);
+  VkResult result = vkCreateInstance(&create_info, nullptr, &instance->handle);
   VK_RETURN_IF_ERROR(result);
 
   // Setup debug messenger.
@@ -89,15 +102,15 @@ SetupSDLVulkanInstance(VulkanContext* context) {
   messenger_info.pUserData = nullptr;
 
   Status status =
-      CreateDebugUtilsMessengerEXT(context->handle, &messenger_info, nullptr,
-                                   &context->debug_messenger_handle);
+      CreateDebugUtilsMessengerEXT(instance->handle, &messenger_info, nullptr,
+                                   &instance->debug_messenger_handle);
   return status;
 }
 
 Status
-SetupVulkanPhysicalDevices(VulkanContext* context) {
+SetupVulkanPhysicalDevices(InstanceContext* instance) {
   std::vector<VkPhysicalDevice> devices;
-  VK_GET_PROPERTIES(vkEnumeratePhysicalDevices, context->handle, devices);
+  VK_GET_PROPERTIES(vkEnumeratePhysicalDevices, instance->handle, devices);
 
   // Enumarate device properties.
   printf("Found %zu physical devices:\n", devices.size());
@@ -118,56 +131,80 @@ SetupVulkanPhysicalDevices(VulkanContext* context) {
     // We setup the queue families data for each device.
     VK_GET_PROPERTIES(vkGetPhysicalDeviceQueueFamilyProperties, device,
                       (pd_context.qf_properties));
-    context->physical_devices.push_back(std::move(pd_context));
+    instance->physical_devices.push_back(std::move(pd_context));
   }
 
-  if (context->physical_devices.empty())
+  if (instance->physical_devices.empty())
     return Status("No suitable device found");
   return Status::Ok();
 }
 
 Status
-SetupVulkanLogicalDevices(VulkanContext* context) {
-  LogicalDeviceContext ld_context;
-  PhysicalDeviceContext& pd_context = context->physical_devices.back();
+SetupVulkanLogicalDevices(InstanceContext* instance) {
+  LogicalDeviceContext device;
+  PhysicalDeviceContext& physical_device = instance->physical_devices.back();
   // For now we get the graphical queue.
   int i = 0;
-  for (auto& qfp : pd_context.qf_properties) {
-    if (qfp.queueCount > 0 && qfp.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-      ld_context.graphics_queue_index = i;
+  for (auto& qfp : physical_device.qf_properties) {
+    if (qfp.queueCount == 0)
+      continue;
+
+    // Get the graphical queue.
+    if (qfp.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+      device.graphics_queue_index = i;
+
+    // Get the present queue.
+    VkBool32 present_support = false;
+    vkGetPhysicalDeviceSurfaceSupportKHR(physical_device.handle, i,
+                                         instance->surface, &present_support);
+    if (present_support)
+      device.present_queue_index = i;
+
     i++;
   }
 
-  if (ld_context.graphics_queue_index < 0)
+  if (device.graphics_queue_index < 0)
     return Status("Could not find a graphical queue");
+  if (device.present_queue_index < 0)
+    return Status("Could not find a present queue");
 
-  // Setup the device queue info.
-  VkDeviceQueueCreateInfo dqci = {};
-  dqci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-  dqci.queueFamilyIndex = ld_context.graphics_queue_index;
-  dqci.queueCount = 1;
-  float priority = 1.0f;
-  dqci.pQueuePriorities = &priority;
+  // The device queues to set.
+  float queue_priority = 1.0f;
+  VkDeviceQueueCreateInfo qcreate_infos[2] = {};
+
+  // Setup the graphics queue info.
+  qcreate_infos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+  qcreate_infos[0].queueFamilyIndex = device.graphics_queue_index;
+  qcreate_infos[0].queueCount = 1;
+  qcreate_infos[0].pQueuePriorities = &queue_priority;
+  qcreate_infos[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+  qcreate_infos[1].queueFamilyIndex = device.graphics_queue_index;
+  qcreate_infos[1].queueCount = 1;
+  qcreate_infos[1].pQueuePriorities = &queue_priority;
+
+  // Setup the present queue info.
 
   // Setup the logical device features.
   VkDeviceCreateInfo dci = {};
   dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-  dci.queueCreateInfoCount = 1;
-  dci.pQueueCreateInfos = &dqci;
+  dci.queueCreateInfoCount = 2;
+  dci.pQueueCreateInfos = qcreate_infos;
   // Set the enabled features.
   VkPhysicalDeviceFeatures features;
   dci.pEnabledFeatures = &features;
   // Setup the validation layers.
-  dci.enabledLayerCount = (uint32_t)context->validation_layers.size();
-  dci.ppEnabledLayerNames = context->validation_layers.data();
+  dci.enabledLayerCount = (uint32_t)instance->validation_layers.size();
+  dci.ppEnabledLayerNames = instance->validation_layers.data();
 
-  VkResult res = vkCreateDevice(pd_context.handle, &dci, nullptr,
-                                &ld_context.handle);
+  VkResult res = vkCreateDevice(physical_device.handle, &dci, nullptr,
+                                &device.handle);
   VK_RETURN_IF_ERROR(res);
 
   // Get the graphics queue
-  vkGetDeviceQueue(ld_context.handle, ld_context.graphics_queue_index, 0,
-                   &ld_context.graphics_queue);
+  vkGetDeviceQueue(device.handle, device.graphics_queue_index, 0,
+                   &device.graphics_queue);
+
+  physical_device.logical_devices.push_back(std::move(device));
 
   return Status::Ok();
 }
@@ -175,13 +212,13 @@ SetupVulkanLogicalDevices(VulkanContext* context) {
 // Validation Layers -----------------------------------------------------------
 
 Status
-GetSDLExtensions(SDL_Window* window, VulkanContext* context) {
+GetSDLExtensions(SDL_Window* window, InstanceContext* instance) {
   VK_GET_PROPERTIES(SDL_Vulkan_GetInstanceExtensions, window,
-                    (context->extensions));
-  if (context->extensions.empty())
+                    (instance->extensions));
+  if (instance->extensions.empty())
     return Status("Could not get SDL required extensions");
 
-  for (const char* ext : context->extensions)
+  for (const char* ext : instance->extensions)
     printf("EXTENSION: %s\n", ext);
   return Status::Ok();
 }

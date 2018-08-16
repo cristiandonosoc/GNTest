@@ -43,10 +43,10 @@ int main() {
 
   {
     Status res;
-    VulkanContext context;
+    InstanceContext instance;
 
     // Extensions
-    res = GetSDLExtensions(window, &context);
+    res = GetSDLExtensions(window, &instance);
     if (!res.ok()) {
       printf("Could not get SDL extensions: %s\n", res.err_msg().c_str());
       return 1;
@@ -54,29 +54,35 @@ int main() {
 
     if (kDebug) {
       // Add debug extensions.
-      context.extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+      instance.extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
       // Add validation layers
-      context.validation_layers.push_back(
+      instance.validation_layers.push_back(
           "VK_LAYER_LUNARG_standard_validation");
     }
 
     // We create the VkInstance.
-    res = SetupSDLVulkanInstance(&context);
+    res = SetupSDLVulkanInstance(&instance);
     if (!res.ok()) {
       printf("Error setting vulkan instance: %s\n", res.err_msg().c_str());
       return 1;
     }
 
+    // Create the rendering surface.
+    if (!SDL_Vulkan_CreateSurface(window, instance.handle, &instance.surface)) {
+      printf("Could not create surface: %s\n", SDL_GetError());
+      return 1;
+    }
+
     // Physical Devices.
-    res = SetupVulkanPhysicalDevices(&context);
+    res = SetupVulkanPhysicalDevices(&instance);
     if (!res.ok()) {
       printf("Error setting vulkan physical devices: %s\n",
              res.err_msg().c_str());
       return 1;
     }
 
-    res = SetupVulkanLogicalDevices(&context);
+    res = SetupVulkanLogicalDevices(&instance);
     if (!res.ok()) {
       printf("Error setting vulkan logical devices: %s\n",
              res.err_msg().c_str());

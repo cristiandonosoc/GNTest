@@ -20,18 +20,24 @@ struct LogicalDeviceContext;
 
 // Overall context to run a vulkan app.
 // Will destroy the managed resources (instance, messengers) on destruction.
-struct VulkanContext {
-  ~VulkanContext();
+struct InstanceContext {
+  InstanceContext();
+  ~InstanceContext();
 
+  // Handles
   VkInstance handle = VK_NULL_HANDLE;
+  VkSurfaceKHR surface = VK_NULL_HANDLE;
+  VkDebugUtilsMessengerEXT debug_messenger_handle = VK_NULL_HANDLE;
+
   // Extensions to be added to the VkInstance
   std::vector<const char*> extensions;
   // List of validation layers.
   std::vector<const char*> validation_layers;
 
-  VkDebugUtilsMessengerEXT debug_messenger_handle = VK_NULL_HANDLE;
-
   std::vector<PhysicalDeviceContext> physical_devices;
+
+  DELETE_COPY_AND_ASSIGN(InstanceContext);
+  DECLARE_MOVE_AND_ASSIGN(InstanceContext);
 };
 
 struct PhysicalDeviceContext {
@@ -44,28 +50,37 @@ struct PhysicalDeviceContext {
 };
 
 struct LogicalDeviceContext {
+  LogicalDeviceContext();
   ~LogicalDeviceContext();
 
   VkDevice handle = VK_NULL_HANDLE;
+
+  // Queue in charge of the graphical commands.
   int graphics_queue_index = -1;
   VkQueue graphics_queue = VK_NULL_HANDLE;
+
+  // Queue in charge of outputting to the system surface/window.
+  int present_queue_index = -1;
+
+  DELETE_COPY_AND_ASSIGN(LogicalDeviceContext);
+  DECLARE_MOVE_AND_ASSIGN(LogicalDeviceContext);
 };
 
-// Vulkan Setuo ----------------------------------------------------------------
+// Vulkan Setup ----------------------------------------------------------------
 
 // Creates an instance. The extensions and validation layers should be already
 // set at this point.
-Status SetupSDLVulkanInstance(VulkanContext*);
+Status SetupSDLVulkanInstance(InstanceContext*);
 
 // Setups the logical devices and bionds the first one to the context.
-Status SetupVulkanPhysicalDevices(VulkanContext*);
+Status SetupVulkanPhysicalDevices(InstanceContext*);
 
-Status SetupVulkanLogicalDevices(VulkanContext*);
+Status SetupVulkanLogicalDevices(InstanceContext*);
 
 // Validation Layers -----------------------------------------------------------
 
 // Gets the extensions SDL needs to hook up correctly with vulkan.
-Status GetSDLExtensions(SDL_Window*, VulkanContext*);
+Status GetSDLExtensions(SDL_Window*, InstanceContext*);
 
 // Validate that the requested layers are provided by the vulkan implementation.
 bool CheckRequiredLayers(const std::vector<const char*>& requested_layers);
