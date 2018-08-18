@@ -79,7 +79,7 @@ SetupSDLVulkanInstance(InstanceContext* instance) {
   return status;
 }
 
-// Logical Device --------------------------------------------------------------
+// Physical Device -------------------------------------------------------------
 
 Status
 SetupVulkanPhysicalDevices(InstanceContext* instance) {
@@ -89,23 +89,45 @@ SetupVulkanPhysicalDevices(InstanceContext* instance) {
   // Enumarate device properties.
   printf("Found %zu physical devices:\n", devices.size());
   for (auto& device : devices) {
-    auto pd_context = std::make_unique<PhysicalDeviceContext>();
-    pd_context->handle = device;
-    vkGetPhysicalDeviceProperties(device, &pd_context->properties);
-    vkGetPhysicalDeviceFeatures(device, &pd_context->features);
+    auto physical_device = std::make_unique<PhysicalDeviceContext>();
+    physical_device->handle = device;
+    vkGetPhysicalDeviceProperties(device, &physical_device->properties);
+    vkGetPhysicalDeviceFeatures(device, &physical_device->features);
 
     printf("--------------------------------------------\n");
-    printf("Device Name: %s\n", pd_context->properties.deviceName);
-    printf("Type: %s\n", VulkanEnumToString(pd_context->properties.deviceType));
-    printf("API Version: %u\n", pd_context->properties.apiVersion);
-    printf("Driver Version: %u\n", pd_context->properties.driverVersion);
-    printf("Vendor ID: %x\n", pd_context->properties.vendorID);
-    printf("Device ID: %x\n", pd_context->properties.deviceID);
+    printf("Device Name: %s\n", physical_device->properties.deviceName);
+    printf("Type: %s\n", VulkanEnumToString(physical_device->properties.deviceType));
+    printf("API Version: %u\n", physical_device->properties.apiVersion);
+    printf("Driver Version: %u\n", physical_device->properties.driverVersion);
+    printf("Vendor ID: %x\n", physical_device->properties.vendorID);
+    printf("Device ID: %x\n", physical_device->properties.deviceID);
+    fflush(stdout);
 
     // We setup the queue families data for each device.
     VK_GET_PROPERTIES(vkGetPhysicalDeviceQueueFamilyProperties, device,
-                      (pd_context->qf_properties));
-    instance->physical_devices.push_back(std::move(pd_context));
+                      (physical_device->qf_properties));
+
+    // Get the queues
+    int i = 0;
+    for (auto& qfp : physical_device->qf_properties) {
+      if (qfp.queueCount == 0)
+        continue;
+
+      // Get the graphical queue.
+      if (qfp.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        physical_device->graphics_queue_index = i;
+
+      // Get the present queue.
+      VkBool32 present_support = false;
+      vkGetPhysicalDeviceSurfaceSupportKHR(physical_device->handle, i,
+                                           instance->surface, &present_support);
+      if (present_support)
+        physical_device->present_queue_index = i;
+
+      i++;
+    }
+
+    instance->physical_devices.push_back(std::move(physical_device));
   }
 
   if (instance->physical_devices.empty())
@@ -115,72 +137,90 @@ SetupVulkanPhysicalDevices(InstanceContext* instance) {
 
 // Logical Device --------------------------------------------------------------
 
-Status
-SetupVulkanLogicalDevices(InstanceContext* instance) {
-  auto device = std::make_unique<LogicalDeviceContext>();
-  auto& physical_device = instance->physical_devices.back();
-  // For now we get the graphical queue.
-  int i = 0;
-  for (auto& qfp : physical_device->qf_properties) {
-    if (qfp.queueCount == 0)
-      continue;
+namespace {
 
-    // Get the graphical queue.
-    if (qfp.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-      device->graphics_queue_index = i;
+bool
+IsSuitablePhysicalDevice(
+    const PhysicalDeviceContext& physical_device,
+    const std::vector<const char*>& requested_extensions) {
+  if (physical_device.graphics_queue_index < 0 ||
+      physical_device.present_queue_index < 0)
+    return false;
 
-    // Get the present queue.
-    VkBool32 present_support = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(physical_device->handle, i,
-                                         instance->surface, &present_support);
-    if (present_support)
-      device->present_queue_index = i;
-
-    i++;
+  if (!CheckPhysicalDeviceRequiredExtensions(physical_device,
+                                             requested_extensions)) {
+    return false;
   }
 
-  if (device->graphics_queue_index < 0)
-    return Status("Could not find a graphical queue");
-  if (device->present_queue_index < 0)
-    return Status("Could not find a present queue");
+  return true;
+}
+
+}  // namespace
+
+Status
+SetupVulkanLogicalDevices(
+    InstanceContext* instance,
+    const std::vector<const char*>& requested_extensions) {
+  // We check for valid physical devices.
+  // For now we pick the first one.
+  PhysicalDeviceContext* physical_device = nullptr;
+  for (const auto& pd : instance->physical_devices) {
+    if (IsSuitablePhysicalDevice(*pd, requested_extensions)) {
+      physical_device = pd.get();
+      break;
+    }
+  }
+  if (!physical_device)
+    return Status("No suitable physical device found!");
+
+  // We now setup the device
+  auto device = std::make_unique<LogicalDeviceContext>();
 
   // The device ->ueues to set.
   float queue_priority = 1.0f;
-  VkDeviceQueueCreateInfo qcreate_infos[2] = {};
+  VkDeviceQueueCreateInfo qcreate_infos[2];
 
-  // Setup the graphics queue info.
+  // Setup the graphics queue.
+  qcreate_infos[0] = {};
   qcreate_infos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-  qcreate_infos[0].queueFamilyIndex = device->graphics_queue_index;
+  qcreate_infos[0].queueFamilyIndex = physical_device->graphics_queue_index;
   qcreate_infos[0].queueCount = 1;
   qcreate_infos[0].pQueuePriorities = &queue_priority;
+  // Setup the present queue.
+  qcreate_infos[1] = {};
   qcreate_infos[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-  qcreate_infos[1].queueFamilyIndex = device->graphics_queue_index;
+  qcreate_infos[1].queueFamilyIndex = physical_device->present_queue_index;
   qcreate_infos[1].queueCount = 1;
   qcreate_infos[1].pQueuePriorities = &queue_priority;
-
-  // Setup the present queue info.
 
   // Setup the logical device features.
   VkDeviceCreateInfo dci = {};
   dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
   dci.queueCreateInfoCount = 2;
   dci.pQueueCreateInfos = qcreate_infos;
-  // Set the enabled features.
-  /* dci.pEnabledFeatures = &physical_device->features; */
+  // Extensions.
+  dci.enabledExtensionCount = (uint32_t)requested_extensions.size();
+  dci.ppEnabledExtensionNames = requested_extensions.data();
+  // Features.
   // For now physical features are disabled.
+  /* dci.pEnabledFeatures = &physical_device->features; */
   VkPhysicalDeviceFeatures features = {};
   dci.pEnabledFeatures = &features;
-  // Setup the validation layers.
+  // Validation layers.
   dci.enabledLayerCount = (uint32_t)instance->validation_layers.size();
   dci.ppEnabledLayerNames = instance->validation_layers.data();
 
+  // Finally create the device.
   VkResult res = vkCreateDevice(physical_device->handle, &dci, nullptr,
                                 &device->handle);
   VK_RETURN_IF_ERROR(res);
 
-  // Get the graphics queue
-  vkGetDeviceQueue(device->handle, device->graphics_queue_index, 0,
+  // Get the graphics queue.
+  vkGetDeviceQueue(device->handle, physical_device->graphics_queue_index, 0,
                    &device->graphics_queue);
+  // Get the present queue.
+  vkGetDeviceQueue(device->handle, physical_device->present_queue_index, 0,
+                   &device->present_queue);
 
   physical_device->logical_devices.push_back(std::move(device));
 
@@ -199,6 +239,43 @@ GetSDLExtensions(SDL_Window* window, InstanceContext* instance) {
   for (const char* ext : instance->extensions)
     printf("EXTENSION: %s\n", ext);
   return Status::Ok();
+}
+
+bool
+CheckPhysicalDeviceRequiredExtensions(
+    const PhysicalDeviceContext& physical_device,
+    const std::vector<const char*>& requested_extensions) {
+  if (requested_extensions.empty())
+    return true;
+
+  // Get the the extensions the physical device actually offers.
+  uint32_t extension_count = 0;
+  vkEnumerateDeviceExtensionProperties(physical_device.handle,
+                                       nullptr,
+                                       &extension_count,
+                                       nullptr);
+  std::vector<VkExtensionProperties> available_extensions;
+  vkEnumerateDeviceExtensionProperties(physical_device.handle,
+                                       nullptr,
+                                       &extension_count,
+                                       available_extensions.data());
+
+  // All extensions should be present.
+  for (const char* requested_extension : requested_extensions) {
+    bool found = false;
+    for (const auto& available_extension : available_extensions) {
+      if (strcmp(available_extension.extensionName,
+                 requested_extension) == 0) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found)
+      return false;
+  }
+
+  return true;
 }
 
 bool

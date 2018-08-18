@@ -24,12 +24,18 @@ InstanceContext::~InstanceContext() {
     vkDestroySurfaceKHR(handle, surface, nullptr);
 
   vkDestroyInstance(handle, nullptr);
+
+  printf("%s\n", PRETTY_FUNCTION);
+  fflush(stdout);
 }
 
 LogicalDeviceContext::LogicalDeviceContext() = default;
 LogicalDeviceContext::~LogicalDeviceContext() {
   if (handle != VK_NULL_HANDLE)
     vkDestroyDevice(handle, nullptr);
+
+  printf("%s\n", PRETTY_FUNCTION);
+  fflush(stdout);
 }
 
 }  // namespace warhol

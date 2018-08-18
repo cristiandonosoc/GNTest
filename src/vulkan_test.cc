@@ -62,6 +62,7 @@ int main() {
           "VK_LAYER_LUNARG_standard_validation");
     }
 
+
     // We create the VkInstance.
     res = SetupSDLVulkanInstance(&instance);
     if (!res.ok()) {
@@ -83,13 +84,16 @@ int main() {
       return 1;
     }
 
-    res = SetupVulkanLogicalDevices(&instance);
+    res = SetupVulkanLogicalDevices(&instance, {});
     if (!res.ok()) {
       printf("Error setting vulkan logical devices: %s\n",
              res.err_msg().c_str());
       return 1;
     }
   }
+
+  printf("Logical device set\n");
+  fflush(stdout);
 
   SDL_DestroyWindow(window);
   SDL_Quit();

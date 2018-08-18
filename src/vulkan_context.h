@@ -31,6 +31,8 @@ struct InstanceContext {
   // List of validation layers.
   std::vector<const char*> validation_layers;
 
+  // The surface to where we will be drawing.
+
   // Store by unique ptr so that the move is trivial.
   // Otherwise care would be needed about moving the handles, as some compilers
   // won't bother invalidating the handle.
@@ -46,6 +48,9 @@ struct PhysicalDeviceContext {
   VkPhysicalDeviceFeatures features;
   std::vector<VkQueueFamilyProperties> qf_properties;
 
+  int graphics_queue_index = -1;
+  int present_queue_index = -1;
+
   // Store by unique ptr so that the move is trivial.
   // Otherwise care would be needed about moving the handles, as some compilers
   // won't bother invalidating the handle.
@@ -59,11 +64,10 @@ struct LogicalDeviceContext {
   VkDevice handle = VK_NULL_HANDLE;
 
   // Queue in charge of the graphical commands.
-  int graphics_queue_index = -1;
   VkQueue graphics_queue = VK_NULL_HANDLE;
 
   // Queue in charge of outputting to the system surface/window.
-  int present_queue_index = -1;
+  VkQueue present_queue = VK_NULL_HANDLE;
 
   DELETE_COPY_AND_ASSIGN(LogicalDeviceContext);
 };

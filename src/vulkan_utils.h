@@ -14,6 +14,7 @@ struct SDL_Window;
 namespace warhol {
 
 struct InstanceContext;
+struct PhysicalDeviceContext;
 
 // Vulkan Setup ----------------------------------------------------------------
 
@@ -24,15 +25,25 @@ Status SetupSDLVulkanInstance(InstanceContext*);
 // Setups the logical devices and bionds the first one to the context.
 Status SetupVulkanPhysicalDevices(InstanceContext*);
 
-Status SetupVulkanLogicalDevices(InstanceContext*);
+Status
+SetupVulkanLogicalDevices(InstanceContext*,
+                          const std::vector<const char*>& extensions);
 
 // Validation Layers -----------------------------------------------------------
 
 // Gets the extensions SDL needs to hook up correctly with vulkan.
 Status GetSDLExtensions(SDL_Window*, InstanceContext*);
 
+// Validate that the requested extensions are provided by the vulkan
+// implementation.
+bool
+CheckPhysicalDeviceRequiredExtensions(
+    const PhysicalDeviceContext&,
+    const std::vector<const char*>& requested_extensions);
+
 // Validate that the requested layers are provided by the vulkan implementation.
 bool CheckRequiredLayers(const std::vector<const char*>& requested_layers);
+
 
 
 // GetInstanceProcAddr calls ---------------------------------------------------
