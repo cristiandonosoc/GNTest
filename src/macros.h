@@ -13,6 +13,14 @@
 #define PRINTF_FORMAT(format_param, dots_param)
 #endif
 
+#if defined(_MSC_VER)
+  #define PRETTY_FUNCTION __FUNCTION__
+#elif defined(__GNUC__) || defined(__clang__)
+  #define PRETTY_FUNCTION __PRETTY_FUNCTION__
+#else
+  #define PRETTY_FUNCTION "__PRETTY_FUNCTION__ Not supported in this compiler"
+#endif
+
 #define DECLARE_COPY_AND_ASSIGN(class_name) \
   class_name(const class_name&);            \
   class_name& operator=(const class_name&);

@@ -112,8 +112,10 @@ config("vulkan_config") {
   }
 }
 
-source_set("vulkan_utils") {
+source_set("vulkan_lib") {
   sources = [
+    "vulkan_context.cc",
+    "vulkan_context.h",
     "vulkan_utils.cc",
     "vulkan_utils.h",
   ]
@@ -127,7 +129,7 @@ executable("vulkan_test") {
   configs += [ ":vulkan_config", ":sdl2_config" ]
   deps = [
     ":utils",
-    ":vulkan_utils",
+    ":vulkan_lib",
   ]
 }
 

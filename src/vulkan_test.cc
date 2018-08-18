@@ -12,6 +12,7 @@
 #include <vulkan/vulkan.h>
 
 #include "status.h"
+#include "vulkan_context.h"
 #include "vulkan_utils.h"
 
 #ifdef NDEBUG
@@ -88,8 +89,6 @@ int main() {
              res.err_msg().c_str());
       return 1;
     }
-
-    printf("SUCCESSFULLY CREATED LOGICAL DEVICE!!!!!!!\n");
   }
 
   SDL_DestroyWindow(window);

@@ -2,9 +2,12 @@
 // This code has a BSD license. See LICENSE.
 
 #include <assert.h>
+#include <string.h>
 
 #include <SDL2/SDL_vulkan.h>
 
+#include "macros.h"
+#include "vulkan_context.h"
 #include "vulkan_utils.h"
 
 namespace warhol {
@@ -24,40 +27,9 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
   return VK_FALSE;
 }
 
-
-
 }  // namespace
 
-// Context struct --------------------------------------------------------------
-
-InstanceContext::InstanceContext() = default;
-InstanceContext::~InstanceContext() {
-  if (handle == VK_NULL_HANDLE)
-    return;
-
-  // IMPORTANT: Keep the correct dependency order of destruction.
-  if (debug_messenger_handle != VK_NULL_HANDLE)
-    DestroyDebugUtilsMessengerEXT(handle, debug_messenger_handle, nullptr);
-
-  if (surface != VK_NULL_HANDLE)
-    vkDestroySurfaceKHR(handle, surface, nullptr);
-
-  vkDestroyInstance(handle, nullptr);
-}
-InstanceContext::InstanceContext(InstanceContext&&) = default;
-InstanceContext& InstanceContext::operator=(InstanceContext&&) = default;
-
-LogicalDeviceContext::LogicalDeviceContext() = default;
-LogicalDeviceContext::~LogicalDeviceContext() {
-  if (handle != VK_NULL_HANDLE)
-    vkDestroyDevice(handle, nullptr);
-}
-
-LogicalDeviceContext::LogicalDeviceContext(LogicalDeviceContext&&) = default;
-LogicalDeviceContext&
-LogicalDeviceContext::operator=(LogicalDeviceContext&&) = default;
-
-// Device management -----------------------------------------------------------
+// VkInstance ------------------------------------------------------------------
 
 Status
 SetupSDLVulkanInstance(InstanceContext* instance) {
@@ -107,6 +79,8 @@ SetupSDLVulkanInstance(InstanceContext* instance) {
   return status;
 }
 
+// Logical Device --------------------------------------------------------------
+
 Status
 SetupVulkanPhysicalDevices(InstanceContext* instance) {
   std::vector<VkPhysicalDevice> devices;
@@ -115,22 +89,22 @@ SetupVulkanPhysicalDevices(InstanceContext* instance) {
   // Enumarate device properties.
   printf("Found %zu physical devices:\n", devices.size());
   for (auto& device : devices) {
-    PhysicalDeviceContext pd_context;
-    pd_context.handle = device;
-    vkGetPhysicalDeviceProperties(device, &pd_context.properties);
-    vkGetPhysicalDeviceFeatures(device, &pd_context.features);
+    auto pd_context = std::make_unique<PhysicalDeviceContext>();
+    pd_context->handle = device;
+    vkGetPhysicalDeviceProperties(device, &pd_context->properties);
+    vkGetPhysicalDeviceFeatures(device, &pd_context->features);
 
     printf("--------------------------------------------\n");
-    printf("Device Name: %s\n", pd_context.properties.deviceName);
-    printf("Type: %s\n", VulkanEnumToString(pd_context.properties.deviceType));
-    printf("API Version: %u\n", pd_context.properties.apiVersion);
-    printf("Driver Version: %u\n", pd_context.properties.driverVersion);
-    printf("Vendor ID: %x\n", pd_context.properties.vendorID);
-    printf("Device ID: %x\n", pd_context.properties.deviceID);
+    printf("Device Name: %s\n", pd_context->properties.deviceName);
+    printf("Type: %s\n", VulkanEnumToString(pd_context->properties.deviceType));
+    printf("API Version: %u\n", pd_context->properties.apiVersion);
+    printf("Driver Version: %u\n", pd_context->properties.driverVersion);
+    printf("Vendor ID: %x\n", pd_context->properties.vendorID);
+    printf("Device ID: %x\n", pd_context->properties.deviceID);
 
     // We setup the queue families data for each device.
     VK_GET_PROPERTIES(vkGetPhysicalDeviceQueueFamilyProperties, device,
-                      (pd_context.qf_properties));
+                      (pd_context->qf_properties));
     instance->physical_devices.push_back(std::move(pd_context));
   }
 
@@ -139,46 +113,48 @@ SetupVulkanPhysicalDevices(InstanceContext* instance) {
   return Status::Ok();
 }
 
+// Logical Device --------------------------------------------------------------
+
 Status
 SetupVulkanLogicalDevices(InstanceContext* instance) {
-  LogicalDeviceContext device;
-  PhysicalDeviceContext& physical_device = instance->physical_devices.back();
+  auto device = std::make_unique<LogicalDeviceContext>();
+  auto& physical_device = instance->physical_devices.back();
   // For now we get the graphical queue.
   int i = 0;
-  for (auto& qfp : physical_device.qf_properties) {
+  for (auto& qfp : physical_device->qf_properties) {
     if (qfp.queueCount == 0)
       continue;
 
     // Get the graphical queue.
     if (qfp.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-      device.graphics_queue_index = i;
+      device->graphics_queue_index = i;
 
     // Get the present queue.
     VkBool32 present_support = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(physical_device.handle, i,
+    vkGetPhysicalDeviceSurfaceSupportKHR(physical_device->handle, i,
                                          instance->surface, &present_support);
     if (present_support)
-      device.present_queue_index = i;
+      device->present_queue_index = i;
 
     i++;
   }
 
-  if (device.graphics_queue_index < 0)
+  if (device->graphics_queue_index < 0)
     return Status("Could not find a graphical queue");
-  if (device.present_queue_index < 0)
+  if (device->present_queue_index < 0)
     return Status("Could not find a present queue");
 
-  // The device queues to set.
+  // The device ->ueues to set.
   float queue_priority = 1.0f;
   VkDeviceQueueCreateInfo qcreate_infos[2] = {};
 
   // Setup the graphics queue info.
   qcreate_infos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-  qcreate_infos[0].queueFamilyIndex = device.graphics_queue_index;
+  qcreate_infos[0].queueFamilyIndex = device->graphics_queue_index;
   qcreate_infos[0].queueCount = 1;
   qcreate_infos[0].pQueuePriorities = &queue_priority;
   qcreate_infos[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-  qcreate_infos[1].queueFamilyIndex = device.graphics_queue_index;
+  qcreate_infos[1].queueFamilyIndex = device->graphics_queue_index;
   qcreate_infos[1].queueCount = 1;
   qcreate_infos[1].pQueuePriorities = &queue_priority;
 
@@ -190,21 +166,23 @@ SetupVulkanLogicalDevices(InstanceContext* instance) {
   dci.queueCreateInfoCount = 2;
   dci.pQueueCreateInfos = qcreate_infos;
   // Set the enabled features.
-  VkPhysicalDeviceFeatures features;
+  /* dci.pEnabledFeatures = &physical_device->features; */
+  // For now physical features are disabled.
+  VkPhysicalDeviceFeatures features = {};
   dci.pEnabledFeatures = &features;
   // Setup the validation layers.
   dci.enabledLayerCount = (uint32_t)instance->validation_layers.size();
   dci.ppEnabledLayerNames = instance->validation_layers.data();
 
-  VkResult res = vkCreateDevice(physical_device.handle, &dci, nullptr,
-                                &device.handle);
+  VkResult res = vkCreateDevice(physical_device->handle, &dci, nullptr,
+                                &device->handle);
   VK_RETURN_IF_ERROR(res);
 
   // Get the graphics queue
-  vkGetDeviceQueue(device.handle, device.graphics_queue_index, 0,
-                   &device.graphics_queue);
+  vkGetDeviceQueue(device->handle, device->graphics_queue_index, 0,
+                   &device->graphics_queue);
 
-  physical_device.logical_devices.push_back(std::move(device));
+  physical_device->logical_devices.push_back(std::move(device));
 
   return Status::Ok();
 }

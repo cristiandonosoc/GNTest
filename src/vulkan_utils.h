@@ -13,58 +13,7 @@ struct SDL_Window;
 
 namespace warhol {
 
-// Context struct --------------------------------------------------------------
-
-struct PhysicalDeviceContext;
-struct LogicalDeviceContext;
-
-// Overall context to run a vulkan app.
-// Will destroy the managed resources (instance, messengers) on destruction.
-struct InstanceContext {
-  InstanceContext();
-  ~InstanceContext();
-
-  // Handles
-  VkInstance handle = VK_NULL_HANDLE;
-  VkSurfaceKHR surface = VK_NULL_HANDLE;
-  VkDebugUtilsMessengerEXT debug_messenger_handle = VK_NULL_HANDLE;
-
-  // Extensions to be added to the VkInstance
-  std::vector<const char*> extensions;
-  // List of validation layers.
-  std::vector<const char*> validation_layers;
-
-  std::vector<PhysicalDeviceContext> physical_devices;
-
-  DELETE_COPY_AND_ASSIGN(InstanceContext);
-  DECLARE_MOVE_AND_ASSIGN(InstanceContext);
-};
-
-struct PhysicalDeviceContext {
-  VkPhysicalDevice handle = VK_NULL_HANDLE;
-  VkPhysicalDeviceProperties properties;
-  VkPhysicalDeviceFeatures features;
-  std::vector<VkQueueFamilyProperties> qf_properties;
-
-  std::vector<LogicalDeviceContext> logical_devices;
-};
-
-struct LogicalDeviceContext {
-  LogicalDeviceContext();
-  ~LogicalDeviceContext();
-
-  VkDevice handle = VK_NULL_HANDLE;
-
-  // Queue in charge of the graphical commands.
-  int graphics_queue_index = -1;
-  VkQueue graphics_queue = VK_NULL_HANDLE;
-
-  // Queue in charge of outputting to the system surface/window.
-  int present_queue_index = -1;
-
-  DELETE_COPY_AND_ASSIGN(LogicalDeviceContext);
-  DECLARE_MOVE_AND_ASSIGN(LogicalDeviceContext);
-};
+struct InstanceContext;
 
 // Vulkan Setup ----------------------------------------------------------------
 
