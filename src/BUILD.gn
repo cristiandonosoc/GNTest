@@ -20,47 +20,6 @@ source_set("utils") {
   ]
 }
 
-source_set("socket") {
-  sources = [
-    "socket.cc",
-    "socket.h",
-  ]
-  deps = [
-    ":utils",
-  ]
-}
-
-config("win_socks") {
-  libs = [ "Ws2_32.lib" ]
-}
-
-executable("server") {
-  sources = [
-    "server_main.cc",
-  ]
-  configs += [ ":win_socks" ]
-  deps = [
-    ":socket",
-  ]
-}
-
-executable("client") {
-  sources = [
-    "client_main.cc",
-  ]
-  configs += [ ":win_socks" ]
-  deps = [
-    ":socket",
-  ]
-}
-
-executable("test") {
-  sources = [ "test_main.cc" ]
-  deps = [
-    ":utils",
-  ]
-}
-
 config("sdl2_config") {
   if (target_os == "win" && compiler == "msvc") {
     include_dirs = [ "../includelnk" ]
@@ -97,8 +56,8 @@ config("vulkan_config") {
     # This env variable allows the loader to find the ICDs molten provides.
     #   export VK_ICD_FILENAMES="$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json"
 
-#Point the loader to the manifest where the layers are specified.
-#export VK_LAYER_PATH = "$VULKAN_SDK/etc/vulkan/explicit_layers.d"
+    # Point the loader to the manifest where the layers are specified.
+    # export VK_LAYER_PATH = "$VULKAN_SDK/etc/vulkan/explicit_layers.d"
     print("${vulkan_include_path}")
     include_dirs = [
       "$vulkan_include_path",
@@ -126,13 +85,12 @@ source_set("vulkan_lib") {
 
 executable("vulkan_test") {
   sources = [ "vulkan_test.cc" ]
-  configs += [ ":vulkan_config", ":sdl2_config" ]
+  configs += [
+    ":vulkan_config",
+    ":sdl2_config"
+  ]
   deps = [
     ":utils",
     ":vulkan_lib",
   ]
-}
-
-executable("hello_world") {
-  sources = [ "hello_world.cc" ]
 }

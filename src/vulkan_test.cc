@@ -93,6 +93,8 @@ int main() {
              res.err_msg().c_str());
       return 1;
     }
+
+
   }
 
   printf("Logical device set\n");

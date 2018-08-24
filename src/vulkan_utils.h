@@ -29,6 +29,15 @@ Status
 SetupVulkanLogicalDevices(InstanceContext*,
                           const std::vector<const char*>& extensions);
 
+VkSurfaceFormatKHR
+GetBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>&);
+
+VkPresentModeKHR
+GetBestPresentMode(const std::vector<VkPresentModeKHR>&);
+
+VkExtent2D
+ChooseSwapExtent(const VkSurfaceCapabilitiesKHR&);
+
 // Validation Layers -----------------------------------------------------------
 
 // Gets the extensions SDL needs to hook up correctly with vulkan.
@@ -43,7 +52,6 @@ CheckPhysicalDeviceRequiredExtensions(
 
 // Validate that the requested layers are provided by the vulkan implementation.
 bool CheckRequiredLayers(const std::vector<const char*>& requested_layers);
-
 
 
 // GetInstanceProcAddr calls ---------------------------------------------------

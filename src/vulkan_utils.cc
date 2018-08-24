@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include <limits>
+
 #include <SDL2/SDL_vulkan.h>
 
 #include "macros.h"
@@ -271,7 +273,70 @@ SetupVulkanLogicalDevices(
 
 // SwapChain -------------------------------------------------------------------
 
+VkSurfaceFormatKHR
+GetBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats) {
+  // When undefined, vulkan lets us decided whichever we want.
+  if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
+    return {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
 
+  // We try to find the RGBA SRGB format.
+  for (const auto& format : formats) {
+    if (format.format == VK_FORMAT_B8G8R8A8_UNORM &&
+        format.colorSpace ==  VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+      return format;
+    }
+  }
+
+  // Otherwise return the first one.
+  return formats.front();
+}
+
+static inline bool
+HasPresentMode(const std::vector<VkPresentModeKHR>& present_modes,
+               const VkPresentModeKHR& target) {
+  for (const auto& present_mode : present_modes) {
+    if (present_mode == target)
+      return true;
+  }
+  return false;
+}
+
+VkPresentModeKHR
+GetBestPresentMode(const std::vector<VkPresentModeKHR>& present_modes) {
+  if (HasPresentMode(present_modes, VK_PRESENT_MODE_MAILBOX_KHR))
+      return VK_PRESENT_MODE_MAILBOX_KHR;
+
+  // Sometimes FIFO is not well implemented, so prefer immediate.
+  if (HasPresentMode(present_modes, VK_PRESENT_MODE_IMMEDIATE_KHR))
+    return VK_PRESENT_MODE_IMMEDIATE_KHR;
+
+  // FIFO is assured to be there.
+  return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+VkExtent2D
+ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+  if (capabilities.currentExtent.width !=
+      std::numeric_limits<uint32_t>::max()) {
+    return capabilities.currentExtent;
+  } else {
+    return capabilities.maxImageExtent;
+
+#if 0
+    // Do the clamping.
+    VkExtent2D extent = {WIDTH, HEIGHT};
+    // TODO: Use MAX, MIN macros.
+    extent.width = std::max(
+        capabilities.minImageExtent.width,
+        std::min(capabilities.maxImageExtent.width, extent.width));
+    extent.height = std::max(
+        capabilities.minImageExtent.height,
+        std::min(capabilities.maxImageExtent.height, extent.height));
+
+    return extent;
+#endif
+  }
+}
 
 // Validation Layers -----------------------------------------------------------
 
