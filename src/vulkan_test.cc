@@ -84,7 +84,10 @@ int main() {
       return 1;
     }
 
-    res = SetupVulkanLogicalDevices(&instance, {});
+    std::vector<const char*> physical_device_extensions;
+    physical_device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+    res = SetupVulkanLogicalDevices(&instance, physical_device_extensions);
     if (!res.ok()) {
       printf("Error setting vulkan logical devices: %s\n",
              res.err_msg().c_str());

@@ -14,6 +14,7 @@ namespace warhol {
 
 struct PhysicalDeviceContext;
 struct LogicalDeviceContext;
+struct SwapChainContext;
 
 // Overall context to run a vulkan app.
 // Will destroy the managed resources (instance, messengers) on destruction.
@@ -42,11 +43,19 @@ struct InstanceContext {
   DELETE_COPY_AND_ASSIGN(InstanceContext);
 };
 
+struct SwapChainContext {
+  VkSurfaceCapabilitiesKHR capabilites;
+  std::vector<VkSurfaceFormatKHR> formats;
+  std::vector<VkPresentModeKHR> present_modes;
+};
+
 struct PhysicalDeviceContext {
   VkPhysicalDevice handle = VK_NULL_HANDLE;
   VkPhysicalDeviceProperties properties;
   VkPhysicalDeviceFeatures features;
   std::vector<VkQueueFamilyProperties> qf_properties;
+
+  SwapChainContext swap_chain_context;
 
   int graphics_queue_index = -1;
   int present_queue_index = -1;

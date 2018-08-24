@@ -127,6 +127,35 @@ SetupVulkanPhysicalDevices(InstanceContext* instance) {
       i++;
     }
 
+    printf("SETTING UP THE SWAP CHAIN\n");
+    fflush(stdout);
+
+    // Setup the swap chain.
+    SwapChainContext& swap_chain_context = physical_device->swap_chain_context;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device->handle,
+                                              instance->surface,
+                                              &swap_chain_context.capabilites);
+    uint32_t format_count;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(
+        physical_device->handle, instance->surface, &format_count, nullptr);
+    swap_chain_context.formats.resize(format_count);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device->handle,
+                                         instance->surface, &format_count,
+                                         swap_chain_context.formats.data());
+
+    uint32_t present_mode_count;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device->handle,
+                                              instance->surface,
+                                              &present_mode_count, nullptr);
+
+    swap_chain_context.present_modes.resize(present_mode_count);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+        physical_device->handle, instance->surface, &present_mode_count,
+        swap_chain_context.present_modes.data());
+
+    printf("SWAP CHAIN SET\n");
+    fflush(stdout);
+
     instance->physical_devices.push_back(std::move(physical_device));
   }
 
@@ -139,18 +168,31 @@ SetupVulkanPhysicalDevices(InstanceContext* instance) {
 
 namespace {
 
+
+// A suitable physical device has the following properties:
+// - Both graphics and present queues.
+// - All the required extensions.
+// - At least one swap chain image format and present mode.
 bool
 IsSuitablePhysicalDevice(
     const PhysicalDeviceContext& physical_device,
     const std::vector<const char*>& requested_extensions) {
+  // Queues.
   if (physical_device.graphics_queue_index < 0 ||
       physical_device.present_queue_index < 0)
     return false;
 
+  // Extensions.
   if (!CheckPhysicalDeviceRequiredExtensions(physical_device,
                                              requested_extensions)) {
     return false;
   }
+
+  /* // Swap chain properties. */
+  /* if (physical_device.swap_chain_context.formats.empty() || */
+  /*     physical_device.swap_chain_context.present_modes.empty()) { */
+  /*   return false; */
+  /* } */
 
   return true;
 }
@@ -227,6 +269,10 @@ SetupVulkanLogicalDevices(
   return Status::Ok();
 }
 
+// SwapChain -------------------------------------------------------------------
+
+
+
 // Validation Layers -----------------------------------------------------------
 
 Status
@@ -255,6 +301,7 @@ CheckPhysicalDeviceRequiredExtensions(
                                        &extension_count,
                                        nullptr);
   std::vector<VkExtensionProperties> available_extensions;
+  available_extensions.resize(extension_count);
   vkEnumerateDeviceExtensionProperties(physical_device.handle,
                                        nullptr,
                                        &extension_count,
