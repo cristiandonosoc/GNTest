@@ -9,60 +9,7 @@
 
 #include "status.h"
 
-struct SDL_Window;
-
 namespace warhol {
-
-struct InstanceContext;
-struct PhysicalDeviceContext;
-
-// Vulkan Setup ----------------------------------------------------------------
-
-// ******** INSTANCE ********
-
-// Creates an instance. The extensions and validation layers should be already
-// set at this point.
-Status SetupSDLVulkanInstance(InstanceContext*);
-
-// ******** PHYSICAL_DEVICE ********
-
-// Setups the logical devices and bionds the first one to the context.
-Status SetupVulkanPhysicalDevices(SDL_Window*, InstanceContext*);
-
-Status
-CreateSurface(SDL_Window*, InstanceContext*, PhysicalDeviceContext*);
-
-PhysicalDeviceContext*
-FindSuitablePhysicalDevice(
-    InstanceContext*, const std::vector<const char*>& requested_extensions);
-
-// ******** LOGICAL_DEVICE ********
-
-Status
-SetupVulkanLogicalDevices(InstanceContext*,
-                          PhysicalDeviceContext*,
-                          const std::vector<const char*>& extensions);
-
-// ******** SWAP_CHAIN ********
-
-Status
-SetupSwapChain(PhysicalDeviceContext*);
-
-// Validation Layers -----------------------------------------------------------
-
-// Gets the extensions SDL needs to hook up correctly with vulkan.
-Status GetSDLExtensions(SDL_Window*, InstanceContext*);
-
-// Validate that the requested extensions are provided by the vulkan
-// implementation.
-bool
-CheckPhysicalDeviceRequiredExtensions(
-    const PhysicalDeviceContext&,
-    const std::vector<const char*>& requested_extensions);
-
-// Validate that the requested layers are provided by the vulkan implementation.
-bool CheckRequiredLayers(const std::vector<const char*>& requested_layers);
-
 
 // GetInstanceProcAddr calls ---------------------------------------------------
 

@@ -9,6 +9,9 @@
 #include <vulkan/vulkan.h>
 
 #include "macros.h"
+#include "status.h"
+
+struct SDL_Window;
 
 namespace warhol {
 
@@ -16,6 +19,8 @@ struct PhysicalDeviceContext;
 struct LogicalDeviceContext;
 struct SwapChainContext;
 struct SwapChainProperties;
+
+// InstanceContext -------------------------------------------------------------
 
 // Overall context to run a vulkan app.
 // Will destroy the managed resources (instance, messengers) on destruction.
@@ -43,6 +48,12 @@ struct InstanceContext {
 
   DELETE_COPY_AND_ASSIGN(InstanceContext);
 };
+
+// Creates an instance. The extensions and validation layers should be already
+// set at this point.
+Status SetupSDLVulkanInstance(InstanceContext*);
+
+// PhysicalDevice --------------------------------------------------------------
 
 struct SwapChainProperties {
   VkSurfaceCapabilitiesKHR capabilites;
@@ -79,6 +90,25 @@ struct PhysicalDeviceContext {
   DELETE_COPY_AND_ASSIGN(PhysicalDeviceContext);
 };
 
+// Setups the logical devices and bionds the first one to the context.
+Status SetupVulkanPhysicalDevices(SDL_Window*, InstanceContext*);
+
+// Validate that the requested extensions are provided by the vulkan
+// implementation.
+bool
+CheckPhysicalDeviceRequiredExtensions(
+    const PhysicalDeviceContext&,
+    const std::vector<const char*>& requested_extensions);
+
+Status
+CreateSurface(SDL_Window*, InstanceContext*, PhysicalDeviceContext*);
+
+PhysicalDeviceContext*
+FindSuitablePhysicalDevice(
+    InstanceContext*, const std::vector<const char*>& requested_extensions);
+
+// LogicalDevice ---------------------------------------------------------------
+
 struct LogicalDeviceContext {
   LogicalDeviceContext(PhysicalDeviceContext*);
   ~LogicalDeviceContext();
@@ -99,6 +129,13 @@ struct LogicalDeviceContext {
   DELETE_COPY_AND_ASSIGN(LogicalDeviceContext);
 };
 
+Status
+SetupVulkanLogicalDevices(InstanceContext*,
+                          PhysicalDeviceContext*,
+                          const std::vector<const char*>& extensions);
+
+// SwapChain -------------------------------------------------------------------
+
 struct SwapChainContext {
   SwapChainContext(LogicalDeviceContext*);
   ~SwapChainContext();
@@ -111,6 +148,15 @@ struct SwapChainContext {
   DELETE_COPY_AND_ASSIGN(SwapChainContext);
 };
 
+Status
+SetupSwapChain(PhysicalDeviceContext*);
 
+// Misc ------------------------------------------------------------------------
+
+// Gets the extensions SDL needs to hook up correctly with vulkan.
+Status GetSDLExtensions(SDL_Window*, InstanceContext*);
+
+// Validate that the requested layers are provided by the vulkan implementation.
+bool CheckRequiredLayers(const std::vector<const char*>& requested_layers);
 
 }  // namespace warhol
