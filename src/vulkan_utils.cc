@@ -83,22 +83,54 @@ SetupSDLVulkanInstance(InstanceContext* instance) {
 
 // Physical Device -------------------------------------------------------------
 
+namespace {
+
+SwapChainProperties
+GetSwapChainProperties(const PhysicalDeviceContext& physical_device) {
+  // Setup the swap chain.
+  SwapChainProperties properties;
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+      physical_device.handle, physical_device.surface, &properties.capabilites);
+  uint32_t format_count;
+  vkGetPhysicalDeviceSurfaceFormatsKHR(
+      physical_device.handle, physical_device.surface, &format_count, nullptr);
+  properties.formats.resize(format_count);
+  vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device.handle,
+                                       physical_device.surface, &format_count,
+                                       properties.formats.data());
+
+  uint32_t present_mode_count;
+  vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device.handle,
+                                            physical_device.surface,
+                                            &present_mode_count, nullptr);
+
+  properties.present_modes.resize(present_mode_count);
+  vkGetPhysicalDeviceSurfacePresentModesKHR(
+      physical_device.handle, physical_device.surface, &present_mode_count,
+      properties.present_modes.data());
+
+  return properties;
+}
+
+}  // namespace
+
 Status
-SetupVulkanPhysicalDevices(InstanceContext* instance) {
+SetupVulkanPhysicalDevices(SDL_Window* window, InstanceContext* instance) {
   std::vector<VkPhysicalDevice> devices;
   VK_GET_PROPERTIES(vkEnumeratePhysicalDevices, instance->handle, devices);
 
   // Enumarate device properties.
   printf("Found %zu physical devices:\n", devices.size());
   for (auto& device : devices) {
-    auto physical_device = std::make_unique<PhysicalDeviceContext>();
+    auto physical_device = std::make_unique<PhysicalDeviceContext>(instance);
     physical_device->handle = device;
     vkGetPhysicalDeviceProperties(device, &physical_device->properties);
     vkGetPhysicalDeviceFeatures(device, &physical_device->features);
 
     printf("--------------------------------------------\n");
     printf("Device Name: %s\n", physical_device->properties.deviceName);
-    printf("Type: %s\n", VulkanEnumToString(physical_device->properties.deviceType));
+    printf("Type: %s\n",
+           VulkanEnumToString(physical_device->properties.deviceType));
     printf("API Version: %u\n", physical_device->properties.apiVersion);
     printf("Driver Version: %u\n", physical_device->properties.driverVersion);
     printf("Vendor ID: %x\n", physical_device->properties.vendorID);
@@ -108,6 +140,11 @@ SetupVulkanPhysicalDevices(InstanceContext* instance) {
     // We setup the queue families data for each device.
     VK_GET_PROPERTIES(vkGetPhysicalDeviceQueueFamilyProperties, device,
                       (physical_device->qf_properties));
+
+    // Create the surface associated with this device.
+    Status res = CreateSurface(window, instance, physical_device.get());
+    if (!res.ok())
+      return res;
 
     // Get the queues
     int i = 0;
@@ -122,41 +159,16 @@ SetupVulkanPhysicalDevices(InstanceContext* instance) {
       // Get the present queue.
       VkBool32 present_support = false;
       vkGetPhysicalDeviceSurfaceSupportKHR(physical_device->handle, i,
-                                           instance->surface, &present_support);
+                                           physical_device->surface,
+                                           &present_support);
       if (present_support)
         physical_device->present_queue_index = i;
 
       i++;
     }
 
-    printf("SETTING UP THE SWAP CHAIN\n");
-    fflush(stdout);
-
-    // Setup the swap chain.
-    SwapChainContext& swap_chain_context = physical_device->swap_chain_context;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device->handle,
-                                              instance->surface,
-                                              &swap_chain_context.capabilites);
-    uint32_t format_count;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(
-        physical_device->handle, instance->surface, &format_count, nullptr);
-    swap_chain_context.formats.resize(format_count);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device->handle,
-                                         instance->surface, &format_count,
-                                         swap_chain_context.formats.data());
-
-    uint32_t present_mode_count;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device->handle,
-                                              instance->surface,
-                                              &present_mode_count, nullptr);
-
-    swap_chain_context.present_modes.resize(present_mode_count);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(
-        physical_device->handle, instance->surface, &present_mode_count,
-        swap_chain_context.present_modes.data());
-
-    printf("SWAP CHAIN SET\n");
-    fflush(stdout);
+    physical_device->swap_chain_properties =
+        GetSwapChainProperties(*physical_device.get());
 
     instance->physical_devices.push_back(std::move(physical_device));
   }
@@ -166,19 +178,26 @@ SetupVulkanPhysicalDevices(InstanceContext* instance) {
   return Status::Ok();
 }
 
-// Logical Device --------------------------------------------------------------
+Status
+CreateSurface(SDL_Window* window, InstanceContext* instance,
+              PhysicalDeviceContext* physical_device) {
+  assert(physical_device->instance);
+  if (!SDL_Vulkan_CreateSurface(window, instance->handle,
+                                &physical_device->surface)) {
+    return Status("Could not create surface: %s\n", SDL_GetError());
+  }
+  return Status::Ok();
+}
 
 namespace {
-
 
 // A suitable physical device has the following properties:
 // - Both graphics and present queues.
 // - All the required extensions.
 // - At least one swap chain image format and present mode.
 bool
-IsSuitablePhysicalDevice(
-    const PhysicalDeviceContext& physical_device,
-    const std::vector<const char*>& requested_extensions) {
+IsSuitablePhysicalDevice(const PhysicalDeviceContext& physical_device,
+                         const std::vector<const char*>& requested_extensions) {
   // Queues.
   if (physical_device.graphics_queue_index < 0 ||
       physical_device.present_queue_index < 0)
@@ -190,19 +209,21 @@ IsSuitablePhysicalDevice(
     return false;
   }
 
-  /* // Swap chain properties. */
-  /* if (physical_device.swap_chain_context.formats.empty() || */
-  /*     physical_device.swap_chain_context.present_modes.empty()) { */
-  /*   return false; */
-  /* } */
+  // Swap chain properties.
+  if (physical_device.swap_chain_properties.formats.empty() ||
+      physical_device.swap_chain_properties.present_modes.empty()) {
+    return false;
+  }
 
   return true;
 }
 
+
+
 }  // namespace
 
-Status
-SetupVulkanLogicalDevices(
+PhysicalDeviceContext*
+FindSuitablePhysicalDevice(
     InstanceContext* instance,
     const std::vector<const char*>& requested_extensions) {
   // We check for valid physical devices.
@@ -214,11 +235,16 @@ SetupVulkanLogicalDevices(
       break;
     }
   }
-  if (!physical_device)
-    return Status("No suitable physical device found!");
+  return physical_device;
+}
 
-  // We now setup the device
-  auto device = std::make_unique<LogicalDeviceContext>();
+// Logical Device --------------------------------------------------------------
+
+Status
+SetupVulkanLogicalDevices(
+    InstanceContext* instance,
+    PhysicalDeviceContext* physical_device,
+    const std::vector<const char*>& requested_extensions) {
 
   // The device ->ueues to set.
   float queue_priority = 1.0f;
@@ -254,6 +280,9 @@ SetupVulkanLogicalDevices(
   dci.enabledLayerCount = (uint32_t)instance->validation_layers.size();
   dci.ppEnabledLayerNames = instance->validation_layers.data();
 
+  // We now setup the device
+  auto device = std::make_unique<LogicalDeviceContext>(physical_device);
+
   // Finally create the device.
   VkResult res = vkCreateDevice(physical_device->handle, &dci, nullptr,
                                 &device->handle);
@@ -267,11 +296,15 @@ SetupVulkanLogicalDevices(
                    &device->present_queue);
 
   physical_device->logical_devices.push_back(std::move(device));
+  physical_device->selected_logical_device =
+      physical_device->logical_devices.back().get();
 
   return Status::Ok();
 }
 
 // SwapChain -------------------------------------------------------------------
+
+namespace {
 
 VkSurfaceFormatKHR
 GetBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats) {
@@ -337,6 +370,84 @@ ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
 #endif
   }
 }
+
+}  // namespace
+
+
+#if 0
+Status
+SetupSwapChain(InstanceContext* instance) {
+  auto* physical_device = instance->selected_physical_device;
+  if (physical_device)
+    return Status("No physical device selected");
+
+  SwapChainContext* swap_chain = physical_device->swap_chain.get();
+  if (!swap_chain)
+    return Status("No Swap Chain context generated");
+
+  uint32_t image_min = swap_chain->capabilites.minImageCount;
+  uint32_t image_max = swap_chain->capabilites.maxImageCount;
+  uint32_t image_count = image_min + 1;
+  if (image_max > 0 && image_count > image_max)
+    image_count = image_max;
+
+  auto surface_format = GetBestSurfaceFormat(swap_chain->formats);
+  auto present_mode = GetBestPresentMode(swap_chain->present_modes);
+  auto extent = ChooseSwapExtent(swap_chain->capabilites);
+
+
+  VkSwapchainCreateInfoKHR scci = {};
+  scci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+  scci.surface = instance->surface;
+
+  scci.minImageCount = image_count;
+  scci.imageFormat = surface_format.format;
+  scci.imageColorSpace = surface_format.colorSpace;
+  scci.imageExtent = extent;
+  scci.imageArrayLayers = 1;
+  scci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+  uint32_t queue_family_indices[] = {
+      (uint32_t)physical_device->graphics_queue_index,
+      (uint32_t)physical_device->present_queue_index};
+
+  // We check which sharing mode is needed between the command queues.
+  if (physical_device->graphics_queue_index !=
+      physical_device->present_queue_index) {
+    // If graphics and present are different, we have a concurrent management
+    // that is simpler.
+    scci.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+    scci.queueFamilyIndexCount = 2;
+    scci.pQueueFamilyIndices = queue_family_indices;
+  } else {
+    // If the queues are the same, we use exclusive as there are no queues
+    // to coordinate.
+    scci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    scci.queueFamilyIndexCount = 0;      // Optional
+    scci.pQueueFamilyIndices = nullptr;  // Optional
+  }
+
+  scci.preTransform = swap_chain->capabilites.currentTransform;
+  // Don't blend alpha between images of the swap chain.
+  scci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+
+  scci.presentMode = present_mode;
+  scci.clipped = VK_TRUE;   // Ignore pixels that are ignored.
+
+  // If we need to create a new swap chain, this is a reference to the one we
+  // came from.
+  scci.oldSwapchain = VK_NULL_HANDLE;
+
+
+
+
+
+
+
+  return Status::Ok();
+}
+
+#endif
 
 // Validation Layers -----------------------------------------------------------
 

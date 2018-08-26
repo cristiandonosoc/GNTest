@@ -62,6 +62,7 @@ int main() {
           "VK_LAYER_LUNARG_standard_validation");
     }
 
+    // ******** INSTANCE ********
 
     // We create the VkInstance.
     res = SetupSDLVulkanInstance(&instance);
@@ -70,14 +71,10 @@ int main() {
       return 1;
     }
 
-    // Create the rendering surface.
-    if (!SDL_Vulkan_CreateSurface(window, instance.handle, &instance.surface)) {
-      printf("Could not create surface: %s\n", SDL_GetError());
-      return 1;
-    }
+    // ******** PHYSICAL_DEVICE ********
 
-    // Physical Devices.
-    res = SetupVulkanPhysicalDevices(&instance);
+    // Physical Devices. Creates a surface.
+    res = SetupVulkanPhysicalDevices(window, &instance);
     if (!res.ok()) {
       printf("Error setting vulkan physical devices: %s\n",
              res.err_msg().c_str());
@@ -87,14 +84,32 @@ int main() {
     std::vector<const char*> physical_device_extensions;
     physical_device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-    res = SetupVulkanLogicalDevices(&instance, physical_device_extensions);
+    auto* suitable_device =
+        FindSuitablePhysicalDevice(&instance, physical_device_extensions);
+    if (!suitable_device) {
+      printf("Found no suitable device\n");
+      return 1;
+    }
+
+    instance.selected_physical_device = suitable_device;
+
+    // ******** LOGICAL_DEVICE ********
+
+    res = SetupVulkanLogicalDevices(&instance, suitable_device,
+                                    physical_device_extensions);
     if (!res.ok()) {
       printf("Error setting vulkan logical devices: %s\n",
              res.err_msg().c_str());
       return 1;
     }
 
+    // ******** SWAP_CHAIN ********
 
+    /* res = SetupSwapChain(&instance); */
+    /* if (!res.ok()) { */
+    /*   printf("Error setting up swapchain: %s\n", res.err_msg().c_str()); */
+    /*   return 1; */
+    /* } */
   }
 
   printf("Logical device set\n");
