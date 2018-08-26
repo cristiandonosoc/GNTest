@@ -3,11 +3,13 @@
 
 toolchain("msvc") {
   tool("cxx") {
-    command = "cl.exe /nologo /FC /FS {{include_dirs}} {{cflags}} {{cflags_cc}} /c {{source}} /Fo{{output}}"
+    depsformat = "msvc"
+    pdbname = "{{output}}_cc.pdb"
+    command = "cl.exe /nologo /showIncludes /FC /FS /Fd$pdbname {{include_dirs}} {{cflags}} {{cflags_cc}} /c {{source}} /Fo{{output}}"
     outputs = [
       "{{source_out_dir}}/{{source_name_part}}.o" ,
     ]
-    # description = "CXX {{output}}"
+    description = "CXX {{output}}"
   }
 
   tool("link") {
@@ -15,7 +17,7 @@ toolchain("msvc") {
     outputs = [
       "{{root_out_dir}}/{{target_output_name}}.exe"
     ]
-    # description = "LINK {{output}}"
+    description = "LINK {{output}}"
   }
 
 
@@ -37,7 +39,9 @@ toolchain("msvc") {
 
 toolchain("clang") {
   tool("cxx") {
-    command = "clang++ {{include_dirs}} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
+    depfile = "{{output}}.d"
+    depsformat = "gcc"
+    command = "clang++ -MMD -MF $depfile {{include_dirs}} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
     outputs = [
       "{{source_out_dir}}/{{source_name_part}}.o" ,
     ]

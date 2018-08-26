@@ -35,8 +35,6 @@ GetBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>&);
 VkPresentModeKHR
 GetBestPresentMode(const std::vector<VkPresentModeKHR>&);
 
-VkExtent2D
-ChooseSwapExtent(const VkSurfaceCapabilitiesKHR&);
 
 // Validation Layers -----------------------------------------------------------
 
