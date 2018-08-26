@@ -334,8 +334,6 @@ SetupVulkanLogicalDevices(
                    &device->present_queue);
 
   physical_device->logical_devices.push_back(std::move(device));
-  physical_device->selected_logical_device =
-      physical_device->logical_devices.back().get();
 
   return Status::Ok();
 }
@@ -419,32 +417,28 @@ ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
 
 }  // namespace
 
-
-#if 0
 Status
-SetupSwapChain(InstanceContext* instance) {
-  auto* physical_device = instance->selected_physical_device;
-  if (physical_device)
+SetupSwapChain(PhysicalDeviceContext* physical_device,
+               LogicalDeviceContext* logical_device) {
+  if (!physical_device)
     return Status("No physical device selected");
 
-  SwapChainContext* swap_chain = physical_device->swap_chain.get();
-  if (!swap_chain)
-    return Status("No Swap Chain context generated");
+  const SwapChainProperties& swap_chain_prop =
+      physical_device->swap_chain_properties;
 
-  uint32_t image_min = swap_chain->capabilites.minImageCount;
-  uint32_t image_max = swap_chain->capabilites.maxImageCount;
+  uint32_t image_min = swap_chain_prop.capabilites.minImageCount;
+  uint32_t image_max = swap_chain_prop.capabilites.maxImageCount;
   uint32_t image_count = image_min + 1;
   if (image_max > 0 && image_count > image_max)
     image_count = image_max;
 
-  auto surface_format = GetBestSurfaceFormat(swap_chain->formats);
-  auto present_mode = GetBestPresentMode(swap_chain->present_modes);
-  auto extent = ChooseSwapExtent(swap_chain->capabilites);
-
+  auto surface_format = GetBestSurfaceFormat(swap_chain_prop.formats);
+  auto present_mode = GetBestPresentMode(swap_chain_prop.present_modes);
+  auto extent = ChooseSwapExtent(swap_chain_prop.capabilites);
 
   VkSwapchainCreateInfoKHR scci = {};
   scci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-  scci.surface = instance->surface;
+  scci.surface = physical_device->surface;
 
   scci.minImageCount = image_count;
   scci.imageFormat = surface_format.format;
@@ -473,7 +467,7 @@ SetupSwapChain(InstanceContext* instance) {
     scci.pQueueFamilyIndices = nullptr;  // Optional
   }
 
-  scci.preTransform = swap_chain->capabilites.currentTransform;
+  scci.preTransform = swap_chain_prop.capabilites.currentTransform;
   // Don't blend alpha between images of the swap chain.
   scci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
@@ -484,10 +478,15 @@ SetupSwapChain(InstanceContext* instance) {
   // came from.
   scci.oldSwapchain = VK_NULL_HANDLE;
 
+  auto swap_chain = std::make_unique<SwapChainContext>(logical_device);
+  VkResult res = vkCreateSwapchainKHR(logical_device->handle, &scci, nullptr,
+                                      &swap_chain->handle);
+  if (res != VK_SUCCESS)
+    return Status("Cannot create swap chain: %s", VulkanEnumToString(res));
+  logical_device->swap_chain = std::move(swap_chain);
+
   return Status::Ok();
 }
-
-#endif
 
 // Misc ------------------------------------------------------------------------
 

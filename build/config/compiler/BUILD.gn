@@ -47,6 +47,7 @@ if (compiler == "clang") {
       "-Wall",
       "-Wextra",
       "-Werror",
+      "-Wno-unused-function",
     ]
   }
 

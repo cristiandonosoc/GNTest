@@ -149,7 +149,7 @@ struct SwapChainContext {
 };
 
 Status
-SetupSwapChain(PhysicalDeviceContext*);
+SetupSwapChain(PhysicalDeviceContext*, LogicalDeviceContext*);
 
 // Misc ------------------------------------------------------------------------
 

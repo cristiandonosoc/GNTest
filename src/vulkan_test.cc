@@ -95,7 +95,10 @@ int main() {
 
     // ******** LOGICAL_DEVICE ********
 
-    res = SetupVulkanLogicalDevices(&instance, suitable_device,
+    // TODO: This function should output a created logical device and we
+    //       should add it to the physical device.
+    res = SetupVulkanLogicalDevices(&instance,
+                                    instance.selected_physical_device,
                                     physical_device_extensions);
     if (!res.ok()) {
       printf("Error setting vulkan logical devices: %s\n",
@@ -103,13 +106,19 @@ int main() {
       return 1;
     }
 
+    // For now select the first logical device as selected
+    instance.selected_physical_device->selected_logical_device =
+        instance.selected_physical_device->logical_devices.back().get();
+
     // ******** SWAP_CHAIN ********
 
-    /* res = SetupSwapChain(&instance); */
-    /* if (!res.ok()) { */
-    /*   printf("Error setting up swapchain: %s\n", res.err_msg().c_str()); */
-    /*   return 1; */
-    /* } */
+    res = SetupSwapChain(
+        instance.selected_physical_device,
+        instance.selected_physical_device->selected_logical_device);
+    if (!res.ok()) {
+      printf("Error setting up swapchain: %s\n", res.err_msg().c_str());
+      return 1;
+    }
   }
 
   printf("Logical device set\n");
