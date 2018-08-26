@@ -488,8 +488,17 @@ SetupSwapChain(PhysicalDeviceContext* physical_device,
   return Status::Ok();
 }
 
-// Misc ------------------------------------------------------------------------
+// ImageView -------------------------------------------------------------------
 
+ImageViewContext::ImageViewContext(LogicalDeviceContext* logical_device) : logical_device(logical_device) {}
+ImageViewContext::~ImageViewContext() {
+  assert(logical_device);
+
+  if (handle != VK_NULL_HANDLE)
+    vkDestroyImageView(logical_device->handle, handle, nullptr);
+}
+
+// Misc ------------------------------------------------------------------------
 
 Status
 GetSDLExtensions(SDL_Window* window, InstanceContext* instance) {

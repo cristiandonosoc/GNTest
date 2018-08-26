@@ -18,7 +18,7 @@ namespace warhol {
 struct PhysicalDeviceContext;
 struct LogicalDeviceContext;
 struct SwapChainContext;
-struct SwapChainProperties;
+struct ImageViewContext;
 
 // InstanceContext -------------------------------------------------------------
 
@@ -125,6 +125,7 @@ struct LogicalDeviceContext {
 
   // Swapchain
   std::unique_ptr<SwapChainContext> swap_chain;
+  std::unique_ptr<ImageViewContext> image_view;
 
   DELETE_COPY_AND_ASSIGN(LogicalDeviceContext);
 };
@@ -151,10 +152,22 @@ struct SwapChainContext {
 Status
 SetupSwapChain(PhysicalDeviceContext*, LogicalDeviceContext*);
 
+// ImageView -------------------------------------------------------------------
+
+struct ImageViewContext {
+  ImageViewContext(LogicalDeviceContext*);
+  ~ImageViewContext();
+
+  LogicalDeviceContext* logical_device;   // Not owning, must outlive.
+
+  VkImageView handle;
+};
+
 // Misc ------------------------------------------------------------------------
 
 // Gets the extensions SDL needs to hook up correctly with vulkan.
-Status GetSDLExtensions(SDL_Window*, InstanceContext*);
+Status
+GetSDLExtensions(SDL_Window*, InstanceContext*);
 
 // Validate that the requested layers are provided by the vulkan implementation.
 bool CheckRequiredLayers(const std::vector<const char*>& requested_layers);
