@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <limits>
+#include <set>
 
 #include <SDL2/SDL_vulkan.h>
 
@@ -284,28 +285,27 @@ SetupVulkanLogicalDevices(
     PhysicalDeviceContext* physical_device,
     const std::vector<const char*>& requested_extensions) {
 
-  // The device ->ueues to set.
+  // The device queues to set.
   float queue_priority = 1.0f;
-  VkDeviceQueueCreateInfo qcreate_infos[2];
 
-  // Setup the graphics queue.
-  qcreate_infos[0] = {};
-  qcreate_infos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-  qcreate_infos[0].queueFamilyIndex = physical_device->graphics_queue_index;
-  qcreate_infos[0].queueCount = 1;
-  qcreate_infos[0].pQueuePriorities = &queue_priority;
-  // Setup the present queue.
-  qcreate_infos[1] = {};
-  qcreate_infos[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-  qcreate_infos[1].queueFamilyIndex = physical_device->present_queue_index;
-  qcreate_infos[1].queueCount = 1;
-  qcreate_infos[1].pQueuePriorities = &queue_priority;
+  // We onlu create unique device queues
+  std::set<int> queue_indices = {physical_device->graphics_queue_index,
+                                 physical_device->present_queue_index};
+  std::vector<VkDeviceQueueCreateInfo> qcreate_infos;
+  for (int queue_family : queue_indices) {
+    VkDeviceQueueCreateInfo qcreate_info = {};
+    qcreate_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    qcreate_info.queueFamilyIndex = queue_family;
+    qcreate_info.queueCount = 1;
+    qcreate_info.pQueuePriorities = &queue_priority;
+    qcreate_infos.push_back(std::move(qcreate_info));
+  }
 
   // Setup the logical device features.
   VkDeviceCreateInfo dci = {};
   dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-  dci.queueCreateInfoCount = 2;
-  dci.pQueueCreateInfos = qcreate_infos;
+  dci.queueCreateInfoCount = (uint32_t)qcreate_infos.size();
+  dci.pQueueCreateInfos = qcreate_infos.data();
   // Extensions.
   dci.enabledExtensionCount = (uint32_t)requested_extensions.size();
   dci.ppEnabledExtensionNames = requested_extensions.data();
