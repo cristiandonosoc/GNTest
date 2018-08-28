@@ -45,6 +45,8 @@ int main() {
   {
     Status res;
     InstanceContext instance;
+    SelectedContext context;
+    context.instance = &instance;
 
     // Extensions
     res = GetSDLExtensions(window, &instance);
@@ -71,6 +73,7 @@ int main() {
       return 1;
     }
 
+    printf("INSTANCE\n"); fflush(stdout);
     // ******** PHYSICAL_DEVICE ********
 
     // Physical Devices. Creates a surface.
@@ -90,15 +93,14 @@ int main() {
       printf("Found no suitable device\n");
       return 1;
     }
+    context.physical_device = suitable_device;
 
-    instance.selected_physical_device = suitable_device;
-
+    printf("PHYSICAL DEVICE\n"); fflush(stdout);
     // ******** LOGICAL_DEVICE ********
 
     // TODO: This function should output a created logical device and we
     //       should add it to the physical device.
-    res = SetupVulkanLogicalDevices(&instance,
-                                    instance.selected_physical_device,
+    res = SetupVulkanLogicalDevices(&instance, context.physical_device,
                                     physical_device_extensions);
     if (!res.ok()) {
       printf("Error setting vulkan logical devices: %s\n",
@@ -107,18 +109,29 @@ int main() {
     }
 
     // For now select the first logical device as selected
-    instance.selected_physical_device->selected_logical_device =
-        instance.selected_physical_device->logical_devices.back().get();
+    context.logical_device =
+        context.physical_device->logical_devices.back().get();
 
+    printf("LOGICAL DEVICE\n"); fflush(stdout);
     // ******** SWAP_CHAIN ********
 
-    res = SetupSwapChain(
-        instance.selected_physical_device,
-        instance.selected_physical_device->selected_logical_device);
+    res = SetupSwapChain(context.physical_device, context.logical_device);
     if (!res.ok()) {
       printf("Error setting up swapchain: %s\n", res.err_msg().c_str());
       return 1;
     }
+    context.swap_chain = context.logical_device->swap_chain.get();
+
+    printf("SWAP CHAIN\n"); fflush(stdout);
+    // ******** IMAGE_VIEWS ********
+
+    res = CreateImageViews(context.swap_chain);
+    if (!res.ok()) {
+      printf("Error setting up image views: %s\n", res.err_msg().c_str());
+      return 1;
+    }
+
+    printf("IMAGE VIEWS\n"); fflush(stdout);
   }
 
   printf("Logical device set\n");

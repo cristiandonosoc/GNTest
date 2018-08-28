@@ -344,6 +344,10 @@ SwapChainContext::SwapChainContext(LogicalDeviceContext* logical_device)
     : logical_device(logical_device) {}
 SwapChainContext::~SwapChainContext() {
   assert(logical_device);
+
+  // Destroy the image views first.
+  image_views.clear();
+
   if (handle != VK_NULL_HANDLE)
     vkDestroySwapchainKHR(logical_device->handle, handle, nullptr);
 }
@@ -432,18 +436,19 @@ SetupSwapChain(PhysicalDeviceContext* physical_device,
   if (image_max > 0 && image_count > image_max)
     image_count = image_max;
 
-  auto surface_format = GetBestSurfaceFormat(swap_chain_prop.formats);
-  auto present_mode = GetBestPresentMode(swap_chain_prop.present_modes);
-  auto extent = ChooseSwapExtent(swap_chain_prop.capabilites);
+  auto swap_chain = std::make_unique<SwapChainContext>(logical_device);
+  swap_chain->surface_format = GetBestSurfaceFormat(swap_chain_prop.formats);
+  swap_chain->present_mode = GetBestPresentMode(swap_chain_prop.present_modes);
+  swap_chain->extent = ChooseSwapExtent(swap_chain_prop.capabilites);
 
   VkSwapchainCreateInfoKHR scci = {};
   scci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
   scci.surface = physical_device->surface;
 
   scci.minImageCount = image_count;
-  scci.imageFormat = surface_format.format;
-  scci.imageColorSpace = surface_format.colorSpace;
-  scci.imageExtent = extent;
+  scci.imageFormat = swap_chain->surface_format.format;
+  scci.imageColorSpace = swap_chain->surface_format.colorSpace;
+  scci.imageExtent = swap_chain->extent;
   scci.imageArrayLayers = 1;
   scci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
@@ -471,32 +476,78 @@ SetupSwapChain(PhysicalDeviceContext* physical_device,
   // Don't blend alpha between images of the swap chain.
   scci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
-  scci.presentMode = present_mode;
+  scci.presentMode = swap_chain->present_mode;
   scci.clipped = VK_TRUE;   // Ignore pixels that are ignored.
 
   // If we need to create a new swap chain, this is a reference to the one we
   // came from.
   scci.oldSwapchain = VK_NULL_HANDLE;
 
-  auto swap_chain = std::make_unique<SwapChainContext>(logical_device);
   VkResult res = vkCreateSwapchainKHR(logical_device->handle, &scci, nullptr,
                                       &swap_chain->handle);
   if (res != VK_SUCCESS)
     return Status("Cannot create swap chain: %s", VulkanEnumToString(res));
-  logical_device->swap_chain = std::move(swap_chain);
 
+  // Retrieve the images.
+  uint32_t sc_image_count;
+  vkGetSwapchainImagesKHR(logical_device->handle, swap_chain->handle,
+                          &sc_image_count, nullptr);
+  swap_chain->images.resize(sc_image_count);
+  vkGetSwapchainImagesKHR(logical_device->handle, swap_chain->handle,
+                          &sc_image_count, swap_chain->images.data());
+
+  logical_device->swap_chain = std::move(swap_chain);
   return Status::Ok();
 }
 
 // ImageView -------------------------------------------------------------------
 
-ImageViewContext::ImageViewContext(LogicalDeviceContext* logical_device) : logical_device(logical_device) {}
+ImageViewContext::ImageViewContext(SwapChainContext* swap_chain)
+    : swap_chain(swap_chain) {}
 ImageViewContext::~ImageViewContext() {
-  assert(logical_device);
+  assert(swap_chain);
 
   if (handle != VK_NULL_HANDLE)
-    vkDestroyImageView(logical_device->handle, handle, nullptr);
+    vkDestroyImageView(swap_chain->logical_device->handle, handle, nullptr);
 }
+ImageViewContext::ImageViewContext(ImageViewContext&&) = default;
+ImageViewContext&
+ImageViewContext::operator=(ImageViewContext&&) = default;
+
+Status
+CreateImageViews(SwapChainContext* swap_chain) {
+  swap_chain->image_views.reserve(swap_chain->images.size());
+  for (size_t i = 0; i < swap_chain->images.size(); i++) {
+    swap_chain->image_views.emplace_back(ImageViewContext(swap_chain));
+
+    VkImageViewCreateInfo ivci = {};
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = swap_chain->images[i];
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = swap_chain->surface_format.format;
+
+    ivci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    ivci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    ivci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    ivci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.baseArrayLayer = 0;
+    ivci.subresourceRange.layerCount = 1;
+
+    VkResult res = vkCreateImageView(swap_chain->logical_device->handle,
+                                     &ivci,
+                                     nullptr,
+                                     &swap_chain->image_views[i].handle);
+    if (res != VK_SUCCESS)
+      return Status("Could not create image view: %s", VulkanEnumToString(res));
+  }
+
+  return Status::Ok();
+}
+
 
 // Misc ------------------------------------------------------------------------
 

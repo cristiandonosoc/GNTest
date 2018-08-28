@@ -15,10 +15,20 @@ struct SDL_Window;
 
 namespace warhol {
 
+struct InstanceContext;
 struct PhysicalDeviceContext;
 struct LogicalDeviceContext;
 struct SwapChainContext;
 struct ImageViewContext;
+
+// Reference holder for the current selected state.
+// These references must outlive the holder.
+struct SelectedContext {
+  InstanceContext* instance;
+  PhysicalDeviceContext* physical_device;
+  LogicalDeviceContext* logical_device;
+  SwapChainContext* swap_chain;
+};
 
 // InstanceContext -------------------------------------------------------------
 
@@ -44,7 +54,6 @@ struct InstanceContext {
   // won't bother invalidating the handle.
   // This is more relevant for the PhysicalDeviceContext though.
   std::vector<std::unique_ptr<PhysicalDeviceContext>> physical_devices;
-  PhysicalDeviceContext* selected_physical_device;
 
   DELETE_COPY_AND_ASSIGN(InstanceContext);
 };
@@ -85,7 +94,6 @@ struct PhysicalDeviceContext {
   // Otherwise care would be needed about moving the handles, as some compilers
   // won't bother invalidating the handle.
   std::vector<std::unique_ptr<LogicalDeviceContext>> logical_devices;
-  LogicalDeviceContext* selected_logical_device;
 
   DELETE_COPY_AND_ASSIGN(PhysicalDeviceContext);
 };
@@ -143,8 +151,16 @@ struct SwapChainContext {
 
   SwapChainProperties properties;
 
-  VkSwapchainKHR handle;
+  // Direct handles
+  VkSurfaceFormatKHR surface_format;
+  VkPresentModeKHR present_mode;
+  VkExtent2D extent;
+
+  VkSwapchainKHR handle = VK_NULL_HANDLE;
   LogicalDeviceContext* logical_device;   // Not owning, must outlive.
+
+  std::vector<VkImage> images;
+  std::vector<ImageViewContext> image_views;
 
   DELETE_COPY_AND_ASSIGN(SwapChainContext);
 };
@@ -155,13 +171,19 @@ SetupSwapChain(PhysicalDeviceContext*, LogicalDeviceContext*);
 // ImageView -------------------------------------------------------------------
 
 struct ImageViewContext {
-  ImageViewContext(LogicalDeviceContext*);
+  ImageViewContext(SwapChainContext*);
   ~ImageViewContext();
 
-  LogicalDeviceContext* logical_device;   // Not owning, must outlive.
+  SwapChainContext* swap_chain;   // Not owning, must outlive.
 
-  VkImageView handle;
+  VkImageView handle = VK_NULL_HANDLE;
+
+  DELETE_COPY_AND_ASSIGN(ImageViewContext);
+  DECLARE_MOVE_AND_ASSIGN(ImageViewContext);
 };
+
+Status
+CreateImageViews(SwapChainContext*);
 
 // Misc ------------------------------------------------------------------------
 
