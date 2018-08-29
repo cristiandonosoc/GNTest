@@ -24,11 +24,6 @@ config("sdl2_config") {
   }
 }
 
-executable("sdl2_test") {
-  sources = [ "sdl2_main.cc" ]
-  configs += [ ":sdl2_config" ]
-}
-
 config("vulkan_config") {
   if (target_os == "win" && compiler == "msvc") {
     include_dirs = [ "../includelnk" ]
