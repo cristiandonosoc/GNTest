@@ -1,7 +1,7 @@
 config("default_include_dirs") {
   include_dirs = [
     "//",
-    "//third_party",
+    "//src",
     root_gen_dir,
   ]
 }

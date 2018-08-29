@@ -1,0 +1,16 @@
+# Copyright 2018, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+source_set("utils") {
+  sources = [
+    "macros.h",
+    "status.cc",
+    "status.h",
+    "string.cc",
+    "string.h",
+    "unique_handle.h",
+  ]
+  deps = [
+    "//third_party/stb",
+  ]
+}

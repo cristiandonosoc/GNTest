@@ -7,7 +7,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "status.h"
+#include "utils/status.h"
 
 namespace warhol {
 

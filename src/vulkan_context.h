@@ -8,8 +8,8 @@
 
 #include <vulkan/vulkan.h>
 
-#include "macros.h"
-#include "status.h"
+#include "utils/macros.h"
+#include "utils/status.h"
 
 struct SDL_Window;
 

@@ -2,12 +2,10 @@
 // This code has a BSD license. See LICENSE.
 
 #include <assert.h>
+#include <stdio.h>
 
-#include <istream>
-
-#include "log.h"
-#include "status.h"
-#include "string.h"
+#include "utils/status.h"
+#include "utils/string.h"
 
 namespace warhol {
 
@@ -32,8 +30,6 @@ Status::Status(Type type, const char* fmt, ...) : type_(type) {
   va_end(va);
 }
 
-/* Status::OK = {}; */
-
 // Utilities -------------------------------------------------------------------
 
 const char*
@@ -51,7 +47,8 @@ void
 LogStatus(const Status& status) {
   auto msg = StringPrintf("[%s]: %s\n", StatusTypeToString(status.type()),
                           status.err_msg().c_str());
-  StdoutAndFlush(msg);
+  printf("%s\n", msg.data());
+  fflush(stdout);
 }
 
 }  // namespace warhol

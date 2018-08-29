@@ -25,6 +25,10 @@
   class_name(const class_name&);            \
   class_name& operator=(const class_name&);
 
+#define DEFAULT_COPY_AND_ASSIGN(class_name) \
+  class_name(const class_name&) = default;  \
+  class_name& operator=(const class_name&) = default;
+
 #define DELETE_COPY_AND_ASSIGN(class_name) \
   class_name(const class_name&) = delete;  \
   class_name& operator=(const class_name&) = delete;
@@ -32,6 +36,10 @@
 #define DECLARE_MOVE_AND_ASSIGN(class_name) \
   class_name(class_name&&);                 \
   class_name& operator=(class_name&&);
+
+#define DEFAULT_MOVE_AND_ASSIGN(class_name) \
+  class_name(class_name&&) = default;       \
+  class_name& operator=(class_name&&) = default;
 
 #define DELETE_MOVE_AND_ASSIGN(class_name) \
   class_name(class_name&&) = delete;       \
