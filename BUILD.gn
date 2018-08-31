@@ -12,12 +12,6 @@ group("default") {
   ]
 }
 
-group("sdl2") {
-  deps = [
-    "//src:sdl2_test",
-  ]
-}
-
 group("vulkan_test") {
   deps = [
     "//src:vulkan_test",
