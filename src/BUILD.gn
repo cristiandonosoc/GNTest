@@ -82,7 +82,12 @@ executable("warhol") {
   sources = [
     "main.cc"
   ]
+  deps = [
+    ":vulkan_lib",
+    "//src/utils",
+  ]
   configs += [
     ":sdl2_config",
   ]
+
 }
