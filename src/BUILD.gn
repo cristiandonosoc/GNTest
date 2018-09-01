@@ -77,3 +77,12 @@ executable("vulkan_test") {
     "//src/utils:utils",
   ]
 }
+
+executable("warhol") {
+  sources = [
+    "main.cc"
+  ]
+  configs += [
+    ":sdl2_config",
+  ]
+}

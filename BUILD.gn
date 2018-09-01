@@ -8,7 +8,13 @@ config("default_include_dirs") {
 
 group("default") {
   deps = [
-    ":vulkan_test",
+    ":warhol",
+  ]
+}
+
+group("warhol") {
+  deps = [
+    "//src:warhol",
   ]
 }
 
