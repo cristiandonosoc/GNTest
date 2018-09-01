@@ -10,6 +10,22 @@
 
 namespace warhol {
 
+// TODO: Setup a better debug call.
+static VKAPI_ATTR VkBool32 VKAPI_CALL
+VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+                VkDebugUtilsMessageTypeFlagsEXT type,
+                const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
+                void* user_data) {
+  (void)severity;
+  (void)type;
+  (void)user_data;
+  printf("Validation layer message: %s\n", callback_data->pMessage);
+
+  return VK_FALSE;
+}
+
+
+
 VulkanContext::~VulkanContext() {
   // We destroy elements backwards from allocation.
   for (VkImageView& image_view : image_views) {
@@ -63,7 +79,7 @@ InitVulkanContext(SDL_Window* window, VulkanContext* context) {
   RETURN_IF_ERROR(status, AddInstanceExtensions(window, context));
   RETURN_IF_ERROR(status, AddInstanceValidationLayers(context));
   RETURN_IF_ERROR(status, SetupInstance(context));
-  /* RETURN_IF_ERROR(status, SetupDebugMessenger(context)); */
+  RETURN_IF_ERROR(status, SetupDebugMessenger(context));
 
   return Status::Ok();
 }
@@ -103,6 +119,27 @@ Status SetupInstance(VulkanContext* context) {
   VK_RETURN_IF_ERROR(result);
   return Status::Ok();
 }
+
+Status SetupDebugMessenger(VulkanContext* context) {
+  VkDebugUtilsMessengerCreateInfoEXT messenger_info = {};
+  messenger_info.sType =
+      VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+  messenger_info.messageSeverity =
+      VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+      VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+      VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+  messenger_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                               VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                               VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+  messenger_info.pfnUserCallback = VulkanDebugCall;
+  messenger_info.pUserData = nullptr;
+
+  Status status =
+      CreateDebugUtilsMessengerEXT(context->instance.handle, &messenger_info, nullptr,
+                                   &context->debug_messenger);
+  return status;
+}
+
 
 // Utils -----------------------------------------------------------------------
 
