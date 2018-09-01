@@ -63,7 +63,7 @@ struct VulkanContext {
 };
 
 Status
-InitVulkanContext(VulkanContext*);
+InitVulkanContext(SDL_Window*, VulkanContext*);
 
 
 }  // namespace warhol

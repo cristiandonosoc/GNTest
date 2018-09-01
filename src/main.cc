@@ -28,7 +28,7 @@ int main() {
   }
 
   warhol::VulkanContext vulkan_context;
-  warhol::Status res = InitVulkanContext(&vulkan_context);
+  warhol::Status res = InitVulkanContext(window, &vulkan_context);
   if (!res.ok()) {
     printf("ERROR INITIALIZING VULKAN: %s\n", res.err_msg().data());
     return 1;
