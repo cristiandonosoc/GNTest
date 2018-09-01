@@ -29,6 +29,8 @@ struct VulkanContext {
     VkPhysicalDeviceProperties properties;
     VkPhysicalDeviceFeatures features;
 
+    std::vector<const char*> extensions;
+
     // Queues
     int graphics_queue_index = -1;
     int present_queue_index = -1;

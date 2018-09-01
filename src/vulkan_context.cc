@@ -3,6 +3,8 @@
 
 #include <string.h>
 
+#include <set>
+
 #include <SDL2/SDL_Vulkan.h>
 
 #include "vulkan_context.h"
@@ -38,11 +40,15 @@ VulkanContext::~VulkanContext() {
     vkDestroySwapchainKHR(logical_device.handle,
                           physical_device.swap_chain.handle, nullptr);
 
-  if (logical_device.handle != VK_NULL_HANDLE)
+  if (logical_device.handle != VK_NULL_HANDLE) {
+    printf("LOG: Destroying logical device\n");
     vkDestroyDevice(logical_device.handle, nullptr);
+  }
 
-  if (surface != VK_NULL_HANDLE)
+  if (surface != VK_NULL_HANDLE) {
+    printf("LOG: Destroying surface\n");
     vkDestroySurfaceKHR(instance.handle, surface, nullptr);
+  }
 
   if (debug_messenger != VK_NULL_HANDLE) {
     printf("LOG: Destroying debug messenger\n");
@@ -61,6 +67,7 @@ Status SetupInstance(SDL_Window*, VulkanContext*);
 Status SetupDebugMessenger(VulkanContext*);
 Status SetupPhysicalDevice(VulkanContext*);
 Status SetupSurface(SDL_Window*, VulkanContext*);
+Status SetupLogicalDevice(VulkanContext*);
 
 // Utils -----------------------------------------------------------------------
 // Adds all the required extensions from SDL and beyond.
@@ -90,6 +97,7 @@ InitVulkanContext(SDL_Window* window, VulkanContext* context) {
   RETURN_IF_ERROR(status, SetupDebugMessenger(context));
   RETURN_IF_ERROR(status, SetupSurface(window, context));
   RETURN_IF_ERROR(status, SetupPhysicalDevice(context));
+  RETURN_IF_ERROR(status, SetupLogicalDevice(context));
 
   return Status::Ok();
 }
@@ -219,10 +227,13 @@ SetupPhysicalDevice(VulkanContext* context) {
     // We check if this is a suitable device
     std::vector<const char*> extensions;
     extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    if (IsSuitablePhysicalDevice(device, extensions)) {
+    if (!IsSuitablePhysicalDevice(device, extensions)) {
       printf("Device \"%s\" is not suitable\n", device.properties.deviceName);
-      devices.push_back(std::move(device));
+      continue;
     }
+
+    device.extensions = std::move(extensions);
+    devices.push_back(std::move(device));
   }
 
   if (devices.empty())
@@ -233,6 +244,59 @@ SetupPhysicalDevice(VulkanContext* context) {
   context->physical_device = devices.front();
   printf("Selected device \"%s\"\n",
          context->physical_device.properties.deviceName);
+
+  return Status::Ok();
+}
+
+Status
+SetupLogicalDevice(VulkanContext* context) {
+  // The device queues to set.
+  float queue_priority = 1.0f;
+
+  // We onlu create unique device queues
+  std::set<int> queue_indices = {context->physical_device.graphics_queue_index,
+                                 context->physical_device.present_queue_index};
+  std::vector<VkDeviceQueueCreateInfo> qcreate_infos;
+  for (int queue_family : queue_indices) {
+    VkDeviceQueueCreateInfo qcreate_info = {};
+    qcreate_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    qcreate_info.queueFamilyIndex = queue_family;
+    qcreate_info.queueCount = 1;
+    qcreate_info.pQueuePriorities = &queue_priority;
+    qcreate_infos.push_back(std::move(qcreate_info));
+  }
+
+  // Setup the logical device features.
+  VkDeviceCreateInfo dci = {};
+  dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+  dci.queueCreateInfoCount = (uint32_t)qcreate_infos.size();
+  dci.pQueueCreateInfos = qcreate_infos.data();
+  // Extensions.
+  dci.enabledExtensionCount =
+      (uint32_t)context->physical_device.extensions.size();
+  dci.ppEnabledExtensionNames = context->physical_device.extensions.data();
+  // Features.
+  // For now physical features are disabled.
+  /* dci.pEnabledFeatures = &physical_device->features; */
+  VkPhysicalDeviceFeatures features = {};
+  dci.pEnabledFeatures = &features;
+  // Validation layers.
+  dci.enabledLayerCount = (uint32_t)context->instance.validation_layers.size();
+  dci.ppEnabledLayerNames = context->instance.validation_layers.data();
+
+  // Finally create the device.
+  VkResult res = vkCreateDevice(context->physical_device.handle, &dci, nullptr,
+                                &context->logical_device.handle);
+  VK_RETURN_IF_ERROR(res);
+
+  // Get the graphics queue.
+  vkGetDeviceQueue(context->logical_device.handle,
+                   context->physical_device.graphics_queue_index, 0,
+                   &context->logical_device.graphics_queue);
+  // Get the present queue.
+  vkGetDeviceQueue(context->logical_device.handle,
+                   context->physical_device.present_queue_index, 0,
+                   &context->logical_device.present_queue);
 
   return Status::Ok();
 }
