@@ -33,6 +33,7 @@ VulkanContext::~VulkanContext() {
   // We destroy elements backwards from allocation.
   for (VkImageView& image_view : swap_chain.image_views) {
     if (image_view != VK_NULL_HANDLE) {
+      printf("LOG: Destroying image\n");
       vkDestroyImageView(logical_device.handle, image_view, nullptr);
     }
   }
@@ -71,6 +72,7 @@ Status SetupPhysicalDevice(VulkanContext*);
 Status SetupSurface(SDL_Window*, VulkanContext*);
 Status SetupLogicalDevice(VulkanContext*);
 Status SetupSwapChain(VulkanContext*);
+Status SetupImages(VulkanContext*);
 
 // Utils -----------------------------------------------------------------------
 // Adds all the required extensions from SDL and beyond.
@@ -111,6 +113,7 @@ InitVulkanContext(SDL_Window* window, VulkanContext* context) {
   RETURN_IF_ERROR(status, SetupPhysicalDevice(context));
   RETURN_IF_ERROR(status, SetupLogicalDevice(context));
   RETURN_IF_ERROR(status, SetupSwapChain(context));
+  RETURN_IF_ERROR(status, SetupImages(context));
 
   return Status::Ok();
 }
@@ -373,8 +376,13 @@ SetupSwapChain(VulkanContext* context) {
                                       nullptr, &swap_chain.handle);
   if (res != VK_SUCCESS)
     return Status("Cannot create swap chain: %s", VulkanEnumToString(res));
+  return Status::Ok();
+}
 
-#if 0
+Status
+SetupImages(VulkanContext* context) {
+  VulkanContext::SwapChain& swap_chain = context->swap_chain;
+
   // Retrieve the images.
   uint32_t sc_image_count;
   vkGetSwapchainImagesKHR(context->logical_device.handle, swap_chain.handle,
@@ -382,7 +390,34 @@ SetupSwapChain(VulkanContext* context) {
   swap_chain.images.resize(sc_image_count);
   vkGetSwapchainImagesKHR(context->logical_device.handle, swap_chain.handle,
                           &sc_image_count, swap_chain.images.data());
-#endif
+
+
+  swap_chain.image_views.reserve(swap_chain.images.size());
+  for (size_t i = 0; i < swap_chain.images.size(); i++) {
+    swap_chain.image_views.emplace_back();
+
+    VkImageViewCreateInfo ivci = {};
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = swap_chain.images[i];
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = swap_chain.format.format;
+
+    ivci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    ivci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    ivci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    ivci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.baseArrayLayer = 0;
+    ivci.subresourceRange.layerCount = 1;
+
+    VkResult res = vkCreateImageView(context->logical_device.handle, &ivci,
+                                     nullptr, &swap_chain.image_views[i]);
+    if (res != VK_SUCCESS)
+      return Status("Could not create image view: %s", VulkanEnumToString(res));
+  }
 
   return Status::Ok();
 }
