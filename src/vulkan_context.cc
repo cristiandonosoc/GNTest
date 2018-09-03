@@ -3,6 +3,7 @@
 
 #include <string.h>
 
+#include <limits>
 #include <set>
 
 #include <SDL2/SDL_Vulkan.h>
@@ -30,15 +31,16 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
 
 VulkanContext::~VulkanContext() {
   // We destroy elements backwards from allocation.
-  for (VkImageView& image_view : image_views) {
+  for (VkImageView& image_view : swap_chain.image_views) {
     if (image_view != VK_NULL_HANDLE) {
       vkDestroyImageView(logical_device.handle, image_view, nullptr);
     }
   }
 
-  if (physical_device.swap_chain.handle != VK_NULL_HANDLE)
-    vkDestroySwapchainKHR(logical_device.handle,
-                          physical_device.swap_chain.handle, nullptr);
+  if (swap_chain.handle != VK_NULL_HANDLE) {
+    printf("LOG: Destroying Swap chain\n");
+    vkDestroySwapchainKHR(logical_device.handle, swap_chain.handle, nullptr);
+  }
 
   if (logical_device.handle != VK_NULL_HANDLE) {
     printf("LOG: Destroying logical device\n");
@@ -68,6 +70,7 @@ Status SetupDebugMessenger(VulkanContext*);
 Status SetupPhysicalDevice(VulkanContext*);
 Status SetupSurface(SDL_Window*, VulkanContext*);
 Status SetupLogicalDevice(VulkanContext*);
+Status SetupSwapChain(VulkanContext*);
 
 // Utils -----------------------------------------------------------------------
 // Adds all the required extensions from SDL and beyond.
@@ -75,16 +78,25 @@ Status AddInstanceExtensions(SDL_Window*, VulkanContext*);
 Status AddInstanceValidationLayers(VulkanContext*);
 Status CheckRequiredLayers(const std::vector<const char*>&);
 
-VulkanContext::PhysicalDevice::SwapChain
+VulkanContext::SwapChain
 GetSwapChainProperties(const VulkanContext&,
                        const VulkanContext::PhysicalDevice&);
 bool
-IsSuitablePhysicalDevice(const VulkanContext::PhysicalDevice&,
+IsSuitablePhysicalDevice(const VulkanContext&,
+                         const VulkanContext::PhysicalDevice&,
                          const std::vector<const char*>& extensions);
+
+VkSurfaceFormatKHR
+GetBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>&);
+VkPresentModeKHR
+GetBestPresentMode(const std::vector<VkPresentModeKHR>&);
+VkExtent2D
+ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 }  // namespace
 
 #define RETURN_IF_ERROR(status, call) \
+  printf("CALLING: %s\n", #call); \
   status = (call);                    \
   if (!status.ok())                   \
     return status;
@@ -98,6 +110,7 @@ InitVulkanContext(SDL_Window* window, VulkanContext* context) {
   RETURN_IF_ERROR(status, SetupSurface(window, context));
   RETURN_IF_ERROR(status, SetupPhysicalDevice(context));
   RETURN_IF_ERROR(status, SetupLogicalDevice(context));
+  RETURN_IF_ERROR(status, SetupSwapChain(context));
 
   return Status::Ok();
 }
@@ -222,12 +235,12 @@ SetupPhysicalDevice(VulkanContext* context) {
       i++;
     }
 
-    device.swap_chain = GetSwapChainProperties(*context, device);
+    context->swap_chain = GetSwapChainProperties(*context, device);
 
     // We check if this is a suitable device
     std::vector<const char*> extensions;
     extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    if (!IsSuitablePhysicalDevice(device, extensions)) {
+    if (!IsSuitablePhysicalDevice(*context, device, extensions)) {
       printf("Device \"%s\" is not suitable\n", device.properties.deviceName);
       continue;
     }
@@ -301,6 +314,79 @@ SetupLogicalDevice(VulkanContext* context) {
   return Status::Ok();
 }
 
+Status
+SetupSwapChain(VulkanContext* context) {
+  VulkanContext::SwapChain& swap_chain = context->swap_chain;
+  uint32_t image_min = swap_chain.capabilites.minImageCount;
+  uint32_t image_max = swap_chain.capabilites.maxImageCount;
+  uint32_t image_count = image_min + 1;
+  if (image_max > 0 && image_count > image_max)
+    image_count = image_max;
+
+  swap_chain.format = GetBestSurfaceFormat(swap_chain.formats);
+  swap_chain.present_mode = GetBestPresentMode(swap_chain.present_modes);
+  swap_chain.extent = ChooseSwapExtent(swap_chain.capabilites);
+
+  VkSwapchainCreateInfoKHR scci = {};
+  scci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+  scci.surface = context->surface;
+
+  scci.minImageCount = image_count;
+  scci.imageFormat = swap_chain.format.format;
+  scci.imageColorSpace = swap_chain.format.colorSpace;
+  scci.imageExtent = swap_chain.extent;
+  scci.imageArrayLayers = 1;
+  scci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+  uint32_t queue_family_indices[] = {
+      (uint32_t)context->physical_device.graphics_queue_index,
+      (uint32_t)context->physical_device.present_queue_index};
+
+  // We check which sharing mode is needed between the command queues.
+  if (context->physical_device.graphics_queue_index !=
+      context->physical_device.present_queue_index) {
+    // If graphics and present are different, we have a concurrent management
+    // that is simpler.
+    scci.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+    scci.queueFamilyIndexCount = 2;
+    scci.pQueueFamilyIndices = queue_family_indices;
+  } else {
+    // If the queues are the same, we use exclusive as there are no queues
+    // to coordinate.
+    scci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    scci.queueFamilyIndexCount = 0;      // Optional
+    scci.pQueueFamilyIndices = nullptr;  // Optional
+  }
+
+  scci.preTransform = swap_chain.capabilites.currentTransform;
+  // Don't blend alpha between images of the swap chain.
+  scci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+
+  scci.presentMode = swap_chain.present_mode;
+  scci.clipped = VK_TRUE;   // Ignore pixels that are ignored.
+
+  // If we need to create a new swap chain, this is a reference to the one we
+  // came from.
+  scci.oldSwapchain = VK_NULL_HANDLE;
+
+  VkResult res = vkCreateSwapchainKHR(context->logical_device.handle, &scci,
+                                      nullptr, &swap_chain.handle);
+  if (res != VK_SUCCESS)
+    return Status("Cannot create swap chain: %s", VulkanEnumToString(res));
+
+#if 0
+  // Retrieve the images.
+  uint32_t sc_image_count;
+  vkGetSwapchainImagesKHR(context->logical_device.handle, swap_chain.handle,
+                          &sc_image_count, nullptr);
+  swap_chain.images.resize(sc_image_count);
+  vkGetSwapchainImagesKHR(context->logical_device.handle, swap_chain.handle,
+                          &sc_image_count, swap_chain.images.data());
+#endif
+
+  return Status::Ok();
+}
+
 
 // Utils -----------------------------------------------------------------------
 
@@ -353,11 +439,11 @@ CheckRequiredLayers(const std::vector<const char*>& requested_layers) {
   return Status::Ok();
 };
 
-VulkanContext::PhysicalDevice::SwapChain
+VulkanContext::SwapChain
 GetSwapChainProperties(const VulkanContext& context,
                        const VulkanContext::PhysicalDevice& device) {
   // Setup the swap chain.
-  VulkanContext::PhysicalDevice::SwapChain swap_chain;
+  VulkanContext::SwapChain swap_chain;
   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.handle, context.surface,
                                             &swap_chain.capabilites);
   uint32_t format_count;
@@ -379,10 +465,9 @@ GetSwapChainProperties(const VulkanContext& context,
   return swap_chain;
 }
 
-
-
 bool
-IsSuitablePhysicalDevice(const VulkanContext::PhysicalDevice& device,
+IsSuitablePhysicalDevice(const VulkanContext& context,
+                         const VulkanContext::PhysicalDevice& device,
                          const std::vector<const char*>& extensions) {
   // Queues.
   if (device.graphics_queue_index < 0 ||
@@ -422,13 +507,80 @@ IsSuitablePhysicalDevice(const VulkanContext::PhysicalDevice& device,
   }
 
   // Swap chain properties.
-  if (device.swap_chain.formats.empty() ||
-      device.swap_chain.present_modes.empty()) {
+  if (context.swap_chain.formats.empty() ||
+      context.swap_chain.present_modes.empty()) {
     return false;
   }
 
   return true;
 }
+
+VkSurfaceFormatKHR
+GetBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats) {
+  // When undefined, vulkan lets us decided whichever we want.
+  if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
+    return {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+
+  // We try to find the RGBA SRGB format.
+  for (const auto& format : formats) {
+    if (format.format == VK_FORMAT_B8G8R8A8_UNORM &&
+        format.colorSpace ==  VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+      return format;
+    }
+  }
+
+  // Otherwise return the first one.
+  return formats.front();
+}
+
+static inline bool
+HasPresentMode(const std::vector<VkPresentModeKHR>& present_modes,
+               const VkPresentModeKHR& target) {
+  for (const auto& present_mode : present_modes) {
+    if (present_mode == target)
+      return true;
+  }
+  return false;
+}
+
+VkPresentModeKHR
+GetBestPresentMode(const std::vector<VkPresentModeKHR>& present_modes) {
+  if (HasPresentMode(present_modes, VK_PRESENT_MODE_MAILBOX_KHR))
+      return VK_PRESENT_MODE_MAILBOX_KHR;
+
+  // Sometimes FIFO is not well implemented, so prefer immediate.
+  if (HasPresentMode(present_modes, VK_PRESENT_MODE_IMMEDIATE_KHR))
+    return VK_PRESENT_MODE_IMMEDIATE_KHR;
+
+  // FIFO is assured to be there.
+  return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+VkExtent2D
+ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+  if (capabilities.currentExtent.width !=
+      std::numeric_limits<uint32_t>::max()) {
+    return capabilities.currentExtent;
+  } else {
+    return capabilities.maxImageExtent;
+
+#if 0
+    // Do the clamping.
+    VkExtent2D extent = {WIDTH, HEIGHT};
+    // TODO: Use MAX, MIN macros.
+    extent.width = std::max(
+        capabilities.minImageExtent.width,
+        std::min(capabilities.maxImageExtent.width, extent.width));
+    extent.height = std::max(
+        capabilities.minImageExtent.height,
+        std::min(capabilities.maxImageExtent.height, extent.height));
+
+    return extent;
+#endif
+  }
+}
+
+
 
 }  // namespace
 

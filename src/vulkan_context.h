@@ -23,6 +23,9 @@ struct VulkanContext {
     std::vector<const char*> validation_layers;
   } instance;
 
+  VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
+  VkSurfaceKHR surface = VK_NULL_HANDLE;
+
   // Physical Device
   struct PhysicalDevice {
     VkPhysicalDevice handle = VK_NULL_HANDLE;
@@ -36,21 +39,24 @@ struct VulkanContext {
     int present_queue_index = -1;
     std::vector<VkQueueFamilyProperties> qf_properties;
 
-    struct SwapChain {
-      std::vector<VkSurfaceFormatKHR> formats;
-      std::vector<VkPresentModeKHR> present_modes;
-
-      VkSwapchainKHR handle = VK_NULL_HANDLE;
-
-      VkSurfaceCapabilitiesKHR capabilites;
-      VkSurfaceFormatKHR format;
-      VkPresentModeKHR present_mode;
-      VkExtent2D extent;
-    } swap_chain;
   } physical_device;
 
-  VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
-  VkSurfaceKHR surface = VK_NULL_HANDLE;
+
+  struct SwapChain {
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> present_modes;
+
+    VkSwapchainKHR handle = VK_NULL_HANDLE;
+
+    VkSurfaceCapabilitiesKHR capabilites;
+    VkSurfaceFormatKHR format;
+    VkPresentModeKHR present_mode;
+    VkExtent2D extent;
+
+    std::vector<VkImage> images;
+    std::vector<VkImageView> image_views;
+  } swap_chain;
+
 
   // Logical Device
   struct LogicalDevice {
@@ -59,8 +65,6 @@ struct VulkanContext {
     VkQueue present_queue = VK_NULL_HANDLE;
   } logical_device;
 
-  std::vector<VkImage> images;
-  std::vector<VkImageView> image_views;
 };
 
 Status
