@@ -41,7 +41,6 @@ struct VulkanContext {
 
   } physical_device;
 
-
   struct SwapChain {
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> present_modes;
@@ -65,10 +64,10 @@ struct VulkanContext {
     VkQueue present_queue = VK_NULL_HANDLE;
   } logical_device;
 
+  DELETE_COPY_AND_ASSIGN(VulkanContext);
 };
 
 Status
 InitVulkanContext(SDL_Window*, VulkanContext*);
-
 
 }  // namespace warhol

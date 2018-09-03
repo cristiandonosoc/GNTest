@@ -27,8 +27,6 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
   return VK_FALSE;
 }
 
-
-
 VulkanContext::~VulkanContext() {
   // We destroy elements backwards from allocation.
   for (VkImageView& image_view : swap_chain.image_views) {
@@ -614,8 +612,6 @@ ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
 #endif
   }
 }
-
-
 
 }  // namespace
 
