@@ -8,14 +8,18 @@
 
 namespace warhol {
 
-namespace {
-
-}  // namespace
-
 ShaderModuleContext::~ShaderModuleContext() {
   if (handle != VK_NULL_HANDLE) {
     assert(context);
     vkDestroyShaderModule(context->logical_device.handle, handle, nullptr);
+  }
+}
+
+PipelineContext::PipelineContext(VulkanContext* context) : context(context) {}
+PipelineContext::~PipelineContext() {
+  if (layout != VK_NULL_HANDLE) {
+    assert(context);
+    vkDestroyPipelineLayout(context->logical_device.handle, layout, nullptr);
   }
 }
 
@@ -41,14 +45,17 @@ CreateShaderModule(VulkanContext* context, const std::string& src,
   return Status::Ok();
 }
 
+#if 0
+
 Status
 CreateGraphicsPipeline(VulkanContext* context, const std::string& vert_src,
                        const std::string& frag_src) {
-  Status res;
+  Status status;
   ShaderModuleContext vert_module = {};
-  res = CreateShaderModule(context, vert_src, &vert_module);
-  if (!res.ok())
-    return res;
+  status = CreateShaderModule(context, vert_src, &vert_module);
+  if (!status.ok())
+    return status;
+
   VkPipelineShaderStageCreateInfo vert_create_info = {};
   vert_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   vert_create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -56,9 +63,9 @@ CreateGraphicsPipeline(VulkanContext* context, const std::string& vert_src,
   vert_create_info.pName = "main";
 
   ShaderModuleContext frag_module = {};
-  res = CreateShaderModule(context, frag_src, &frag_module);
-  if (!res.ok())
-    return res;
+  status = CreateShaderModule(context, frag_src, &frag_module);
+  if (!status.ok())
+    return status;
   VkPipelineShaderStageCreateInfo frag_create_info = {};
   frag_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   frag_create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -67,6 +74,10 @@ CreateGraphicsPipeline(VulkanContext* context, const std::string& vert_src,
 
   VkPipelineShaderStageCreateInfo shader_stages[] = {vert_create_info,
                                                      frag_create_info};
+
+
 }
+
+#endif
 
 }  // namespace warhol

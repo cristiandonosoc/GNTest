@@ -8,6 +8,8 @@
 
 #include "vulkan_context.h"
 
+#include "utils/file.h"
+
 int main() {
   // Setup SDL2.
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
@@ -27,7 +29,7 @@ int main() {
     return 1;
   }
 
-  warhol::VulkanContext vulkan_context;
+  warhol::VulkanContext vulkan_context = {};
   warhol::Status res = InitVulkanContext(window, &vulkan_context);
   if (!res.ok()) {
     printf("ERROR INITIALIZING VULKAN: %s\n", res.err_msg().data());

@@ -64,6 +64,12 @@ struct VulkanContext {
     VkQueue present_queue = VK_NULL_HANDLE;
   } logical_device;
 
+  struct Pipeline {
+    VkRenderPass render_pass = VK_NULL_HANDLE;
+    VkPipelineLayout layout = VK_NULL_HANDLE;
+    std::vector<VkShaderModule> shader_modules;
+  } pipeline;
+
   DELETE_COPY_AND_ASSIGN(VulkanContext);
 };
 

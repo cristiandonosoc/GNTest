@@ -19,6 +19,15 @@ struct ShaderModuleContext {
   DELETE_COPY_AND_ASSIGN(ShaderModuleContext);
 };
 
+struct PipelineContext {
+  PipelineContext(VulkanContext*);
+  ~PipelineContext();
 
+  VkPipelineLayout layout = VK_NULL_HANDLE;
+
+  VulkanContext* context;   // Not owning.
+
+  DELETE_COPY_AND_ASSIGN(PipelineContext);
+};
 
 }  // namespace warhol

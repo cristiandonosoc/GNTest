@@ -9,6 +9,7 @@ if (compiler == "msvc") {
       # Warning ignores
       "/wd4700",    # Un-initialized variable
       "/wd4702",    # Un-reachable code
+      "/wd4996",    # fopen
     ]
   }
 

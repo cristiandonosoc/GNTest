@@ -29,6 +29,16 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
 
 VulkanContext::~VulkanContext() {
   // We destroy elements backwards from allocation.
+  if (pipeline.layout != VK_NULL_HANDLE) {
+    printf("LOG: Destroying pipeline layout\n");
+    vkDestroyPipelineLayout(logical_device.handle, pipeline.layout, nullptr);
+  }
+
+  if (pipeline.render_pass != VK_NULL_HANDLE) {
+    printf("LOG: Destroying render pass\n");
+    vkDestroyRenderPass(logical_device.handle, pipeline.render_pass, nullptr);
+  }
+
   for (VkImageView& image_view : swap_chain.image_views) {
     if (image_view != VK_NULL_HANDLE) {
       printf("LOG: Destroying image\n");
@@ -71,6 +81,9 @@ Status SetupSurface(SDL_Window*, VulkanContext*);
 Status SetupLogicalDevice(VulkanContext*);
 Status SetupSwapChain(VulkanContext*);
 Status SetupImages(VulkanContext*);
+Status SetupRenderPass(VulkanContext*);
+Status SetupPipelineLayout(VulkanContext*);
+Status SetupShaderModules(VulkanContext*);
 
 // Utils -----------------------------------------------------------------------
 // Adds all the required extensions from SDL and beyond.
@@ -112,6 +125,9 @@ InitVulkanContext(SDL_Window* window, VulkanContext* context) {
   RETURN_IF_ERROR(status, SetupLogicalDevice(context));
   RETURN_IF_ERROR(status, SetupSwapChain(context));
   RETURN_IF_ERROR(status, SetupImages(context));
+  RETURN_IF_ERROR(status, SetupRenderPass(context));
+  RETURN_IF_ERROR(status, SetupPipelineLayout(context));
+  /* RETURN_IF_ERROR(status, SetupShaderModules(context)); */
 
   return Status::Ok();
 }
@@ -420,6 +436,158 @@ SetupImages(VulkanContext* context) {
   return Status::Ok();
 }
 
+Status
+SetupRenderPass(VulkanContext* context) {
+  VkAttachmentReference color_attachment_ref = {};
+  color_attachment_ref.attachment = 0;
+  color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+  VkSubpassDescription subpass = {};
+  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments = &color_attachment_ref;
+
+  VkAttachmentDescription color_attachment = {};
+  color_attachment.format = context->swap_chain.format.format;
+  color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+  color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+  VkRenderPassCreateInfo render_pass_info = {};
+  render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  render_pass_info.attachmentCount = 1;
+  render_pass_info.pAttachments = &color_attachment;
+  render_pass_info.subpassCount = 1;
+  render_pass_info.pSubpasses = &subpass;
+
+  VkResult res = vkCreateRenderPass(context->logical_device.handle,
+                                    &render_pass_info,
+                                    nullptr,
+                                    &context->pipeline.render_pass);
+  if (res != VK_SUCCESS)
+    return Status("Could not create render pass: %s", VulkanEnumToString(res));
+  return Status::Ok();
+}
+
+Status
+SetupPipelineLayout(VulkanContext* context) {
+  // Vertex input state
+  VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
+  vertex_input_info.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  vertex_input_info.vertexBindingDescriptionCount = 0;
+  vertex_input_info.pVertexBindingDescriptions = nullptr;
+  vertex_input_info.vertexAttributeDescriptionCount = 0;
+  vertex_input_info.pVertexBindingDescriptions = nullptr;
+
+  // Assembly: How the geometry is interpreted.
+  VkPipelineInputAssemblyStateCreateInfo input_assembly = {};
+  input_assembly.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+  input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  input_assembly.primitiveRestartEnable = VK_FALSE;
+
+  // Viewport: The extent of the window we're going to draw to.
+  VkViewport viewport = {};
+  viewport.x = 0.0f;
+  viewport.y = 0.0f;
+  viewport.width = (float)context->swap_chain.extent.width;
+  viewport.height = (float)context->swap_chain.extent.height;
+  viewport.minDepth = 0.0f;
+  viewport.maxDepth = 1.0f;
+
+  // Scissor: The sub-window we will actually keep.
+  VkRect2D scissor = {};
+  scissor.offset = {0, 0};
+  scissor.extent = context->swap_chain.extent;
+
+  // The Viewport state.
+  VkPipelineViewportStateCreateInfo viewport_state = {};
+  viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+  viewport_state.viewportCount = 1;
+  viewport_state.pViewports = &viewport;
+  viewport_state.scissorCount = 1;
+  viewport_state.pScissors = &scissor;
+
+  // Rasterizer configuration.
+  VkPipelineRasterizationStateCreateInfo rasterizer = {};
+  rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+  // Whether to clamp instead of discard for depth test.
+  rasterizer.depthClampEnable = VK_FALSE;
+  rasterizer.rasterizerDiscardEnable = VK_FALSE;  // Disable the rasterizer stage.
+  rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+  rasterizer.lineWidth = 1.0f;
+  rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+  rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+  rasterizer.depthBiasEnable = VK_FALSE;
+  rasterizer.depthBiasConstantFactor = 0.0f; // Optional
+  rasterizer.depthBiasClamp = 0.0f; // Optional
+  rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+
+  // Multisampling. (Disabled for now).
+  VkPipelineMultisampleStateCreateInfo multisampling = {};
+  multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+  multisampling.sampleShadingEnable = VK_FALSE;
+  multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+  multisampling.minSampleShading = 1.0f; // Optional
+  multisampling.pSampleMask = nullptr; // Optional
+  multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
+  multisampling.alphaToOneEnable = VK_FALSE; // Optional
+
+  VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+  pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  pipeline_layout_info.setLayoutCount = 0; // Optional
+  pipeline_layout_info.pSetLayouts = nullptr; // Optional
+  pipeline_layout_info.pushConstantRangeCount = 0; // Optional
+  pipeline_layout_info.pPushConstantRanges = nullptr; // Optional
+
+  VkResult res = vkCreatePipelineLayout(context->logical_device.handle,
+                                        &pipeline_layout_info,
+                                        nullptr,
+                                        &context->pipeline.layout);
+
+  if (res != VK_SUCCESS) {
+    return Status("Could not create pipeline layout: %s",
+                  VulkanEnumToString(res));
+  }
+  return Status::Ok();
+}
+
+static inline Status
+CreateShaderModule(VulkanContext* context, const std::string& src,
+                   VkShaderModule* out) {
+  VkShaderModuleCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  create_info.codeSize = src.size();
+  create_info.pCode = (const uint32_t*)src.data();
+
+  VkShaderModule handle = VK_NULL_HANDLE;
+  VkResult res = vkCreateShaderModule(context->logical_device.handle,
+                                      &create_info, nullptr, &handle);
+  if (res != VK_SUCCESS) {
+    return Status("Could not create shader module: %s",
+                  VulkanEnumToString(res));
+  }
+
+  *out = handle;
+  return Status::Ok();
+}
+
+
+
+/* Status */
+/* SetupShaderModules(VulkanContext* context) { */
+/*   Status status; */
+/*   std::vector<char> data; */
+/*   status = ReadWholeFile("out/simple.vert.spv", */
+/*   status = CreateShaderModule(context, */
+
+
+/* } */
 
 // Utils -----------------------------------------------------------------------
 
