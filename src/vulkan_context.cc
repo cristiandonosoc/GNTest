@@ -8,6 +8,7 @@
 
 #include <SDL2/SDL_Vulkan.h>
 
+#include "utils/file.h"
 #include "vulkan_context.h"
 #include "vulkan_utils.h"
 
@@ -28,6 +29,19 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
 }
 
 VulkanContext::~VulkanContext() {
+  if (pipeline.pipeline != VK_NULL_HANDLE) {
+    printf("LOG: Destroying Graphics Pipeline\n");
+    vkDestroyPipeline(logical_device.handle, pipeline.pipeline, nullptr);
+  }
+
+  for (const auto shader_module : pipeline.shader_modules) {
+    if (shader_module != VK_NULL_HANDLE) {
+      printf("LOG: Destroying Shader Module\n");
+      vkDestroyShaderModule(logical_device.handle, shader_module,
+                            nullptr);
+    }
+  }
+
   // We destroy elements backwards from allocation.
   if (pipeline.layout != VK_NULL_HANDLE) {
     printf("LOG: Destroying pipeline layout\n");
@@ -83,7 +97,7 @@ Status SetupSwapChain(VulkanContext*);
 Status SetupImages(VulkanContext*);
 Status SetupRenderPass(VulkanContext*);
 Status SetupPipelineLayout(VulkanContext*);
-Status SetupShaderModules(VulkanContext*);
+Status SetupGraphicsPipeline(VulkanContext*);
 
 // Utils -----------------------------------------------------------------------
 // Adds all the required extensions from SDL and beyond.
@@ -110,6 +124,7 @@ ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 #define RETURN_IF_ERROR(status, call) \
   printf("CALLING: %s\n", #call); \
+  fflush(stdout); \
   status = (call);                    \
   if (!status.ok())                   \
     return status;
@@ -127,7 +142,7 @@ InitVulkanContext(SDL_Window* window, VulkanContext* context) {
   RETURN_IF_ERROR(status, SetupImages(context));
   RETURN_IF_ERROR(status, SetupRenderPass(context));
   RETURN_IF_ERROR(status, SetupPipelineLayout(context));
-  /* RETURN_IF_ERROR(status, SetupShaderModules(context)); */
+  RETURN_IF_ERROR(status, SetupGraphicsPipeline(context));
 
   return Status::Ok();
 }
@@ -475,6 +490,83 @@ SetupRenderPass(VulkanContext* context) {
 
 Status
 SetupPipelineLayout(VulkanContext* context) {
+  VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+  pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  pipeline_layout_info.setLayoutCount = 0; // Optional
+  pipeline_layout_info.pSetLayouts = nullptr; // Optional
+  pipeline_layout_info.pushConstantRangeCount = 0; // Optional
+  pipeline_layout_info.pPushConstantRanges = nullptr; // Optional
+
+  VkResult res = vkCreatePipelineLayout(context->logical_device.handle,
+                                        &pipeline_layout_info,
+                                        nullptr,
+                                        &context->pipeline.layout);
+
+  if (res != VK_SUCCESS) {
+    return Status("Could not create pipeline layout: %s",
+                  VulkanEnumToString(res));
+  }
+  return Status::Ok();
+}
+
+static inline Status
+CreateShaderModule(VulkanContext* context, const std::vector<char>& src,
+                   VkShaderModule* out) {
+  VkShaderModuleCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  create_info.codeSize = src.size();
+  create_info.pCode = (const uint32_t*)src.data();
+
+  VkShaderModule handle = VK_NULL_HANDLE;
+  VkResult res = vkCreateShaderModule(context->logical_device.handle,
+                                      &create_info, nullptr, &handle);
+  if (res != VK_SUCCESS) {
+    return Status("Could not create shader module: %s",
+                  VulkanEnumToString(res));
+  }
+
+  *out = handle;
+  return Status::Ok();
+}
+
+Status
+SetupGraphicsPipeline(VulkanContext* context) {
+  Status status;
+  context->pipeline.shader_modules.emplace_back();
+  auto& shader_module = context->pipeline.shader_modules.back();
+
+  std::vector<char> shader_src;
+  status = ReadWholeFile("out/simple.vert.spv", &shader_src);
+  if (!status.ok())
+    return status;
+
+  status = CreateShaderModule(context, shader_src, &shader_module);
+  if (!status.ok())
+    return status;
+
+  VkPipelineShaderStageCreateInfo vert_create_info = {};
+  vert_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  vert_create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+  vert_create_info.module = shader_module;
+  vert_create_info.pName = "main";
+
+  context->pipeline.shader_modules.emplace_back();
+  shader_module = context->pipeline.shader_modules.back();
+  status = ReadWholeFile("out/simple.vert.spv", &shader_src);
+  if (!status.ok())
+    return status;
+  status = CreateShaderModule(context, shader_src, &shader_module);
+  if (!status.ok())
+    return status;
+  VkPipelineShaderStageCreateInfo frag_create_info = {};
+  frag_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  frag_create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+  frag_create_info.module = shader_module;
+  frag_create_info.pName = "main";
+
+  VkPipelineShaderStageCreateInfo shader_stages[] = {vert_create_info,
+                                                     frag_create_info};
+
   // Vertex input state
   VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
   vertex_input_info.sType =
@@ -538,56 +630,56 @@ SetupPipelineLayout(VulkanContext* context) {
   multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
   multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
-  VkPipelineLayoutCreateInfo pipeline_layout_info = {};
-  pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipeline_layout_info.setLayoutCount = 0; // Optional
-  pipeline_layout_info.pSetLayouts = nullptr; // Optional
-  pipeline_layout_info.pushConstantRangeCount = 0; // Optional
-  pipeline_layout_info.pPushConstantRanges = nullptr; // Optional
+  VkPipelineColorBlendAttachmentState color_blend_attachment = {};
+  color_blend_attachment.blendEnable = VK_TRUE;
+  color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+  color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+  color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+  color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+  color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+  color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
-  VkResult res = vkCreatePipelineLayout(context->logical_device.handle,
-                                        &pipeline_layout_info,
-                                        nullptr,
-                                        &context->pipeline.layout);
+  VkPipelineColorBlendStateCreateInfo color_blending = {};
+  color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+  color_blending.logicOpEnable = VK_FALSE;
+  color_blending.logicOp = VK_LOGIC_OP_COPY; // Optional
+  color_blending.attachmentCount = 1;
+  color_blending.pAttachments = &color_blend_attachment;
+  color_blending.blendConstants[0] = 0.0f; // Optional
+  color_blending.blendConstants[1] = 0.0f; // Optional
+  color_blending.blendConstants[2] = 0.0f; // Optional
+  color_blending.blendConstants[3] = 0.0f; // Optional
 
-  if (res != VK_SUCCESS) {
-    return Status("Could not create pipeline layout: %s",
+
+  VkGraphicsPipelineCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+  create_info.stageCount = 2;
+  create_info.pStages = shader_stages;
+
+  create_info.pVertexInputState = &vertex_input_info;
+  create_info.pInputAssemblyState = &input_assembly;
+  create_info.pViewportState = &viewport_state;
+  create_info.pRasterizationState = &rasterizer;
+  create_info.pMultisampleState = &multisampling;
+  create_info.pDepthStencilState = nullptr; // Optional
+  create_info.pColorBlendState = &color_blending;
+  create_info.pDynamicState = nullptr; // Optional
+
+  create_info.layout = context->pipeline.layout;
+  create_info.renderPass = context->pipeline.render_pass;
+  create_info.subpass = 0;
+
+  create_info.basePipelineHandle = VK_NULL_HANDLE; // Optional
+  create_info.basePipelineIndex = -1; // Optional
+
+  VkResult res = vkCreateGraphicsPipelines(
+      context->logical_device.handle, VK_NULL_HANDLE, 1, &create_info, nullptr,
+      &context->pipeline.pipeline);
+  if (res != VK_SUCCESS)
+    return Status("Error creating graphics pipeline: %s",
                   VulkanEnumToString(res));
-  }
   return Status::Ok();
 }
-
-static inline Status
-CreateShaderModule(VulkanContext* context, const std::string& src,
-                   VkShaderModule* out) {
-  VkShaderModuleCreateInfo create_info = {};
-  create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-  create_info.codeSize = src.size();
-  create_info.pCode = (const uint32_t*)src.data();
-
-  VkShaderModule handle = VK_NULL_HANDLE;
-  VkResult res = vkCreateShaderModule(context->logical_device.handle,
-                                      &create_info, nullptr, &handle);
-  if (res != VK_SUCCESS) {
-    return Status("Could not create shader module: %s",
-                  VulkanEnumToString(res));
-  }
-
-  *out = handle;
-  return Status::Ok();
-}
-
-
-
-/* Status */
-/* SetupShaderModules(VulkanContext* context) { */
-/*   Status status; */
-/*   std::vector<char> data; */
-/*   status = ReadWholeFile("out/simple.vert.spv", */
-/*   status = CreateShaderModule(context, */
-
-
-/* } */
 
 // Utils -----------------------------------------------------------------------
 
