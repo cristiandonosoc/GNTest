@@ -9,6 +9,7 @@
 #include <SDL2/SDL_Vulkan.h>
 
 #include "utils/file.h"
+#include "utils/log.h"
 #include "vulkan_context.h"
 #include "vulkan_utils.h"
 
@@ -525,6 +526,9 @@ CreateShaderModule(VulkanContext* context, const std::vector<char>& src,
                   VulkanEnumToString(res));
   }
 
+  printf("Created shader module\n");
+  fflush(stdout);
+
   *out = handle;
   return Status::Ok();
 }
@@ -563,6 +567,8 @@ SetupGraphicsPipeline(VulkanContext* context) {
   frag_create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
   frag_create_info.module = shader_module;
   frag_create_info.pName = "main";
+
+  LOG(INFO) << "CREATED FILES";
 
   VkPipelineShaderStageCreateInfo shader_stages[] = {vert_create_info,
                                                      frag_create_info};
