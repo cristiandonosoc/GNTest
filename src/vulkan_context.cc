@@ -454,15 +454,6 @@ SetupImages(VulkanContext* context) {
 
 Status
 SetupRenderPass(VulkanContext* context) {
-  VkAttachmentReference color_attachment_ref = {};
-  color_attachment_ref.attachment = 0;
-  color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-  VkSubpassDescription subpass = {};
-  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-  subpass.colorAttachmentCount = 1;
-  subpass.pColorAttachments = &color_attachment_ref;
-
   VkAttachmentDescription color_attachment = {};
   color_attachment.format = context->swap_chain.format.format;
   color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -472,6 +463,15 @@ SetupRenderPass(VulkanContext* context) {
   color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+  VkAttachmentReference color_attachment_ref = {};
+  color_attachment_ref.attachment = 0;
+  color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+  VkSubpassDescription subpass = {};
+  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments = &color_attachment_ref;
 
   VkRenderPassCreateInfo render_pass_info = {};
   render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -526,9 +526,6 @@ CreateShaderModule(VulkanContext* context, const std::vector<char>& src,
                   VulkanEnumToString(res));
   }
 
-  printf("Created shader module\n");
-  fflush(stdout);
-
   *out = handle;
   return Status::Ok();
 }
@@ -536,39 +533,45 @@ CreateShaderModule(VulkanContext* context, const std::vector<char>& src,
 Status
 SetupGraphicsPipeline(VulkanContext* context) {
   Status status;
-  context->pipeline.shader_modules.emplace_back();
-  auto& shader_module = context->pipeline.shader_modules.back();
 
-  std::vector<char> shader_src;
-  status = ReadWholeFile("out/simple.vert.spv", &shader_src);
+  // Vertex shader.
+  std::vector<char> vertex_src;
+  status = ReadWholeFile("out/simple.vert.spv", &vertex_src);
   if (!status.ok())
     return status;
 
-  status = CreateShaderModule(context, shader_src, &shader_module);
+  context->pipeline.shader_modules.emplace_back();
+  auto& vertex_module = context->pipeline.shader_modules.back();
+  status = CreateShaderModule(context, vertex_src, &vertex_module);
   if (!status.ok())
     return status;
 
   VkPipelineShaderStageCreateInfo vert_create_info = {};
   vert_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   vert_create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-  vert_create_info.module = shader_module;
+  vert_create_info.module = vertex_module;
   vert_create_info.pName = "main";
 
-  context->pipeline.shader_modules.emplace_back();
-  shader_module = context->pipeline.shader_modules.back();
-  status = ReadWholeFile("out/simple.vert.spv", &shader_src);
+  // Fragment shader.
+
+  std::vector<char> fragment_src;
+  status = ReadWholeFile("out/simple.frag.spv", &fragment_src);
   if (!status.ok())
     return status;
-  status = CreateShaderModule(context, shader_src, &shader_module);
+
+  context->pipeline.shader_modules.emplace_back();
+  auto& fragment_module = context->pipeline.shader_modules.back();
+
+  status = CreateShaderModule(context, fragment_src, &fragment_module);
   if (!status.ok())
     return status;
   VkPipelineShaderStageCreateInfo frag_create_info = {};
   frag_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   frag_create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-  frag_create_info.module = shader_module;
+  frag_create_info.module = fragment_module;
   frag_create_info.pName = "main";
 
-  LOG(INFO) << "CREATED FILES";
+  LOG(INFO) << "CREATED SHADER MODULES";
 
   VkPipelineShaderStageCreateInfo shader_stages[] = {vert_create_info,
                                                      frag_create_info};
@@ -656,6 +659,7 @@ SetupGraphicsPipeline(VulkanContext* context) {
   color_blending.blendConstants[2] = 0.0f; // Optional
   color_blending.blendConstants[3] = 0.0f; // Optional
 
+  // Create the graphics pipeline.
 
   VkGraphicsPipelineCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -677,6 +681,8 @@ SetupGraphicsPipeline(VulkanContext* context) {
 
   create_info.basePipelineHandle = VK_NULL_HANDLE; // Optional
   create_info.basePipelineIndex = -1; // Optional
+
+  LOG(INFO) << "Attempting to create graphics pipeline";
 
   VkResult res = vkCreateGraphicsPipelines(
       context->logical_device.handle, VK_NULL_HANDLE, 1, &create_info, nullptr,
