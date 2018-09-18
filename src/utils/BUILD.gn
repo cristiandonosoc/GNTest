@@ -3,6 +3,8 @@
 
 source_set("utils") {
   sources = [
+    "debug.cc",
+    "debug.h",
     "file.cc",
     "file.h",
     "log.cc",
