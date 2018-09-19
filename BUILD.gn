@@ -23,9 +23,3 @@ group("warhol") {
     "//src:warhol",
   ]
 }
-
-group("vulkan_test") {
-  deps = [
-    "//src:vulkan_test",
-  ]
-}

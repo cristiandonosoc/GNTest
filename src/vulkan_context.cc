@@ -6,7 +6,7 @@
 #include <limits>
 #include <set>
 
-#include <SDL2/SDL_Vulkan.h>
+#include <SDL2/SDL_vulkan.h>
 
 #include "utils/file.h"
 #include "utils/log.h"

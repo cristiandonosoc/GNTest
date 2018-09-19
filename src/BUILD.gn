@@ -17,16 +17,12 @@ config("sdl2_config") {
     handled = true
   } else if (target_os == "mac" && compiler == "clang") {
     # NOTE: SDL2 should be installed as a framework in /Library/Frameworks
-    ldflags = [
-      "-framework", "SDL2",
-    ]
+    ldflags = [ "-framework", "SDL2" ]
     handled = true
   } else if (target_os == "linux") {
     if (compiler == "clang") {
       include_dirs = [ "$sdl2_include_path" ]
-      ldflags = [
-        "-lSDL2",
-      ]
+      ldflags = [ "-lSDL2" ]
       handled = true
     }
   }
@@ -55,19 +51,14 @@ config("vulkan_config") {
 
     # Point the loader to the manifest where the layers are specified.
     # export VK_LAYER_PATH = "$VULKAN_SDK/etc/vulkan/explicit_layers.d"
-    print("${vulkan_include_path}")
-    include_dirs = [
-      "$vulkan_include_path",
-    ]
-    libs = [
-      "${vulkan_lib_path}/libvulkan.dylib",
-    ]
+    include_dirs = [ "${$vulkan_include_path}" ]
+    libs = [ "${vulkan_lib_path}/libvulkan.dylib" ]
     handled = true
   } else if (target_os == "linux") {
     if (compiler == "clang") {
-      include_dirs = [
-        "$vulkan_include_path",
-      ]
+      include_dirs = [ "${vulkan_include_path}" ]
+      libs = [ "-lvulkan" ]
+      ldflags = [ "-L${vulkan_lib_path}" ]
       handled = true
     }
   }
@@ -85,21 +76,12 @@ source_set("vulkan_lib") {
     "vulkan_utils.h",
   ]
   configs += [
+    ":sdl2_config",
     ":vulkan_config",
   ]
 }
 
-executable("vulkan_test") {
-  sources = [ "vulkan_test.cc" ]
-  configs += [
-    ":vulkan_config",
-    ":sdl2_config"
-  ]
-  deps = [
-    ":vulkan_lib",
-    "//src/utils:utils",
-  ]
-}
+# Executables -------------------------------------------------------------------
 
 executable("warhol") {
   sources = [
@@ -111,6 +93,7 @@ executable("warhol") {
   ]
   configs += [
     ":sdl2_config",
+    ":vulkan_config",
   ]
 }
 
