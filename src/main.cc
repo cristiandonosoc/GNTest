@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #define SDL_MAIN_HANDLED
-#include <SDL2/sdl.h>
+#include <SDL2/SDL.h>
 
 #include "vulkan_context.h"
 
@@ -35,6 +35,8 @@ int main() {
     printf("ERROR INITIALIZING VULKAN: %s\n", res.err_msg().data());
     return 1;
   }
+
+  // TODO(Cristian): Correctly close SDL2
 
   printf("Correctly initialized vulkan\n");
   return 0;

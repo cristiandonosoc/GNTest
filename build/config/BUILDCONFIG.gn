@@ -20,13 +20,18 @@ if (target_os == "win") {
   compiler = "msvc"
   set_default_toolchain("//build/toolchains:msvc")
 }
-# TODO: Linux
+
+if (target_os == "linux") {
+  compiler = "clang"
+  set_default_toolchain("//build/toolchains:clang")
+}
+
 if (target_os == "mac") {
   compiler = "clang"
   set_default_toolchain("//build/toolchains:clang")
 }
 
-assert(compiler != "", "Unsupported OS")
+assert(compiler != "", "Unsupported OS $target_os")
 
 # Configs
 # ------------------------------------------------------------------------------

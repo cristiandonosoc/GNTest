@@ -4,6 +4,12 @@ config("default_include_dirs") {
     "//src",
     root_gen_dir,
   ]
+
+  if (target_os == "linux") {
+    include_dirs += [
+      "/usr/include",
+    ]
+  }
 }
 
 group("default") {
