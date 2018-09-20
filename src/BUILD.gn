@@ -22,7 +22,8 @@ config("sdl2_config") {
   } else if (target_os == "linux") {
     if (compiler == "clang") {
       include_dirs = [ "$sdl2_include_path" ]
-      ldflags = [ "-lSDL2" ]
+      libs = [ "-lSDL2" ]
+      ldflags = [ "-L${sdl2_lib_path}" ]
       handled = true
     }
   }

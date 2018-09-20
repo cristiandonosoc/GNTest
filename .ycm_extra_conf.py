@@ -45,6 +45,11 @@ flags = [
 '-isystem', '/mnt/c/Programming/external/fake-windows-headers-for-ycm',
 '-isystem', '/mnt/c/Programming/include',
 '-isystem', '/mnt/c/Programming/vulkan/Include',
+
+# Linux
+'-I', os.path.join('usr', 'include'),
+'-I', os.path.join('usr', 'local', 'include'),
+'-I', os.path.expanduser('~/Local/include'),
 ]
 
 if 'VULKAN_SDK' in os.environ:
