@@ -9,35 +9,36 @@
 #include "vulkan_context.h"
 
 #include "utils/file.h"
+#include "utils/log.h"
 
 int main() {
   // Setup SDL2.
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
-    printf("Error loading SDL: %s\n", SDL_GetError());
+    LOG(ERROR) << "Loading SDL: " << SDL_GetError();
     return 1;
   }
 
   // Data about displays.
-  printf("Information from SDL\n");
-  printf("Amount of displays: %d\n", SDL_GetNumVideoDisplays());
+  LOG(INFO) << "Information from SDL:";
+  LOG(INFO) << "- Amount of displays: " << SDL_GetNumVideoDisplays();
 
   SDL_Window *window = SDL_CreateWindow("Example", SDL_WINDOWPOS_UNDEFINED,
                                         SDL_WINDOWPOS_UNDEFINED, 640, 480,
                                         SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN);
   if (!window) {
-    printf("Error creating window: %s\n", SDL_GetError());
+    LOG(ERROR) << "Creating SDL2 window: " << SDL_GetError();
     return 1;
   }
 
   warhol::VulkanContext vulkan_context = {};
   warhol::Status res = InitVulkanContext(window, &vulkan_context);
   if (!res.ok()) {
-    printf("ERROR INITIALIZING VULKAN: %s\n", res.err_msg().data());
+    LOG (ERROR) << "Initializing Vulkan: " << res.err_msg();
     return 1;
   }
 
   // TODO(Cristian): Correctly close SDL2
 
-  printf("Correctly initialized vulkan\n");
+  LOG(INFO) << "Correctly initialized vulkan";
   return 0;
 }

@@ -10,6 +10,7 @@
 
 #include "utils/file.h"
 #include "utils/log.h"
+#include "utils/string.h"
 #include "vulkan_context.h"
 #include "vulkan_utils.h"
 
@@ -24,7 +25,7 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
   (void)severity;
   (void)type;
   (void)user_data;
-  printf("Validation layer message: %s\n", callback_data->pMessage);
+  LOG(INFO) << "Validation layer message: " << callback_data->pMessage;
 
   return VK_FALSE;
 }
@@ -38,13 +39,13 @@ VulkanContext::~VulkanContext() {
   }
 
   if (pipeline.pipeline != VK_NULL_HANDLE) {
-    printf("LOG: Destroying Graphics Pipeline\n");
+    LOG(INFO) << "Destroying Graphics Pipeline";
     vkDestroyPipeline(logical_device.handle, pipeline.pipeline, nullptr);
   }
 
   for (const auto shader_module : pipeline.shader_modules) {
     if (shader_module != VK_NULL_HANDLE) {
-      printf("LOG: Destroying Shader Module\n");
+      LOG(INFO) << "Destroying Shader Module";
       vkDestroyShaderModule(logical_device.handle, shader_module,
                             nullptr);
     }
@@ -52,44 +53,44 @@ VulkanContext::~VulkanContext() {
 
   // We destroy elements backwards from allocation.
   if (pipeline.layout != VK_NULL_HANDLE) {
-    printf("LOG: Destroying pipeline layout\n");
+    LOG(INFO) << "Destroying pipeline layout";
     vkDestroyPipelineLayout(logical_device.handle, pipeline.layout, nullptr);
   }
 
   if (pipeline.render_pass != VK_NULL_HANDLE) {
-    printf("LOG: Destroying render pass\n");
+    LOG(INFO) << "Destroying render pass";
     vkDestroyRenderPass(logical_device.handle, pipeline.render_pass, nullptr);
   }
 
   for (VkImageView& image_view : swap_chain.image_views) {
     if (image_view != VK_NULL_HANDLE) {
-      printf("LOG: Destroying image\n");
+      LOG(INFO) << "Destroying image";
       vkDestroyImageView(logical_device.handle, image_view, nullptr);
     }
   }
 
   if (swap_chain.handle != VK_NULL_HANDLE) {
-    printf("LOG: Destroying Swap chain\n");
+    LOG(INFO) << "Destroying Swap chain";
     vkDestroySwapchainKHR(logical_device.handle, swap_chain.handle, nullptr);
   }
 
   if (logical_device.handle != VK_NULL_HANDLE) {
-    printf("LOG: Destroying logical device\n");
+    LOG(INFO) << "Destroying logical device";
     vkDestroyDevice(logical_device.handle, nullptr);
   }
 
   if (surface != VK_NULL_HANDLE) {
-    printf("LOG: Destroying surface\n");
+    LOG(INFO) << "Destroying surface";
     vkDestroySurfaceKHR(instance.handle, surface, nullptr);
   }
 
   if (debug_messenger != VK_NULL_HANDLE) {
-    printf("LOG: Destroying debug messenger\n");
+    LOG(INFO) << "Destroying debug messenger";
     DestroyDebugUtilsMessengerEXT(instance.handle, debug_messenger, nullptr);
   }
 
   if (instance.handle != VK_NULL_HANDLE) {
-    printf("LOG: Destroying instance\n");
+    LOG(INFO) << "Destroying instance";
     vkDestroyInstance(instance.handle, nullptr);
   }
 }
@@ -133,8 +134,7 @@ ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 }  // namespace
 
 #define RETURN_IF_ERROR(status, call) \
-  printf("CALLING: %s\n", #call); \
-  fflush(stdout); \
+  LOG(INFO) << "CALLING: " #call;     \
   status = (call);                    \
   if (!status.ok())                   \
     return status;
@@ -238,7 +238,8 @@ SetupPhysicalDevice(VulkanContext* context) {
   // Enumarate device properties.
   std::vector<VulkanContext::PhysicalDevice> devices;
   devices.reserve(device_handles.size());
-  printf("Found %zu physical devices:\n", device_handles.size());
+  LOG(INFO) << StringPrintf("Found %zu physical devices: ",
+                            device_handles.size());
   for (auto& device_handle : device_handles) {
     VulkanContext::PhysicalDevice device;
     device.handle = device_handle;
@@ -284,7 +285,9 @@ SetupPhysicalDevice(VulkanContext* context) {
     std::vector<const char*> extensions;
     extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     if (!IsSuitablePhysicalDevice(*context, device, extensions)) {
-      printf("Device \"%s\" is not suitable\n", device.properties.deviceName);
+      LOG(INFO) << "Device " << device.properties.deviceName
+                << " is not suitable",
+          device.properties.deviceName;
       continue;
     }
 
@@ -298,8 +301,8 @@ SetupPhysicalDevice(VulkanContext* context) {
   // TODO: Find a better heuristic to get the device.
   //       For now we get the first.
   context->physical_device = devices.front();
-  printf("Selected device \"%s\"\n",
-         context->physical_device.properties.deviceName);
+  LOG(INFO) << "Selected device: "
+            << context->physical_device.properties.deviceName;
 
   return Status::Ok();
 }
