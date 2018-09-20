@@ -16,8 +16,7 @@ namespace warhol {
 struct VulkanContext {
   ~VulkanContext();
 
-  // Instance
-  struct {
+  struct Instance {
     VkInstance handle = VK_NULL_HANDLE;
     std::vector<const char*> extensions;
     std::vector<const char*> validation_layers;
@@ -26,7 +25,6 @@ struct VulkanContext {
   VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
   VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-  // Physical Device
   struct PhysicalDevice {
     VkPhysicalDevice handle = VK_NULL_HANDLE;
     VkPhysicalDeviceProperties properties;
@@ -40,6 +38,12 @@ struct VulkanContext {
     std::vector<VkQueueFamilyProperties> qf_properties;
 
   } physical_device;
+
+  struct LogicalDevice {
+    VkDevice handle = VK_NULL_HANDLE;
+    VkQueue graphics_queue = VK_NULL_HANDLE;
+    VkQueue present_queue = VK_NULL_HANDLE;
+  } logical_device;
 
   struct SwapChain {
     std::vector<VkSurfaceFormatKHR> formats;
@@ -56,14 +60,6 @@ struct VulkanContext {
     std::vector<VkImageView> image_views;
   } swap_chain;
 
-
-  // Logical Device
-  struct LogicalDevice {
-    VkDevice handle = VK_NULL_HANDLE;
-    VkQueue graphics_queue = VK_NULL_HANDLE;
-    VkQueue present_queue = VK_NULL_HANDLE;
-  } logical_device;
-
   struct Pipeline {
     VkRenderPass render_pass = VK_NULL_HANDLE;
     VkPipelineLayout layout = VK_NULL_HANDLE;
@@ -71,6 +67,8 @@ struct VulkanContext {
 
     std::vector<VkShaderModule> shader_modules;
   } pipeline;
+
+  std::vector<VkFramebuffer> frame_buffers;
 
   DELETE_COPY_AND_ASSIGN(VulkanContext);
 };

@@ -30,6 +30,13 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
 }
 
 VulkanContext::~VulkanContext() {
+  for (auto frame_buffer : frame_buffers) {
+    if (frame_buffer != VK_NULL_HANDLE) {
+      LOG(INFO) << "Destroying frame buffer";
+      vkDestroyFramebuffer(logical_device.handle, frame_buffer, nullptr);
+    }
+  }
+
   if (pipeline.pipeline != VK_NULL_HANDLE) {
     printf("LOG: Destroying Graphics Pipeline\n");
     vkDestroyPipeline(logical_device.handle, pipeline.pipeline, nullptr);
@@ -89,6 +96,7 @@ VulkanContext::~VulkanContext() {
 
 // Declare the stages
 namespace {
+
 Status SetupInstance(SDL_Window*, VulkanContext*);
 Status SetupDebugMessenger(VulkanContext*);
 Status SetupPhysicalDevice(VulkanContext*);
@@ -99,6 +107,7 @@ Status SetupImages(VulkanContext*);
 Status SetupRenderPass(VulkanContext*);
 Status SetupPipelineLayout(VulkanContext*);
 Status SetupGraphicsPipeline(VulkanContext*);
+Status SetupFrameBuffers(VulkanContext*);
 
 // Utils -----------------------------------------------------------------------
 // Adds all the required extensions from SDL and beyond.
@@ -144,6 +153,7 @@ InitVulkanContext(SDL_Window* window, VulkanContext* context) {
   RETURN_IF_ERROR(status, SetupRenderPass(context));
   RETURN_IF_ERROR(status, SetupPipelineLayout(context));
   RETURN_IF_ERROR(status, SetupGraphicsPipeline(context));
+  RETURN_IF_ERROR(status, SetupFrameBuffers(context));
 
   return Status::Ok();
 }
@@ -571,8 +581,6 @@ SetupGraphicsPipeline(VulkanContext* context) {
   frag_create_info.module = fragment_module;
   frag_create_info.pName = "main";
 
-  LOG(INFO) << "CREATED SHADER MODULES";
-
   VkPipelineShaderStageCreateInfo shader_stages[] = {vert_create_info,
                                                      frag_create_info};
 
@@ -682,14 +690,38 @@ SetupGraphicsPipeline(VulkanContext* context) {
   create_info.basePipelineHandle = VK_NULL_HANDLE; // Optional
   create_info.basePipelineIndex = -1; // Optional
 
-  LOG(INFO) << "Attempting to create graphics pipeline";
-
   VkResult res = vkCreateGraphicsPipelines(
       context->logical_device.handle, VK_NULL_HANDLE, 1, &create_info, nullptr,
       &context->pipeline.pipeline);
-  if (res != VK_SUCCESS)
+  if (res != VK_SUCCESS) {
     return Status("Error creating graphics pipeline: %s",
                   VulkanEnumToString(res));
+  }
+  return Status::Ok();
+}
+
+Status
+SetupFrameBuffers(VulkanContext* context) {
+  context->frame_buffers.resize(context->swap_chain.image_views.size());
+
+  for (size_t i = 0; i < context->frame_buffers.size(); i++) {
+    VkFramebufferCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    create_info.renderPass = context->pipeline.render_pass;
+    create_info.attachmentCount = 1;
+    create_info.pAttachments = &context->swap_chain.image_views[i];
+    create_info.width = context->swap_chain.extent.width;
+    create_info.height = context->swap_chain.extent.height;
+    create_info.layers = 1;
+
+    VkResult res = vkCreateFramebuffer(context->logical_device.handle,
+                                       &create_info,
+                                       nullptr,
+                                       &context->frame_buffers[i]);
+    if (res != VK_SUCCESS)
+      return Status("Error creating frame buffer: %s", VulkanEnumToString(res));
+  }
+
   return Status::Ok();
 }
 
