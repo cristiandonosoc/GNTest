@@ -709,6 +709,25 @@ VulkanContext::SetupCommandPool() {
   return Status::Ok();
 }
 
+Status
+VulkanContext::SetupCommandBuffers() {
+  command_buffers.resize(frame_buffers.size());
+
+  VkCommandBufferAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  alloc_info.commandPool = command_pool;
+  alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  alloc_info.commandBufferCount = (uint32_t)command_buffers.size();
+
+  VkResult res = vkAllocateCommandBuffers(logical_device.handle, &alloc_info,
+                                          command_buffers.data());
+  if (res != VK_SUCCESS) {
+    return Status("Could not allocate command buffers: %s",
+                  VulkanEnumToString(res));
+  }
+  return Status::Ok();
+}
+
 // Utils -----------------------------------------------------------------------
 
 namespace {

@@ -70,6 +70,7 @@ struct VulkanContext {
 
   std::vector<VkFramebuffer> frame_buffers;
   VkCommandPool command_pool = VK_NULL_HANDLE;
+  std::vector<VkCommandBuffer> command_buffers;
 
   Status Init(SDL_Window*);
 
@@ -86,6 +87,7 @@ struct VulkanContext {
   Status SetupGraphicsPipeline();
   Status SetupFrameBuffers();
   Status SetupCommandPool();
+  Status SetupCommandBuffers();
 
   DELETE_COPY_AND_ASSIGN(VulkanContext);
 };
