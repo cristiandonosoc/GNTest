@@ -31,7 +31,7 @@ int main() {
   }
 
   warhol::VulkanContext vulkan_context = {};
-  warhol::Status res = InitVulkanContext(window, &vulkan_context);
+  warhol::Status res = vulkan_context.Init(window);
   if (!res.ok()) {
     LOG (ERROR) << "Initializing Vulkan: " << res.err_msg();
     return 1;

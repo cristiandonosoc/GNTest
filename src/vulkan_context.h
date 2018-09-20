@@ -71,10 +71,23 @@ struct VulkanContext {
   std::vector<VkFramebuffer> frame_buffers;
   VkCommandPool command_pool = VK_NULL_HANDLE;
 
+  Status Init(SDL_Window*);
+
+  // Setup functions
+  Status SetupInstance(SDL_Window*);
+  Status SetupDebugMessenger();
+  Status SetupPhysicalDevice();
+  Status SetupSurface(SDL_Window*);
+  Status SetupLogicalDevice();
+  Status SetupSwapChain();
+  Status SetupImages();
+  Status SetupRenderPass();
+  Status SetupPipelineLayout();
+  Status SetupGraphicsPipeline();
+  Status SetupFrameBuffers();
+  Status SetupCommandPool();
+
   DELETE_COPY_AND_ASSIGN(VulkanContext);
 };
-
-Status
-InitVulkanContext(SDL_Window*, VulkanContext*);
 
 }  // namespace warhol

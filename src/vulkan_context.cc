@@ -103,19 +103,6 @@ VulkanContext::~VulkanContext() {
 // Declare the stages
 namespace {
 
-Status SetupInstance(SDL_Window*, VulkanContext*);
-Status SetupDebugMessenger(VulkanContext*);
-Status SetupPhysicalDevice(VulkanContext*);
-Status SetupSurface(SDL_Window*, VulkanContext*);
-Status SetupLogicalDevice(VulkanContext*);
-Status SetupSwapChain(VulkanContext*);
-Status SetupImages(VulkanContext*);
-Status SetupRenderPass(VulkanContext*);
-Status SetupPipelineLayout(VulkanContext*);
-Status SetupGraphicsPipeline(VulkanContext*);
-Status SetupFrameBuffers(VulkanContext*);
-Status SetupCommandPool(VulkanContext*);
-
 // Utils -----------------------------------------------------------------------
 // Adds all the required extensions from SDL and beyond.
 Status AddInstanceExtensions(SDL_Window*, VulkanContext*);
@@ -137,6 +124,10 @@ GetBestPresentMode(const std::vector<VkPresentModeKHR>&);
 VkExtent2D
 ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
+Status
+CreateShaderModule(VulkanContext*, const std::vector<char>& src,
+                   VkShaderModule* out);
+
 }  // namespace
 
 #define RETURN_IF_ERROR(status, call) \
@@ -146,33 +137,31 @@ ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
     return status;
 
 Status
-InitVulkanContext(SDL_Window* window, VulkanContext* context) {
+VulkanContext::Init(SDL_Window* window) {
   Status status;
   // Instance.
-  RETURN_IF_ERROR(status, SetupInstance(window, context));
-  RETURN_IF_ERROR(status, SetupDebugMessenger(context));
-  RETURN_IF_ERROR(status, SetupSurface(window, context));
-  RETURN_IF_ERROR(status, SetupPhysicalDevice(context));
-  RETURN_IF_ERROR(status, SetupLogicalDevice(context));
-  RETURN_IF_ERROR(status, SetupSwapChain(context));
-  RETURN_IF_ERROR(status, SetupImages(context));
-  RETURN_IF_ERROR(status, SetupRenderPass(context));
-  RETURN_IF_ERROR(status, SetupPipelineLayout(context));
-  RETURN_IF_ERROR(status, SetupGraphicsPipeline(context));
-  RETURN_IF_ERROR(status, SetupFrameBuffers(context));
-  RETURN_IF_ERROR(status, SetupCommandPool(context));
+  RETURN_IF_ERROR(status, SetupInstance(window));
+  RETURN_IF_ERROR(status, SetupDebugMessenger());
+  RETURN_IF_ERROR(status, SetupSurface(window));
+  RETURN_IF_ERROR(status, SetupPhysicalDevice());
+  RETURN_IF_ERROR(status, SetupLogicalDevice());
+  RETURN_IF_ERROR(status, SetupSwapChain());
+  RETURN_IF_ERROR(status, SetupImages());
+  RETURN_IF_ERROR(status, SetupRenderPass());
+  RETURN_IF_ERROR(status, SetupPipelineLayout());
+  RETURN_IF_ERROR(status, SetupGraphicsPipeline());
+  RETURN_IF_ERROR(status, SetupFrameBuffers());
+  RETURN_IF_ERROR(status, SetupCommandPool());
 
   return Status::Ok();
 }
 
-// Stages implementation.
-namespace {
-
-Status SetupInstance(SDL_Window* window, VulkanContext* context) {
+Status
+VulkanContext::SetupInstance(SDL_Window* window) {
   // TODO: The extensions and validation layers should be exposed.
   Status status;
-  RETURN_IF_ERROR(status, AddInstanceExtensions(window, context));
-  RETURN_IF_ERROR(status, AddInstanceValidationLayers(context));
+  RETURN_IF_ERROR(status, AddInstanceExtensions(window, this));
+  RETURN_IF_ERROR(status, AddInstanceValidationLayers(this));
 
   // Vulkan application info.
   VkApplicationInfo app_info = {};
@@ -188,26 +177,26 @@ Status SetupInstance(SDL_Window* window, VulkanContext* context) {
   create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   create_info.pApplicationInfo = &app_info;
   create_info.enabledExtensionCount =
-      (uint32_t)context->instance.extensions.size();
-  create_info.ppEnabledExtensionNames = context->instance.extensions.data();
+      (uint32_t)instance.extensions.size();
+  create_info.ppEnabledExtensionNames = instance.extensions.data();
 
-  Status res = CheckRequiredLayers(context->instance.validation_layers);
+  Status res = CheckRequiredLayers(instance.validation_layers);
   if (!res.ok())
     return res;
 
   create_info.enabledLayerCount =
-      (uint32_t)context->instance.validation_layers.size();
-  create_info.ppEnabledLayerNames = context->instance.validation_layers.data();
+      (uint32_t)instance.validation_layers.size();
+  create_info.ppEnabledLayerNames = instance.validation_layers.data();
 
   // Finally create the VkInstance.
   VkResult result =
-      vkCreateInstance(&create_info, nullptr, &context->instance.handle);
+      vkCreateInstance(&create_info, nullptr, &instance.handle);
   VK_RETURN_IF_ERROR(result);
   return Status::Ok();
 }
 
 Status
-SetupDebugMessenger(VulkanContext* context) {
+VulkanContext::SetupDebugMessenger() {
   VkDebugUtilsMessengerCreateInfoEXT messenger_info = {};
   messenger_info.sType =
       VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -221,25 +210,22 @@ SetupDebugMessenger(VulkanContext* context) {
   messenger_info.pfnUserCallback = VulkanDebugCall;
   messenger_info.pUserData = nullptr;
 
-  Status status =
-      CreateDebugUtilsMessengerEXT(context->instance.handle, &messenger_info,
-                                   nullptr, &context->debug_messenger);
+  Status status = CreateDebugUtilsMessengerEXT(instance.handle, &messenger_info,
+                                               nullptr, &debug_messenger);
   return status;
 }
 
 Status
-SetupSurface(SDL_Window* window, VulkanContext* context) {
-  if (!SDL_Vulkan_CreateSurface(window, context->instance.handle,
-                                &context->surface)) {
+VulkanContext::SetupSurface(SDL_Window* window) {
+  if (!SDL_Vulkan_CreateSurface(window, instance.handle, &surface))
     return Status("Could not create surface: %s\n", SDL_GetError());
-  }
   return Status::Ok();
 }
 
 Status
-SetupPhysicalDevice(VulkanContext* context) {
+VulkanContext::SetupPhysicalDevice() {
   std::vector<VkPhysicalDevice> device_handles;
-  VK_GET_PROPERTIES(vkEnumeratePhysicalDevices, context->instance.handle,
+  VK_GET_PROPERTIES(vkEnumeratePhysicalDevices, instance.handle,
                     device_handles);
 
   // Enumarate device properties.
@@ -278,7 +264,7 @@ SetupPhysicalDevice(VulkanContext* context) {
 
       // Get the present queue.
       VkBool32 present_support = false;
-      vkGetPhysicalDeviceSurfaceSupportKHR(device.handle, i, context->surface,
+      vkGetPhysicalDeviceSurfaceSupportKHR(device.handle, i, surface,
                                            &present_support);
       if (present_support)
         device.present_queue_index = i;
@@ -286,12 +272,12 @@ SetupPhysicalDevice(VulkanContext* context) {
       i++;
     }
 
-    context->swap_chain = GetSwapChainProperties(*context, device);
+    swap_chain = GetSwapChainProperties(*this, device);
 
     // We check if this is a suitable device
     std::vector<const char*> extensions;
     extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    if (!IsSuitablePhysicalDevice(*context, device, extensions)) {
+    if (!IsSuitablePhysicalDevice(*this, device, extensions)) {
       LOG(INFO) << "Device " << device.properties.deviceName
                 << " is not suitable",
           device.properties.deviceName;
@@ -307,21 +293,20 @@ SetupPhysicalDevice(VulkanContext* context) {
 
   // TODO: Find a better heuristic to get the device.
   //       For now we get the first.
-  context->physical_device = devices.front();
-  LOG(INFO) << "Selected device: "
-            << context->physical_device.properties.deviceName;
+  physical_device = devices.front();
+  LOG(INFO) << "Selected device: " << physical_device.properties.deviceName;
 
   return Status::Ok();
 }
 
 Status
-SetupLogicalDevice(VulkanContext* context) {
+VulkanContext::SetupLogicalDevice() {
   // The device queues to set.
   float queue_priority = 1.0f;
 
   // We onlu create unique device queues
-  std::set<int> queue_indices = {context->physical_device.graphics_queue_index,
-                                 context->physical_device.present_queue_index};
+  std::set<int> queue_indices = {physical_device.graphics_queue_index,
+                                 physical_device.present_queue_index};
   std::vector<VkDeviceQueueCreateInfo> qcreate_infos;
   for (int queue_family : queue_indices) {
     VkDeviceQueueCreateInfo qcreate_info = {};
@@ -339,37 +324,34 @@ SetupLogicalDevice(VulkanContext* context) {
   dci.pQueueCreateInfos = qcreate_infos.data();
   // Extensions.
   dci.enabledExtensionCount =
-      (uint32_t)context->physical_device.extensions.size();
-  dci.ppEnabledExtensionNames = context->physical_device.extensions.data();
+      (uint32_t)physical_device.extensions.size();
+  dci.ppEnabledExtensionNames = physical_device.extensions.data();
   // Features.
   // For now physical features are disabled.
   /* dci.pEnabledFeatures = &physical_device->features; */
   VkPhysicalDeviceFeatures features = {};
   dci.pEnabledFeatures = &features;
   // Validation layers.
-  dci.enabledLayerCount = (uint32_t)context->instance.validation_layers.size();
-  dci.ppEnabledLayerNames = context->instance.validation_layers.data();
+  dci.enabledLayerCount = (uint32_t)instance.validation_layers.size();
+  dci.ppEnabledLayerNames = instance.validation_layers.data();
 
   // Finally create the device.
-  VkResult res = vkCreateDevice(context->physical_device.handle, &dci, nullptr,
-                                &context->logical_device.handle);
+  VkResult res = vkCreateDevice(physical_device.handle, &dci, nullptr,
+                                &logical_device.handle);
   VK_RETURN_IF_ERROR(res);
 
   // Get the graphics queue.
-  vkGetDeviceQueue(context->logical_device.handle,
-                   context->physical_device.graphics_queue_index, 0,
-                   &context->logical_device.graphics_queue);
+  vkGetDeviceQueue(logical_device.handle, physical_device.graphics_queue_index,
+                   0, &logical_device.graphics_queue);
   // Get the present queue.
-  vkGetDeviceQueue(context->logical_device.handle,
-                   context->physical_device.present_queue_index, 0,
-                   &context->logical_device.present_queue);
+  vkGetDeviceQueue(logical_device.handle, physical_device.present_queue_index,
+                   0, &logical_device.present_queue);
 
   return Status::Ok();
 }
 
 Status
-SetupSwapChain(VulkanContext* context) {
-  VulkanContext::SwapChain& swap_chain = context->swap_chain;
+VulkanContext::SetupSwapChain() {
   uint32_t image_min = swap_chain.capabilites.minImageCount;
   uint32_t image_max = swap_chain.capabilites.maxImageCount;
   uint32_t image_count = image_min + 1;
@@ -382,7 +364,7 @@ SetupSwapChain(VulkanContext* context) {
 
   VkSwapchainCreateInfoKHR scci = {};
   scci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-  scci.surface = context->surface;
+  scci.surface = surface;
 
   scci.minImageCount = image_count;
   scci.imageFormat = swap_chain.format.format;
@@ -392,12 +374,12 @@ SetupSwapChain(VulkanContext* context) {
   scci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
   uint32_t queue_family_indices[] = {
-      (uint32_t)context->physical_device.graphics_queue_index,
-      (uint32_t)context->physical_device.present_queue_index};
+      (uint32_t)physical_device.graphics_queue_index,
+      (uint32_t)physical_device.present_queue_index};
 
   // We check which sharing mode is needed between the command queues.
-  if (context->physical_device.graphics_queue_index !=
-      context->physical_device.present_queue_index) {
+  if (physical_device.graphics_queue_index !=
+      physical_device.present_queue_index) {
     // If graphics and present are different, we have a concurrent management
     // that is simpler.
     scci.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -422,25 +404,22 @@ SetupSwapChain(VulkanContext* context) {
   // came from.
   scci.oldSwapchain = VK_NULL_HANDLE;
 
-  VkResult res = vkCreateSwapchainKHR(context->logical_device.handle, &scci,
-                                      nullptr, &swap_chain.handle);
+  VkResult res = vkCreateSwapchainKHR(logical_device.handle, &scci, nullptr,
+                                      &swap_chain.handle);
   if (res != VK_SUCCESS)
     return Status("Cannot create swap chain: %s", VulkanEnumToString(res));
   return Status::Ok();
 }
 
 Status
-SetupImages(VulkanContext* context) {
-  VulkanContext::SwapChain& swap_chain = context->swap_chain;
-
+VulkanContext::SetupImages() {
   // Retrieve the images.
   uint32_t sc_image_count;
-  vkGetSwapchainImagesKHR(context->logical_device.handle, swap_chain.handle,
+  vkGetSwapchainImagesKHR(logical_device.handle, swap_chain.handle,
                           &sc_image_count, nullptr);
   swap_chain.images.resize(sc_image_count);
-  vkGetSwapchainImagesKHR(context->logical_device.handle, swap_chain.handle,
+  vkGetSwapchainImagesKHR(logical_device.handle, swap_chain.handle,
                           &sc_image_count, swap_chain.images.data());
-
 
   swap_chain.image_views.reserve(swap_chain.images.size());
   for (size_t i = 0; i < swap_chain.images.size(); i++) {
@@ -463,7 +442,7 @@ SetupImages(VulkanContext* context) {
     ivci.subresourceRange.baseArrayLayer = 0;
     ivci.subresourceRange.layerCount = 1;
 
-    VkResult res = vkCreateImageView(context->logical_device.handle, &ivci,
+    VkResult res = vkCreateImageView(logical_device.handle, &ivci,
                                      nullptr, &swap_chain.image_views[i]);
     if (res != VK_SUCCESS)
       return Status("Could not create image view: %s", VulkanEnumToString(res));
@@ -473,9 +452,9 @@ SetupImages(VulkanContext* context) {
 }
 
 Status
-SetupRenderPass(VulkanContext* context) {
+VulkanContext::SetupRenderPass() {
   VkAttachmentDescription color_attachment = {};
-  color_attachment.format = context->swap_chain.format.format;
+  color_attachment.format = swap_chain.format.format;
   color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
   color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -500,17 +479,15 @@ SetupRenderPass(VulkanContext* context) {
   render_pass_info.subpassCount = 1;
   render_pass_info.pSubpasses = &subpass;
 
-  VkResult res = vkCreateRenderPass(context->logical_device.handle,
-                                    &render_pass_info,
-                                    nullptr,
-                                    &context->pipeline.render_pass);
+  VkResult res = vkCreateRenderPass(logical_device.handle, &render_pass_info,
+                                    nullptr, &pipeline.render_pass);
   if (res != VK_SUCCESS)
     return Status("Could not create render pass: %s", VulkanEnumToString(res));
   return Status::Ok();
 }
 
 Status
-SetupPipelineLayout(VulkanContext* context) {
+VulkanContext::SetupPipelineLayout() {
   VkPipelineLayoutCreateInfo pipeline_layout_info = {};
   pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   pipeline_layout_info.setLayoutCount = 0; // Optional
@@ -518,10 +495,8 @@ SetupPipelineLayout(VulkanContext* context) {
   pipeline_layout_info.pushConstantRangeCount = 0; // Optional
   pipeline_layout_info.pPushConstantRanges = nullptr; // Optional
 
-  VkResult res = vkCreatePipelineLayout(context->logical_device.handle,
-                                        &pipeline_layout_info,
-                                        nullptr,
-                                        &context->pipeline.layout);
+  VkResult res = vkCreatePipelineLayout(
+      logical_device.handle, &pipeline_layout_info, nullptr, &pipeline.layout);
 
   if (res != VK_SUCCESS) {
     return Status("Could not create pipeline layout: %s",
@@ -530,28 +505,8 @@ SetupPipelineLayout(VulkanContext* context) {
   return Status::Ok();
 }
 
-static inline Status
-CreateShaderModule(VulkanContext* context, const std::vector<char>& src,
-                   VkShaderModule* out) {
-  VkShaderModuleCreateInfo create_info = {};
-  create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-  create_info.codeSize = src.size();
-  create_info.pCode = (const uint32_t*)src.data();
-
-  VkShaderModule handle = VK_NULL_HANDLE;
-  VkResult res = vkCreateShaderModule(context->logical_device.handle,
-                                      &create_info, nullptr, &handle);
-  if (res != VK_SUCCESS) {
-    return Status("Could not create shader module: %s",
-                  VulkanEnumToString(res));
-  }
-
-  *out = handle;
-  return Status::Ok();
-}
-
 Status
-SetupGraphicsPipeline(VulkanContext* context) {
+VulkanContext::SetupGraphicsPipeline() {
   Status status;
 
   // Vertex shader.
@@ -560,9 +515,9 @@ SetupGraphicsPipeline(VulkanContext* context) {
   if (!status.ok())
     return status;
 
-  context->pipeline.shader_modules.emplace_back();
-  auto& vertex_module = context->pipeline.shader_modules.back();
-  status = CreateShaderModule(context, vertex_src, &vertex_module);
+  pipeline.shader_modules.emplace_back();
+  auto& vertex_module = pipeline.shader_modules.back();
+  status = CreateShaderModule(this, vertex_src, &vertex_module);
   if (!status.ok())
     return status;
 
@@ -579,10 +534,10 @@ SetupGraphicsPipeline(VulkanContext* context) {
   if (!status.ok())
     return status;
 
-  context->pipeline.shader_modules.emplace_back();
-  auto& fragment_module = context->pipeline.shader_modules.back();
+  pipeline.shader_modules.emplace_back();
+  auto& fragment_module = pipeline.shader_modules.back();
 
-  status = CreateShaderModule(context, fragment_src, &fragment_module);
+  status = CreateShaderModule(this, fragment_src, &fragment_module);
   if (!status.ok())
     return status;
   VkPipelineShaderStageCreateInfo frag_create_info = {};
@@ -614,15 +569,15 @@ SetupGraphicsPipeline(VulkanContext* context) {
   VkViewport viewport = {};
   viewport.x = 0.0f;
   viewport.y = 0.0f;
-  viewport.width = (float)context->swap_chain.extent.width;
-  viewport.height = (float)context->swap_chain.extent.height;
+  viewport.width = (float)swap_chain.extent.width;
+  viewport.height = (float)swap_chain.extent.height;
   viewport.minDepth = 0.0f;
   viewport.maxDepth = 1.0f;
 
   // Scissor: The sub-window we will actually keep.
   VkRect2D scissor = {};
   scissor.offset = {0, 0};
-  scissor.extent = context->swap_chain.extent;
+  scissor.extent = swap_chain.extent;
 
   // The Viewport state.
   VkPipelineViewportStateCreateInfo viewport_state = {};
@@ -693,16 +648,16 @@ SetupGraphicsPipeline(VulkanContext* context) {
   create_info.pColorBlendState = &color_blending;
   create_info.pDynamicState = nullptr; // Optional
 
-  create_info.layout = context->pipeline.layout;
-  create_info.renderPass = context->pipeline.render_pass;
+  create_info.layout = pipeline.layout;
+  create_info.renderPass = pipeline.render_pass;
   create_info.subpass = 0;
 
   create_info.basePipelineHandle = VK_NULL_HANDLE; // Optional
   create_info.basePipelineIndex = -1; // Optional
 
-  VkResult res = vkCreateGraphicsPipelines(
-      context->logical_device.handle, VK_NULL_HANDLE, 1, &create_info, nullptr,
-      &context->pipeline.pipeline);
+  VkResult res =
+      vkCreateGraphicsPipelines(logical_device.handle, VK_NULL_HANDLE, 1,
+                                &create_info, nullptr, &pipeline.pipeline);
   if (res != VK_SUCCESS) {
     return Status("Error creating graphics pipeline: %s",
                   VulkanEnumToString(res));
@@ -711,26 +666,26 @@ SetupGraphicsPipeline(VulkanContext* context) {
 }
 
 Status
-SetupFrameBuffers(VulkanContext* context) {
-  context->frame_buffers.reserve(context->swap_chain.image_views.size());
+VulkanContext::SetupFrameBuffers() {
+  frame_buffers.reserve(swap_chain.image_views.size());
 
-  for (size_t i = 0; i < context->frame_buffers.size(); i++) {
-    context->frame_buffers.emplace_back();
-    context->frame_buffers[i] = VK_NULL_HANDLE;
+  for (size_t i = 0; i < frame_buffers.size(); i++) {
+    frame_buffers.emplace_back();
+    frame_buffers[i] = VK_NULL_HANDLE;
 
     VkFramebufferCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    create_info.renderPass = context->pipeline.render_pass;
+    create_info.renderPass = pipeline.render_pass;
     create_info.attachmentCount = 1;
-    create_info.pAttachments = &context->swap_chain.image_views[i];
-    create_info.width = context->swap_chain.extent.width;
-    create_info.height = context->swap_chain.extent.height;
+    create_info.pAttachments = &swap_chain.image_views[i];
+    create_info.width = swap_chain.extent.width;
+    create_info.height = swap_chain.extent.height;
     create_info.layers = 1;
 
-    VkResult res = vkCreateFramebuffer(context->logical_device.handle,
+    VkResult res = vkCreateFramebuffer(logical_device.handle,
                                        &create_info,
                                        nullptr,
-                                       &context->frame_buffers[i]);
+                                       &frame_buffers[i]);
     if (res != VK_SUCCESS)
       return Status("Error creating frame buffer: %s", VulkanEnumToString(res));
   }
@@ -739,22 +694,24 @@ SetupFrameBuffers(VulkanContext* context) {
 }
 
 Status
-SetupCommandPool(VulkanContext* context) {
+VulkanContext::SetupCommandPool() {
   VkCommandPoolCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  create_info.queueFamilyIndex = context->physical_device.graphics_queue_index;
+  create_info.queueFamilyIndex = physical_device.graphics_queue_index;
   create_info.flags = 0;  // Optional.
 
-  VkResult res = vkCreateCommandPool(context->logical_device.handle,
+  VkResult res = vkCreateCommandPool(logical_device.handle,
                                      &create_info,
                                      nullptr,
-                                     &context->command_pool);
+                                     &command_pool);
   if (res != VK_SUCCESS)
     return Status("Could not create Command Pool: %s", VulkanEnumToString(res));
   return Status::Ok();
 }
 
 // Utils -----------------------------------------------------------------------
+
+namespace {
 
 Status
 AddInstanceExtensions(SDL_Window* window, VulkanContext* context) {
@@ -830,6 +787,7 @@ GetSwapChainProperties(const VulkanContext& context,
 
   return swap_chain;
 }
+
 
 bool
 IsSuitablePhysicalDevice(const VulkanContext& context,
@@ -944,6 +902,26 @@ ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
     return extent;
 #endif
   }
+}
+
+Status
+CreateShaderModule(VulkanContext* context, const std::vector<char>& src,
+                   VkShaderModule* out) {
+  VkShaderModuleCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  create_info.codeSize = src.size();
+  create_info.pCode = (const uint32_t*)src.data();
+
+  VkShaderModule handle = VK_NULL_HANDLE;
+  VkResult res = vkCreateShaderModule(context->logical_device.handle,
+                                      &create_info, nullptr, &handle);
+  if (res != VK_SUCCESS) {
+    return Status("Could not create shader module: %s",
+                  VulkanEnumToString(res));
+  }
+
+  *out = handle;
+  return Status::Ok();
 }
 
 }  // namespace
