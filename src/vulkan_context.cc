@@ -31,6 +31,11 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
 }
 
 VulkanContext::~VulkanContext() {
+  if (command_pool != VK_NULL_HANDLE) {
+    LOG(INFO) << "Destroying command pool";
+    vkDestroyCommandPool(logical_device.handle, command_pool, nullptr);
+  }
+
   for (auto frame_buffer : frame_buffers) {
     if (frame_buffer != VK_NULL_HANDLE) {
       LOG(INFO) << "Destroying frame buffer";
@@ -109,6 +114,7 @@ Status SetupRenderPass(VulkanContext*);
 Status SetupPipelineLayout(VulkanContext*);
 Status SetupGraphicsPipeline(VulkanContext*);
 Status SetupFrameBuffers(VulkanContext*);
+Status SetupCommandPool(VulkanContext*);
 
 // Utils -----------------------------------------------------------------------
 // Adds all the required extensions from SDL and beyond.
@@ -154,6 +160,7 @@ InitVulkanContext(SDL_Window* window, VulkanContext* context) {
   RETURN_IF_ERROR(status, SetupPipelineLayout(context));
   RETURN_IF_ERROR(status, SetupGraphicsPipeline(context));
   RETURN_IF_ERROR(status, SetupFrameBuffers(context));
+  RETURN_IF_ERROR(status, SetupCommandPool(context));
 
   return Status::Ok();
 }
@@ -705,9 +712,12 @@ SetupGraphicsPipeline(VulkanContext* context) {
 
 Status
 SetupFrameBuffers(VulkanContext* context) {
-  context->frame_buffers.resize(context->swap_chain.image_views.size());
+  context->frame_buffers.reserve(context->swap_chain.image_views.size());
 
   for (size_t i = 0; i < context->frame_buffers.size(); i++) {
+    context->frame_buffers.emplace_back();
+    context->frame_buffers[i] = VK_NULL_HANDLE;
+
     VkFramebufferCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     create_info.renderPass = context->pipeline.render_pass;
@@ -725,6 +735,22 @@ SetupFrameBuffers(VulkanContext* context) {
       return Status("Error creating frame buffer: %s", VulkanEnumToString(res));
   }
 
+  return Status::Ok();
+}
+
+Status
+SetupCommandPool(VulkanContext* context) {
+  VkCommandPoolCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  create_info.queueFamilyIndex = context->physical_device.graphics_queue_index;
+  create_info.flags = 0;  // Optional.
+
+  VkResult res = vkCreateCommandPool(context->logical_device.handle,
+                                     &create_info,
+                                     nullptr,
+                                     &context->command_pool);
+  if (res != VK_SUCCESS)
+    return Status("Could not create Command Pool: %s", VulkanEnumToString(res));
   return Status::Ok();
 }
 

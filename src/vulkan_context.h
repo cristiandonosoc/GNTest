@@ -69,6 +69,7 @@ struct VulkanContext {
   } pipeline;
 
   std::vector<VkFramebuffer> frame_buffers;
+  VkCommandPool command_pool = VK_NULL_HANDLE;
 
   DELETE_COPY_AND_ASSIGN(VulkanContext);
 };
