@@ -88,6 +88,7 @@ struct VulkanContext {
   Status SetupFrameBuffers();
   Status SetupCommandPool();
   Status SetupCommandBuffers();
+  Status BeginRenderPass();
 
   DELETE_COPY_AND_ASSIGN(VulkanContext);
 };

@@ -152,6 +152,7 @@ VulkanContext::Init(SDL_Window* window) {
   RETURN_IF_ERROR(status, SetupGraphicsPipeline());
   RETURN_IF_ERROR(status, SetupFrameBuffers());
   RETURN_IF_ERROR(status, SetupCommandPool());
+  RETURN_IF_ERROR(status, BeginRenderPass());
 
   return Status::Ok();
 }
@@ -725,6 +726,57 @@ VulkanContext::SetupCommandBuffers() {
     return Status("Could not allocate command buffers: %s",
                   VulkanEnumToString(res));
   }
+
+  // Initialize the command buffers.
+  for (size_t i = 0; i < command_buffers.size(); i++) {
+
+    VkCommandBufferBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    begin_info.pInheritanceInfo = nullptr;  // nullptr.
+
+    VkResult result = vkBeginCommandBuffer(command_buffers[i], &begin_info);
+    if (result != VK_SUCCESS) {
+      return Status("Could not begin command buffer: %s",
+                    VulkanEnumToString(result));
+    }
+
+  }
+
+  return Status::Ok();
+}
+
+Status VulkanContext::BeginRenderPass() {
+  for (size_t i = 0; i < command_buffers.size(); i++) {
+
+    // Initialize the render passes.
+    VkRenderPassBeginInfo render_pass_begin_info = {};
+    render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    render_pass_begin_info.renderPass = pipeline.render_pass;
+    render_pass_begin_info.renderArea.offset = {0, 0};
+    render_pass_begin_info.renderArea.extent = swap_chain.extent;
+
+    VkClearValue clear_value = {};
+    clear_value.color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+
+    render_pass_begin_info.clearValueCount = 1;
+    render_pass_begin_info.pClearValues = &clear_value;
+
+    // Do a render pass.
+    vkCmdBeginRenderPass(command_buffers[i], &render_pass_begin_info,
+                         VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      pipeline.pipeline);
+    vkCmdDraw(command_buffers[i], 3, 1, 0, 0);
+    vkCmdEndRenderPass(command_buffers[i]);
+
+    VkResult result = vkEndCommandBuffer(command_buffers[i]);
+    if (result != VK_SUCCESS) {
+      return Status("Could not record command buffer: %s",
+                    VulkanEnumToString(result));
+    }
+  }
+
   return Status::Ok();
 }
 
