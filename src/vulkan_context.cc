@@ -30,76 +30,6 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
   return VK_FALSE;
 }
 
-VulkanContext::~VulkanContext() {
-  if (command_pool != VK_NULL_HANDLE) {
-    LOG(INFO) << "Destroying command pool";
-    vkDestroyCommandPool(logical_device.handle, command_pool, nullptr);
-  }
-
-  for (auto frame_buffer : frame_buffers) {
-    if (frame_buffer != VK_NULL_HANDLE) {
-      LOG(INFO) << "Destroying frame buffer";
-      vkDestroyFramebuffer(logical_device.handle, frame_buffer, nullptr);
-    }
-  }
-
-  if (pipeline.pipeline != VK_NULL_HANDLE) {
-    LOG(INFO) << "Destroying Graphics Pipeline";
-    vkDestroyPipeline(logical_device.handle, pipeline.pipeline, nullptr);
-  }
-
-  for (const auto shader_module : pipeline.shader_modules) {
-    if (shader_module != VK_NULL_HANDLE) {
-      LOG(INFO) << "Destroying Shader Module";
-      vkDestroyShaderModule(logical_device.handle, shader_module,
-                            nullptr);
-    }
-  }
-
-  // We destroy elements backwards from allocation.
-  if (pipeline.layout != VK_NULL_HANDLE) {
-    LOG(INFO) << "Destroying pipeline layout";
-    vkDestroyPipelineLayout(logical_device.handle, pipeline.layout, nullptr);
-  }
-
-  if (pipeline.render_pass != VK_NULL_HANDLE) {
-    LOG(INFO) << "Destroying render pass";
-    vkDestroyRenderPass(logical_device.handle, pipeline.render_pass, nullptr);
-  }
-
-  for (VkImageView& image_view : swap_chain.image_views) {
-    if (image_view != VK_NULL_HANDLE) {
-      LOG(INFO) << "Destroying image";
-      vkDestroyImageView(logical_device.handle, image_view, nullptr);
-    }
-  }
-
-  if (swap_chain.handle != VK_NULL_HANDLE) {
-    LOG(INFO) << "Destroying Swap chain";
-    vkDestroySwapchainKHR(logical_device.handle, swap_chain.handle, nullptr);
-  }
-
-  if (logical_device.handle != VK_NULL_HANDLE) {
-    LOG(INFO) << "Destroying logical device";
-    vkDestroyDevice(logical_device.handle, nullptr);
-  }
-
-  if (surface != VK_NULL_HANDLE) {
-    LOG(INFO) << "Destroying surface";
-    vkDestroySurfaceKHR(instance.handle, surface, nullptr);
-  }
-
-  if (debug_messenger != VK_NULL_HANDLE) {
-    LOG(INFO) << "Destroying debug messenger";
-    DestroyDebugUtilsMessengerEXT(instance.handle, debug_messenger, nullptr);
-  }
-
-  if (instance.handle != VK_NULL_HANDLE) {
-    LOG(INFO) << "Destroying instance";
-    vkDestroyInstance(instance.handle, nullptr);
-  }
-}
-
 // Declare the stages
 namespace {
 
@@ -153,6 +83,7 @@ VulkanContext::Init(SDL_Window* window) {
   RETURN_IF_ERROR(status, SetupFrameBuffers());
   RETURN_IF_ERROR(status, SetupCommandPool());
   RETURN_IF_ERROR(status, BeginRenderPass());
+  RETURN_IF_ERROR(status, CreateSemaphores());
 
   return Status::Ok();
 }
@@ -746,9 +677,9 @@ VulkanContext::SetupCommandBuffers() {
   return Status::Ok();
 }
 
-Status VulkanContext::BeginRenderPass() {
+Status
+VulkanContext::BeginRenderPass() {
   for (size_t i = 0; i < command_buffers.size(); i++) {
-
     // Initialize the render passes.
     VkRenderPassBeginInfo render_pass_begin_info = {};
     render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -777,6 +708,23 @@ Status VulkanContext::BeginRenderPass() {
     }
   }
 
+  return Status::Ok();
+}
+
+Status
+VulkanContext::CreateSemaphores() {
+  // Currently we can recycle VkSemaphoreCreateInfos.
+  VkSemaphoreCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+  VkResult result = vkCreateSemaphore(logical_device.handle, &create_info,
+                                      nullptr, &image_available_semaphore);
+  if (result != VK_SUCCESS)
+    return Status("Creating semaphore: %s", VulkanEnumToString(result));
+
+  result = vkCreateSemaphore(logical_device.handle, &create_info, nullptr,
+                             &render_finished_semaphore);
+  if (result != VK_SUCCESS)
+    return Status("Creating semaphore: %s", VulkanEnumToString(result));
   return Status::Ok();
 }
 
@@ -996,5 +944,91 @@ CreateShaderModule(VulkanContext* context, const std::vector<char>& src,
 }
 
 }  // namespace
+
+// Management ------------------------------------------------------------------
+
+VulkanContext::VulkanContext() = default;
+
+VulkanContext::~VulkanContext() {
+  if (image_available_semaphore != VK_NULL_HANDLE) {
+    LOG(DEBUG) << "Destroying semaphore";
+    vkDestroySemaphore(logical_device.handle, image_available_semaphore,
+                       nullptr);
+  }
+
+  if (render_finished_semaphore != VK_NULL_HANDLE) {
+    LOG(DEBUG) << "Destroying semaphore";
+    vkDestroySemaphore(logical_device.handle, render_finished_semaphore,
+                       nullptr);
+  }
+
+  if (command_pool != VK_NULL_HANDLE) {
+    LOG(DEBUG) << "Destroying command pool";
+    vkDestroyCommandPool(logical_device.handle, command_pool, nullptr);
+  }
+
+  for (auto frame_buffer : frame_buffers) {
+    if (frame_buffer != VK_NULL_HANDLE) {
+      LOG(DEBUG) << "Destroying frame buffer";
+      vkDestroyFramebuffer(logical_device.handle, frame_buffer, nullptr);
+    }
+  }
+
+  if (pipeline.pipeline != VK_NULL_HANDLE) {
+    LOG(DEBUG) << "Destroying Graphics Pipeline";
+    vkDestroyPipeline(logical_device.handle, pipeline.pipeline, nullptr);
+  }
+
+  for (const auto shader_module : pipeline.shader_modules) {
+    if (shader_module != VK_NULL_HANDLE) {
+      LOG(DEBUG) << "Destroying Shader Module";
+      vkDestroyShaderModule(logical_device.handle, shader_module,
+                            nullptr);
+    }
+  }
+
+  // We destroy elements backwards from allocation.
+  if (pipeline.layout != VK_NULL_HANDLE) {
+    LOG(DEBUG) << "Destroying pipeline layout";
+    vkDestroyPipelineLayout(logical_device.handle, pipeline.layout, nullptr);
+  }
+
+  if (pipeline.render_pass != VK_NULL_HANDLE) {
+    LOG(DEBUG) << "Destroying render pass";
+    vkDestroyRenderPass(logical_device.handle, pipeline.render_pass, nullptr);
+  }
+
+  for (VkImageView& image_view : swap_chain.image_views) {
+    if (image_view != VK_NULL_HANDLE) {
+      LOG(DEBUG) << "Destroying image";
+      vkDestroyImageView(logical_device.handle, image_view, nullptr);
+    }
+  }
+
+  if (swap_chain.handle != VK_NULL_HANDLE) {
+    LOG(DEBUG) << "Destroying Swap chain";
+    vkDestroySwapchainKHR(logical_device.handle, swap_chain.handle, nullptr);
+  }
+
+  if (logical_device.handle != VK_NULL_HANDLE) {
+    LOG(DEBUG) << "Destroying logical device";
+    vkDestroyDevice(logical_device.handle, nullptr);
+  }
+
+  if (surface != VK_NULL_HANDLE) {
+    LOG(DEBUG) << "Destroying surface";
+    vkDestroySurfaceKHR(instance.handle, surface, nullptr);
+  }
+
+  if (debug_messenger != VK_NULL_HANDLE) {
+    LOG(DEBUG) << "Destroying debug messenger";
+    DestroyDebugUtilsMessengerEXT(instance.handle, debug_messenger, nullptr);
+  }
+
+  if (instance.handle != VK_NULL_HANDLE) {
+    LOG(DEBUG) << "Destroying instance";
+    vkDestroyInstance(instance.handle, nullptr);
+  }
+}
 
 }  // namespace warhol

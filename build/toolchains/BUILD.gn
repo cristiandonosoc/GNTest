@@ -45,7 +45,7 @@ toolchain("clang") {
     outputs = [
       "{{source_out_dir}}/{{source_name_part}}.o" ,
     ]
-    # description = "CXX {{output}}"
+    description = "CXX {{output}}"
   }
 
   tool("link") {
@@ -53,7 +53,7 @@ toolchain("clang") {
     outputs = [
       "{{root_out_dir}}/{{target_output_name}}"
     ]
-    # description = "LINK {{output}}"
+    description = "LINK {{output}}"
   }
 
   tool("stamp") {

@@ -22,6 +22,8 @@ void FreeSDL(SDL_Window* window) {
   SDL_Quit();
 }
 
+void MainLoop(SDL_Window*, warhol::VulkanContext*);
+
 int main() {
   // Setup SDL2.
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
@@ -50,8 +52,25 @@ int main() {
     return 1;
   }
 
-  // TODO(Cristian): Correctly close SDL2
+  MainLoop(window.get(), &vulkan_context);
 
   LOG(INFO) << "Correctly initialized vulkan";
   return 0;
+}
+
+
+void MainLoop(SDL_Window*, warhol::VulkanContext*) {
+  bool running = true;
+  while (running) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_QUIT) {
+        running = false;
+      }
+    }
+    break;
+
+    SDL_Delay(10);  // Pause for 10 ms.
+  }
+
 }

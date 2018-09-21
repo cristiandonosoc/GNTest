@@ -14,6 +14,8 @@ struct SDL_Window;
 namespace warhol {
 
 struct VulkanContext {
+ public:
+  VulkanContext();
   ~VulkanContext();
 
   struct Instance {
@@ -74,6 +76,8 @@ struct VulkanContext {
 
   Status Init(SDL_Window*);
 
+
+ private:
   // Setup functions
   Status SetupInstance(SDL_Window*);
   Status SetupDebugMessenger();
@@ -89,6 +93,10 @@ struct VulkanContext {
   Status SetupCommandPool();
   Status SetupCommandBuffers();
   Status BeginRenderPass();
+  Status CreateSemaphores();
+
+  VkSemaphore image_available_semaphore = VK_NULL_HANDLE;
+  VkSemaphore render_finished_semaphore = VK_NULL_HANDLE;
 
   DELETE_COPY_AND_ASSIGN(VulkanContext);
 };
