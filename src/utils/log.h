@@ -9,9 +9,10 @@ namespace warhol {
 
 using LogLevel = int;
 // Remember to update kLogLevelStrings in log.cc
-constexpr LogLevel LOG_INFO = 0;
-constexpr LogLevel LOG_WARNING = 1;
-constexpr LogLevel LOG_ERROR = 2;
+constexpr LogLevel LOG_DEBUG = 0;
+constexpr LogLevel LOG_INFO = 1;
+constexpr LogLevel LOG_WARNING = 2;
+constexpr LogLevel LOG_ERROR = 3;
 
 const char* LogLevelToString(LogLevel);
 

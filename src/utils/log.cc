@@ -9,7 +9,7 @@ namespace warhol {
 
 namespace {
 
-const char* kLogLevelStrings[] = {"INFO", "WARNING", "ERROR"};
+const char* kLogLevelStrings[] = {"DEBUG", "INFO", "WARNING", "ERROR"};
 
 }  // namespace
 
