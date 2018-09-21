@@ -23,6 +23,7 @@ void FreeSDL(SDL_Window* window) {
 }
 
 void MainLoop(SDL_Window*, warhol::VulkanContext*);
+void DrawFrame(warhol::VulkanContext*);
 
 int main() {
   // Setup SDL2.
