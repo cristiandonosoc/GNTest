@@ -1,0 +1,21 @@
+# Copyright 2018, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+config("gl3w_config") {
+  # So includes like <GL/gl3w.h> works.
+  include_dirs = [ ".." ]
+}
+
+source_set("gl3w") {
+  sources = [
+    "gl3w.c",
+  ]
+
+  public = [
+    "gl3w.h",
+  ]
+
+  configs += [
+    ":gl3w_config",
+  ]
+}

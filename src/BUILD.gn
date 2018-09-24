@@ -82,6 +82,20 @@ source_set("vulkan_lib") {
   ]
 }
 
+source_set("warhol_lib") {
+  sources = [
+    "shader.cc",
+    "shader.h",
+  ]
+  configs += [
+    "//third_party/gl3w/GL:gl3w_config",
+  ]
+  deps = [
+    "//src/utils",
+    "//third_party/gl3w/GL:gl3w",
+  ]
+}
+
 # Executables -------------------------------------------------------------------
 
 executable("warhol") {
@@ -104,5 +118,20 @@ executable("sdl2_test") {
   ]
   configs += [
     ":sdl2_config",
+  ]
+}
+
+executable("opengl_example") {
+  sources = [
+    "opengl_example.cc",
+  ]
+  configs += [
+    ":sdl2_config",
+    "//third_party/gl3w/GL:gl3w_config",
+  ]
+  deps = [
+    ":warhol_lib",
+    "//src/utils",
+    "//third_party/gl3w/GL:gl3w",
   ]
 }

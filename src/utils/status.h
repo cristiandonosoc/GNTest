@@ -42,4 +42,5 @@ const char* StatusTypeToString();
 
 void LogStatus(const Status&);
 
+
 }  // namespace warhol

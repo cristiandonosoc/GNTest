@@ -2,10 +2,19 @@
 # ------------------------------------------------------------------------------
 
 toolchain("msvc") {
+  tool("cc") {
+    depsformat = "msvc"
+    pdbname = "{{output}}_c.pdb"
+    command = "cl.exe /nologo /showIncludes /FC /FS /Fd$pdbname {{include_dirs}} {{cflags}} /TC /c {{source}} /Fo{{output}}"
+    outputs = [
+      "{{source_out_dir}}/{{source_name_part}}.o" ,
+    ]
+    description = "CC {{output}}"
+  }
   tool("cxx") {
     depsformat = "msvc"
     pdbname = "{{output}}_cc.pdb"
-    command = "cl.exe /nologo /showIncludes /FC /FS /Fd$pdbname {{include_dirs}} {{cflags}} {{cflags_cc}} /c {{source}} /Fo{{output}}"
+    command = "cl.exe /nologo /showIncludes /FC /FS /Fd$pdbname {{include_dirs}} {{cflags}} {{cflags_cc}} /TP /c {{source}} /Fo{{output}}"
     outputs = [
       "{{source_out_dir}}/{{source_name_part}}.o" ,
     ]

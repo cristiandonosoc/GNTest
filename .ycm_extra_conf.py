@@ -39,8 +39,10 @@ flags = [
 '-Wextra',
 '-x', 'c++',
 '--std=c++14',
+'-I', os.path.join(os.getcwd()),
 '-I', os.path.join(os.getcwd(), 'src'),
 '-isystem', os.path.join(os.getcwd(), 'third_party'),
+'-isystem', os.path.join(os.getcwd(), 'third_party', 'gl3w'),
 # Fake headers so that YCM doesn't explode win windows
 '-isystem', '/mnt/c/Programming/external/fake-windows-headers-for-ycm',
 '-isystem', '/mnt/c/Programming/include',
