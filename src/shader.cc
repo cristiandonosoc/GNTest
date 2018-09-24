@@ -1,6 +1,8 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
+#include <assert.h>
+
 #include <GL/gl3w.h>
 
 #include "shader.h"
@@ -62,6 +64,11 @@ Shader::InternalInit() {
   // TODO: Obtain attributes.
 
   return Status::Ok();
+}
+
+void Shader::Use() {
+  assert(handle_ != 0);
+  glUseProgram(handle_);
 }
 
 void Shader::Clear() {

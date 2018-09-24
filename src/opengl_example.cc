@@ -73,6 +73,52 @@ int main() {
 
   LOG(INFO) << "Successfully compiled a shader!";
 
+  // Vertices example.
+  float vertices[] = {
+    -0.5f, -0.5f, 0.0f,
+     0.5f, -0.5f, 0.0f,
+     0.0f,  0.5f, 0.0f
+  };
+
+  // Generate the VAO that will hold the configuration.
+  uint32_t vao;
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+
+  // Generate the vertices buffer object.
+  uint32_t vbo;
+  glGenBuffers(1, &vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  // Send the vertex data over.
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+  // Tell OpenGL how to interpret the buffer.
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  glEnableVertexAttribArray(0);
+
+  bool running = true;
+  while (running) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_QUIT) {
+        running = false;
+      }
+    }
+    if (!running)
+      break;
+
+    // Draw the triangle.
+    glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    shader.Use();
+    glBindVertexArray(vao);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    SDL_GL_SwapWindow(window);
+
+    SDL_Delay(10);
+  }
+
+
   // TODO: Do RAII resouce cleaning.
   SDL_GL_DeleteContext(gl_context);
   SDL_DestroyWindow(window);

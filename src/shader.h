@@ -19,6 +19,8 @@ class Shader {
   Status Init();
   bool valid() const { return handle_ != 0; }
 
+  void Use();
+
  private:
   // Clears all the handles that the shader owns.
   void Clear();
