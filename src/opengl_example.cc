@@ -8,6 +8,7 @@
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 
+#include "shader.h"
 #include "utils/file.h"
 #include "utils/log.h"
 
@@ -45,6 +46,32 @@ int main() {
              << "OpenGL Shading Language Version: "
              << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl
              << "OpenGL Extension: " << glGetString(GL_EXTENSIONS);
+
+  std::vector<char> vertex_shader;
+  Status res = ReadWholeFile("shaders/simple.vert", &vertex_shader);
+  if (!res.ok()) {
+    LOG(ERROR) << "Reading vertex shader: " << res.err_msg();
+    return 1;
+  }
+
+  std::vector<char> fragment_shader;
+  res = ReadWholeFile("shaders/simple.frag", &fragment_shader);
+  if (!res.ok()) {
+    LOG(ERROR) << "Reading fragment shader: " << res.err_msg();
+    return 1;
+  }
+  LOG(INFO) << "Correctly read fragment shader: " << std::endl
+    << fragment_shader.data();
+
+  // Create a shader.
+  Shader shader(vertex_shader.data(), fragment_shader.data());
+  res = shader.Init();
+  if (!res.ok()) {
+    LOG(ERROR) << "Initializing shader: " << res.err_msg();
+    return 1;
+  }
+
+  LOG(INFO) << "Successfully compiled a shader!";
 
   // TODO: Do RAII resouce cleaning.
   SDL_GL_DeleteContext(gl_context);

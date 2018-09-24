@@ -17,8 +17,14 @@ class Shader {
   ~Shader();
 
   Status Init();
+  bool valid() const { return handle_ != 0; }
 
  private:
+  // Clears all the handles that the shader owns.
+  void Clear();
+  // So that Init can clear resources on failure.
+  Status InternalInit();
+
   int handle_ = 0;
   int vert_handle_ = 0;
   int frag_handle_ = 0;
