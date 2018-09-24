@@ -10,11 +10,10 @@ source_set("gl3w") {
   sources = [
     "gl3w.c",
   ]
-
   public = [
     "gl3w.h",
   ]
-
+  libs = [ "-ldl" ]
   configs += [
     ":gl3w_config",
   ]

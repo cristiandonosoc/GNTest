@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-/* #include <GL/gl3w.h> */
+#include <GL/gl3w.h>
 
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
@@ -32,24 +32,22 @@ int main() {
                        1280, 720,
                        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
-  std::vector<char> vertex_shader;
-  Status res = ReadWholeFile("shaders/simple.vert", &vertex_shader);
-  if (!res.ok()) {
-    LOG(ERROR) << "Reading vertex shader: " << res.err_msg();
-    return 1;
-  }
+  // Setup an OpenGL context.
+  SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+  SDL_GL_SetSwapInterval(1);  // Enable v-sync.
+  gl3wInit();
 
-  std::vector<char> fragment_shader;
-  res = ReadWholeFile("shaders/simple.frag", &fragment_shader);
-  if (!res.ok()) {
-    LOG(ERROR) << "Reading fragment shader: " << res.err_msg();
-    return 1;
-  }
+  // Test OpenGL is running.
+  LOG(DEBUG) << std::endl
+             << "OpenGL Vendor: " << glGetString(GL_VENDOR) << std::endl
+             << "OpenGL Renderer: " << glGetString(GL_RENDERER) << std::endl
+             << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl
+             << "OpenGL Shading Language Version: "
+             << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl
+             << "OpenGL Extension: " << glGetString(GL_EXTENSIONS);
 
-  LOG(INFO) << "Correctly read vertex shader: " << std::endl
-    << fragment_shader.data();
-
-
+  // TODO: Do RAII resouce cleaning.
+  SDL_GL_DeleteContext(gl_context);
   SDL_DestroyWindow(window);
   SDL_Quit();
 
