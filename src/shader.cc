@@ -1,11 +1,13 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
+#include "shader.h"
+
 #include <assert.h>
 
 #include <GL/gl3w.h>
 
-#include "shader.h"
+#include "utils/gl.h"
 
 namespace warhol {
 
@@ -100,7 +102,8 @@ Status CompileShader(GLenum kind, const std::string& src, int* out) {
     GLchar log[2048];
     glGetShaderInfoLog(handle, sizeof(log), 0, log);
     glDeleteShader(handle);
-    return STATUS_VA("Error compiling shader: %s", log);
+    return STATUS_VA(
+        "Error compiling %s shader: %s", GLEnumToString(kind), log);
   }
   *out = handle;
   return Status::Ok();

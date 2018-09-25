@@ -21,12 +21,12 @@ ReadWholeFile(const std::string& path, std::vector<char>* out) {
   fseek(file, 0, SEEK_SET);
 
   out->clear();
-  out->resize(file_size);
+  out->resize(file_size + 1);
   auto result = fread(out->data(), 1, file_size, file);
   if (result != file_size)
     return STATUS_VA("Could not read file: %s", path.data());
-
   fclose(file);
+  out->back() = '\0';
   return Status::Ok();
 }
 

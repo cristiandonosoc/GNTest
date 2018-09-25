@@ -65,7 +65,7 @@ int main() {
     return 1;
   }
 
-  LOG(INFO) << "Successfully compiled a shader!";
+  LOG(DEBUG) << "Successfully compiled a shader!";
 
   // Vertices example.
   float vertices[] = {

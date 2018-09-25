@@ -7,6 +7,8 @@ source_set("utils") {
     "debug.h",
     "file.cc",
     "file.h",
+    "gl.cc",
+    "gl.h",
     "log.cc",
     "log.h",
     "macros.h",
@@ -15,7 +17,11 @@ source_set("utils") {
     "string.cc",
     "string.h",
   ]
+  configs += [
+    "//third_party/gl3w/GL:gl3w_config",
+  ]
   deps = [
     "//third_party/stb",
+    "//third_party/gl3w/GL:gl3w",
   ]
 }
