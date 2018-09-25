@@ -4,43 +4,49 @@
 #pragma once
 
 #include <string>
+#include <ostream>
 
 #include "utils/macros.h"
+#include "utils/log.h"
 
 namespace warhol {
 
 class Status {
  public:
-  enum class Type {
-    kOk,
-    kError,
-    kDisconnect,    // Server disconnect.
-  };
-
   static Status Ok() { return Status(); }
 
   Status();
-  Status(std::string err_msg);          // Will set error status.
-  Status(Type, std::string err_msg);
+  Status(LogLevel, std::string err_msg);
 
-  Status(const char* fmt, ...) PRINTF_FORMAT(2, 3);   // Will set error status.
-  Status(Type, const char* fmt, ...) PRINTF_FORMAT(3, 4);
+  explicit Status(std::string err_msg);          // Will set error status.
+  explicit Status(const char* fmt, ...)
+      PRINTF_FORMAT(2, 3);  // Will set error status.
+  explicit Status(const char* file, int line, const char* fmt, ...)
+      PRINTF_FORMAT(4, 5);
 
-  bool ok() const { return type_ == Type::kOk; }
+  bool ok() const { return err_msg_.empty(); }
+
+  const char* file() const { return file_; }
+  int line() const { return line_; }
 
   const std::string& err_msg() const { return err_msg_; }
-  Type type() const { return type_; }
+  LogLevel level() const { return level_; }
 
  private:
-  Type type_ = Type::kOk;
+  const char* file_;
+  int line_;
+  LogLevel level_ = LOG_ERROR;
   std::string err_msg_;
 };
 
-// Utilities -------------------------------------------------------------------
+std::ostream& operator<<(std::ostream&, const Status&);
 
-const char* StatusTypeToString();
+#define STATUS(fmt) \
+  Status(__FILE__, __LINE__, fmt)
+#define STATUS_VA(fmt, ...) \
+  Status(__FILE__, __LINE__, fmt, __VA_ARGS__)
 
-void LogStatus(const Status&);
-
+#define LOG_STATUS(status) \
+  ::warhol::LogEntry().stream() << status
 
 }  // namespace warhol

@@ -34,7 +34,7 @@ Status Shader::Init() {
 Status
 Shader::InternalInit() {
   if (vert_src_.empty() || frag_src_.empty())
-    return Status("Shaders sources must be set before calling Init");
+    return STATUS("Shaders sources must be set before calling Init");
 
   Status res = CompileShader(GL_VERTEX_SHADER, vert_src_, &vert_handle_);
   if (!res.ok())
@@ -46,7 +46,7 @@ Shader::InternalInit() {
   // Create the shader program.
   handle_ = glCreateProgram();
   if (!handle_)
-    return Status("glCreateProgram: could not allocate a program");
+    return STATUS("glCreateProgram: could not allocate a program");
 
   glAttachShader(handle_, vert_handle_);
   glAttachShader(handle_, frag_handle_);
@@ -57,7 +57,7 @@ Shader::InternalInit() {
   if (success == GL_FALSE) {
     GLchar log[2048];
     glGetProgramInfoLog(handle_, sizeof(log), 0, log);
-    return Status("Could not link shader: %s", log);
+    return STATUS_VA("Could not link shader: %s", log);
   }
 
   // TODO: Obtain uniforms.
@@ -87,7 +87,7 @@ namespace {
 Status CompileShader(GLenum kind, const std::string& src, int* out) {
   int handle = glCreateShader(kind);
   if (!handle)
-    return Status("Could not allocate a shader");
+    return STATUS("Could not allocate a shader");
 
   // Compile the shader source.
   const GLchar* gl_src = src.data();
@@ -100,7 +100,7 @@ Status CompileShader(GLenum kind, const std::string& src, int* out) {
     GLchar log[2048];
     glGetShaderInfoLog(handle, sizeof(log), 0, log);
     glDeleteShader(handle);
-    return Status("Error compiling shader: %s", log);
+    return STATUS_VA("Error compiling shader: %s", log);
   }
   *out = handle;
   return Status::Ok();

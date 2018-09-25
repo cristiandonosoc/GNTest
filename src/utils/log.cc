@@ -18,6 +18,12 @@ LogLevelToString(LogLevel level) {
   return kLogLevelStrings[(int)level];
 }
 
+LogEntry::LogEntry() = default;
+
+LogEntry::LogEntry(LogLevel level) {
+  os_ << "[" << LogLevelToString(level) << "] ";
+}
+
 LogEntry::LogEntry(LogLevel level, const char* file, int line) {
   os_ << "[" << LogLevelToString(level) << "]"
       << "[" << file << ":" << line << "] ";

@@ -18,6 +18,8 @@ const char* LogLevelToString(LogLevel);
 
 class LogEntry {
  public:
+  LogEntry();
+  LogEntry(LogLevel);
   LogEntry(LogLevel, const char* file, int line);
   ~LogEntry();
 

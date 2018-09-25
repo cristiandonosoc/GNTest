@@ -19,15 +19,15 @@ int main() {
   SDLContext sdl_context;
   Status res = sdl_context.Init();
   if (!res.ok()) {
-    LOG(ERROR) << "Error Initializing SDL: " << res.err_msg();
+    LOG_STATUS(res) << res;
     return 1;
   }
+  gl3wInit();
 
   // Data about displays.
-  printf("Information from SDL\n");
-  printf("Amount of displays: %d\n", SDL_GetNumVideoDisplays());
+  LOG(DEBUG) << "Information from SDL:" << std::endl
+             << "Amount of displays: " << SDL_GetNumVideoDisplays();
 
-  gl3wInit();
 
   // Test OpenGL is running.
   LOG(DEBUG) << std::endl
@@ -35,30 +35,33 @@ int main() {
              << "OpenGL Renderer: " << glGetString(GL_RENDERER) << std::endl
              << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl
              << "OpenGL Shading Language Version: "
-             << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl
-             << "OpenGL Extension: " << glGetString(GL_EXTENSIONS);
+             << glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+  int vert_attribs;
+  glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &vert_attribs);
+  LOG(DEBUG) << std::endl << "Max Vertex Attributes: " << vert_attribs;
 
   std::vector<char> vertex_shader;
   res = ReadWholeFile("shaders/simple.vert", &vertex_shader);
   if (!res.ok()) {
-    LOG(ERROR) << "Reading vertex shader: " << res.err_msg();
+    LOG(ERROR) << res;
     return 1;
   }
 
   std::vector<char> fragment_shader;
   res = ReadWholeFile("shaders/simple.frag", &fragment_shader);
   if (!res.ok()) {
-    LOG(ERROR) << "Reading fragment shader: " << res.err_msg();
+    LOG_STATUS(res);
     return 1;
   }
   LOG(INFO) << "Correctly read fragment shader: " << std::endl
-    << fragment_shader.data();
+            << fragment_shader.data();
 
   // Create a shader.
   Shader shader(vertex_shader.data(), fragment_shader.data());
   res = shader.Init();
   if (!res.ok()) {
-    LOG(ERROR) << "Initializing shader: " << res.err_msg();
+    LOG_STATUS(res);
     return 1;
   }
 

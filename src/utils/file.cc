@@ -14,7 +14,7 @@ ReadWholeFile(const std::string& path, std::vector<char>* out) {
 
   file = fopen(path.data(), "rb");
   if (file == NULL)
-    return Status("Could not open file: %s", path.data());
+    return STATUS_VA("Could not open file: %s", path.data());
 
   fseek(file, 0, SEEK_END);
   file_size = ftell(file);
@@ -24,7 +24,7 @@ ReadWholeFile(const std::string& path, std::vector<char>* out) {
   out->resize(file_size);
   auto result = fread(out->data(), 1, file_size, file);
   if (result != file_size)
-    return Status("Could not read file: %s", path.data());
+    return STATUS_VA("Could not read file: %s", path.data());
 
   fclose(file);
   return Status::Ok();
