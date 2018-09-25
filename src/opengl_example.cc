@@ -8,6 +8,7 @@
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 
+#include "sdl_context.h"
 #include "shader.h"
 #include "utils/file.h"
 #include "utils/log.h"
@@ -15,9 +16,10 @@
 using namespace warhol;
 
 int main() {
-  // Setup SDL2.
-  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
-    printf("Error loading SDL: %s\n", SDL_GetError());
+  SDLContext sdl_context;
+  Status res = sdl_context.Init();
+  if (!res.ok()) {
+    LOG(ERROR) << "Error Initializing SDL: " << res.err_msg();
     return 1;
   }
 
@@ -25,17 +27,6 @@ int main() {
   printf("Information from SDL\n");
   printf("Amount of displays: %d\n", SDL_GetNumVideoDisplays());
 
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-  SDL_Window* window =
-      SDL_CreateWindow("Warhol",
-                       SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                       1280, 720,
-                       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-
-  // Setup an OpenGL context.
-  SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-  SDL_GL_SetSwapInterval(1);  // Enable v-sync.
   gl3wInit();
 
   // Test OpenGL is running.
@@ -48,7 +39,7 @@ int main() {
              << "OpenGL Extension: " << glGetString(GL_EXTENSIONS);
 
   std::vector<char> vertex_shader;
-  Status res = ReadWholeFile("shaders/simple.vert", &vertex_shader);
+  res = ReadWholeFile("shaders/simple.vert", &vertex_shader);
   if (!res.ok()) {
     LOG(ERROR) << "Reading vertex shader: " << res.err_msg();
     return 1;
@@ -113,15 +104,12 @@ int main() {
     glBindVertexArray(vao);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    SDL_GL_SwapWindow(window);
+    SDL_GL_SwapWindow(sdl_context.window);
 
     SDL_Delay(10);
   }
 
-
-  // TODO: Do RAII resouce cleaning.
-  SDL_GL_DeleteContext(gl_context);
-  SDL_DestroyWindow(window);
+  sdl_context.Clear();
   SDL_Quit();
 
   return 0;
