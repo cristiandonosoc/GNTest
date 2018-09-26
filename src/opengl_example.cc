@@ -104,6 +104,13 @@ int main() {
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     shader.Use();
+
+    // Get a color and send the uniform.
+    float ticks = SDL_GetTicks() / 1000;
+    float green = sin(ticks) / 2.0f + 0.5f;
+    const Uniform* uniform = shader.GetUniform("u_color");
+    glUniform4f(uniform->location, 0.0f, green, 0.0f, 1.0f);
+
     glBindVertexArray(vao);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 

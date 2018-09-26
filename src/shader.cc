@@ -5,8 +5,6 @@
 
 #include <assert.h>
 
-#include <GL/gl3w.h>
-
 #include "utils/gl.h"
 
 namespace warhol {
@@ -15,6 +13,8 @@ namespace warhol {
 
 namespace {
 Status CompileShader(GLenum kind, const std::string& src, int* handle);
+
+
 }  // namespace
 
 // Shader Implementation -------------------------------------------------------
@@ -62,7 +62,7 @@ Shader::InternalInit() {
     return STATUS_VA("Could not link shader: %s", log);
   }
 
-  // TODO: Obtain uniforms.
+  ObtainUniforms();
   // TODO: Obtain attributes.
 
   return Status::Ok();
@@ -80,6 +80,52 @@ void Shader::Clear() {
     glDeleteShader(frag_handle_);
   if (handle_)
     glDeleteShader(handle_);
+}
+
+void Shader::ObtainUniforms() {
+  char buf[256];
+  // Size of the longest uniform name.
+  GLint max_name_size;
+  glGetProgramiv(handle_, GL_ACTIVE_UNIFORM_MAX_LENGTH, &max_name_size);
+  LOG(DEBUG) << "MAX NAME SIZE: " << max_name_size;
+  assert((uint32_t)max_name_size <= sizeof(buf));
+
+  // Get the uniforms.
+  GLint uniform_count = 0;
+  glGetProgramiv(handle_, GL_ACTIVE_UNIFORMS, &uniform_count);
+  LOG(DEBUG) << "Found uniforms: " << uniform_count;
+  for (GLint i = 0; i < uniform_count; i++) {
+    // Get type data.
+    GLsizei length, count;
+    GLenum type;
+    glGetActiveUniform(handle_, i, max_name_size, &length, &count, &type, buf);
+    // Get location data.
+    GLint location = glGetUniformLocation(handle_, buf);
+    if (location < 0) {
+      LOG(ERROR) << "Could not find location for uniform: " << buf;
+      assert(false);
+    }
+
+    Uniform uniform = {};
+    uniform.name = buf;
+    uniform.location = location;
+    uniform.type = type;
+    uniform.count = count;
+    uniform.size = GLEnumToSize(type);
+
+    LOG(DEBUG) << "Found uniform: " << uniform.name << ", "
+               << "location: " << uniform.location << ", "
+               << "type: " << GLEnumToString(uniform.type);
+
+    uniforms_[uniform.name] = std::move(uniform);
+  }
+}
+
+const Uniform* Shader::GetUniform(const std::string& uniform_name) const {
+  auto it = uniforms_.find(uniform_name);
+  if (it == uniforms_.end())
+    return nullptr;
+  return &it->second;
 }
 
 // Helpers Implementation ------------------------------------------------------
