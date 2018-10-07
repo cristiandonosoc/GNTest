@@ -10,10 +10,9 @@ declare_args() {
 
 config("sdl2_config") {
   handled = false
+  include_dirs = [ "$sdl2_include_path" ]
   if (target_os == "win" && compiler == "msvc") {
-    include_dirs = [ "../includelnk" ]
-    libs = [ "../liblnk/SDL2/SDL2.lib" ]
-    ldflags = [ "/SUBSYSTEM:CONSOLE" ]
+    libs = [ "${sdl2_lib_path}/SDL2/SDL2.lib" ]
     handled = true
   } else if (target_os == "mac" && compiler == "clang") {
     # NOTE: SDL2 should be installed as a framework in /Library/Frameworks
@@ -21,7 +20,6 @@ config("sdl2_config") {
     handled = true
   } else if (target_os == "linux") {
     if (compiler == "clang") {
-      include_dirs = [ "$sdl2_include_path" ]
       libs = [ "-lSDL2" ]
       ldflags = [ "-L${sdl2_lib_path}" ]
       handled = true
@@ -35,9 +33,9 @@ config("sdl2_config") {
 
 config("vulkan_config") {
   handled = false
+  include_dirs = [ "${vulkan_include_path}" ]
   if (target_os == "win" && compiler == "msvc") {
-    include_dirs = [ "../includelnk" ]
-    libs  = [ "../liblnk/vulkan/vulkan-1.lib" ]
+    libs = [ "${vulkan_include_path}/vulkan/vulkan-1.lib" ]
     handled = true
   } else if (target_os == "mac" && compiler == "clang") {
     # IMPORTANT: vulkan for mac requires certain env variables to be set in
@@ -52,12 +50,10 @@ config("vulkan_config") {
 
     # Point the loader to the manifest where the layers are specified.
     # export VK_LAYER_PATH = "$VULKAN_SDK/etc/vulkan/explicit_layers.d"
-    include_dirs = [ "${$vulkan_include_path}" ]
     libs = [ "${vulkan_lib_path}/libvulkan.dylib" ]
     handled = true
   } else if (target_os == "linux") {
     if (compiler == "clang") {
-      include_dirs = [ "${vulkan_include_path}" ]
       libs = [ "-lvulkan" ]
       ldflags = [ "-L${vulkan_lib_path}" ]
       handled = true
@@ -90,11 +86,11 @@ source_set("warhol_lib") {
     "shader.h",
   ]
   configs += [
-    "//third_party/gl3w/GL:gl3w_config",
+    "//third_party/gl3w:gl3w_config",
   ]
   deps = [
     "//src/utils",
-    "//third_party/gl3w/GL:gl3w",
+    "//third_party/gl3w:gl3w",
   ]
 }
 
@@ -129,11 +125,11 @@ executable("opengl_example") {
   ]
   configs += [
     ":sdl2_config",
-    "//third_party/gl3w/GL:gl3w_config",
+    "//third_party/gl3w:gl3w_config",
   ]
   deps = [
     ":warhol_lib",
     "//src/utils",
-    "//third_party/gl3w/GL:gl3w",
+    "//third_party/gl3w:gl3w",
   ]
 }

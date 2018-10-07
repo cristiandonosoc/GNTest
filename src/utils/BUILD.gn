@@ -18,10 +18,10 @@ source_set("utils") {
     "string.h",
   ]
   configs += [
-    "//third_party/gl3w/GL:gl3w_config",
+    "//third_party/gl3w:gl3w_config",
   ]
   deps = [
     "//third_party/stb",
-    "//third_party/gl3w/GL:gl3w",
+    "//third_party/gl3w:gl3w",
   ]
 }

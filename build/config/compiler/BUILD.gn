@@ -19,6 +19,10 @@ if (compiler == "msvc") {
       "/EHsc",
       "/GR-",
     ]
+
+    ldflags = [
+      "/SUBSYSTEM:CONSOLE",
+    ]
   }
 
   config("debug") {

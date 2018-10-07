@@ -3,7 +3,7 @@
 
 config("gl3w_config") {
   # So includes like <GL/gl3w.h> works.
-  include_dirs = [ ".." ]
+  include_dirs = [ "//third_party/include" ]
 }
 
 source_set("gl3w") {
@@ -13,7 +13,9 @@ source_set("gl3w") {
   public = [
     "gl3w.h",
   ]
-  libs = [ "-ldl" ]
+  if (target_os == "linux") {
+    libs = [ "-ldl" ]
+  }
   configs += [
     ":gl3w_config",
   ]
