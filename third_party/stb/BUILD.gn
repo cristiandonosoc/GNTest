@@ -19,5 +19,3 @@ source_set("stb_lib") {
   configs -= [ "//build/config/compiler:default_warnings" ]
 
 }
-
-

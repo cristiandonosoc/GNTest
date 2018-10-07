@@ -19,4 +19,6 @@ source_set("gl3w") {
   configs += [
     ":gl3w_config",
   ]
+  # We don't care about the warnings of this library.
+  configs -= [ "//build/config/compiler:default_warnings" ]
 }

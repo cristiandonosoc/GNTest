@@ -86,6 +86,7 @@ source_set("warhol_lib") {
     "shader.h",
   ]
   configs += [
+    ":sdl2_config",
     "//third_party/gl3w:gl3w_config",
   ]
   deps = [

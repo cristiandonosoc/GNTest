@@ -137,6 +137,7 @@ GLEnumToString(GLenum type) {
     default:
       LOG(ERROR) << "Uncovered GLenum type: " << (uint32_t)type;
       assert(false);
+      return nullptr;
   }
 }
 
@@ -254,6 +255,7 @@ GLEnumToSize(GLenum type) {
     default:
       LOG(ERROR) << "Uncovered GLenum type: " << (uint32_t)type;
       assert(false);
+      return 0;
   }
 }
 

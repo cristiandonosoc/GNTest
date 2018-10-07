@@ -1,6 +1,7 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
+#include <math.h>
 #include <stdio.h>
 
 #include <GL/gl3w.h>
@@ -106,7 +107,7 @@ int main() {
     shader.Use();
 
     // Get a color and send the uniform.
-    float ticks = SDL_GetTicks() / 1000;
+    float ticks = (float)SDL_GetTicks() / 1000.0f;
     float green = sin(ticks) / 2.0f + 0.5f;
     const Uniform* uniform = shader.GetUniform("u_color");
     glUniform4f(uniform->location, 0.0f, green, 0.0f, 1.0f);
