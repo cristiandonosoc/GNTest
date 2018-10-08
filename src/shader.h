@@ -37,6 +37,8 @@ class Shader {
   const Uniform* GetUniform(const std::string& uniform_name) const;
   const std::map<std::string, Uniform> uniforms() const { return uniforms_; }
 
+  bool SetFloat(const std::string& name, float val) const;
+
  private:
   // Clears all the handles that the shader owns.
   void Clear();

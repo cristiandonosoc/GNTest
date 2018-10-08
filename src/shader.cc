@@ -83,6 +83,10 @@ void Shader::Clear() {
 }
 
 void Shader::ObtainUniforms() {
+
+  LOG(DEBUG) << "Running: " << PRETTY_FUNCTION;
+
+
   char buf[256];
   // Size of the longest uniform name.
   GLint max_name_size;
@@ -126,6 +130,17 @@ const Uniform* Shader::GetUniform(const std::string& uniform_name) const {
   if (it == uniforms_.end())
     return nullptr;
   return &it->second;
+}
+
+bool Shader::SetFloat(const std::string& name, float val) const {
+  const Uniform* uniform = GetUniform(name);
+  if (!uniform) {
+    LOG(WARNING) << "Could not find uniform: " << name;
+    return false;
+  }
+
+  glUniform1f(uniform->location, val);
+  return true;
 }
 
 // Helpers Implementation ------------------------------------------------------

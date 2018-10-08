@@ -40,7 +40,7 @@ int main() {
 
   int vert_attribs;
   glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &vert_attribs);
-  LOG(DEBUG) << std::endl << "Max Vertex Attributes: " << vert_attribs;
+  LOG(DEBUG) << "Max Vertex Attributes: " << vert_attribs;
 
   std::vector<char> vertex_shader;
   res = ReadWholeFile("shaders/simple.vert", &vertex_shader);
@@ -68,27 +68,56 @@ int main() {
 
   LOG(DEBUG) << "Successfully compiled a shader!";
 
-  // Vertices example.
+  /* // Vertices example. */
+  /* float vertices[] = { */
+  /*   -0.5f, -0.5f, 0.0f, */
+  /*    0.5f, -0.5f, 0.0f, */
+  /*    0.0f,  0.5f, 0.0f */
+  /* }; */
+
   float vertices[] = {
-    -0.5f, -0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
-     0.0f,  0.5f, 0.0f
+    // positions         // colors
+     0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
+    -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
+     0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top
   };
+
+
+
 
   // Generate the VAO that will hold the configuration.
   uint32_t vao;
   glGenVertexArrays(1, &vao);
-  glBindVertexArray(vao);
 
   // Generate the vertices buffer object.
   uint32_t vbo;
   glGenBuffers(1, &vbo);
+
+  glBindVertexArray(vao);
+
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   // Send the vertex data over.
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
   // Tell OpenGL how to interpret the buffer.
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
+                        6 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+
+  shader.Use();
+
+
+    // Get a color and send the uniform.
+    /* float ticks = (float)SDL_GetTicks() / 1000.0f; */
+    /* float green = sin(ticks) / 2.0f + 0.5f; */
+    const Uniform* uniform = shader.GetUniform("u_color");
+    if (!uniform) {
+      LOG(WARNING) << "Could not find uniform \"u_color\"";
+      /* glUniform4f(uniform->location, 0.0f, green, 0.0f, 1.0f); */
+    }
+
+
 
   bool running = true;
   while (running) {
@@ -104,13 +133,15 @@ int main() {
     // Draw the triangle.
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    shader.Use();
 
-    // Get a color and send the uniform.
+    /* // Get a color and send the uniform. */
     float ticks = (float)SDL_GetTicks() / 1000.0f;
     float green = sin(ticks) / 2.0f + 0.5f;
-    const Uniform* uniform = shader.GetUniform("u_color");
-    glUniform4f(uniform->location, 0.0f, green, 0.0f, 1.0f);
+    /* const Uniform* uniform = shader.GetUniform("u_color"); */
+    /* glUniform4f(uniform->location, 0.0f, green, 0.0f, 1.0f); */
+
+
+    shader.SetFloat("u_x_offset", green);
 
     glBindVertexArray(vao);
     glDrawArrays(GL_TRIANGLES, 0, 3);
