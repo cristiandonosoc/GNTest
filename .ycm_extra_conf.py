@@ -38,7 +38,7 @@ flags = [
 '-Wall',
 '-Wextra',
 '-x', 'c++',
-'--std=c++14',
+'--std=c++17',
 '-I', os.path.join(os.getcwd()),
 '-I', os.path.join(os.getcwd(), 'src'),
 '-isystem', os.path.join(os.getcwd(), 'third_party'),

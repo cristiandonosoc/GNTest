@@ -130,6 +130,7 @@ executable("opengl_example") {
   ]
   deps = [
     ":warhol_lib",
+    "//src/arch:arch_provider",
     "//src/utils",
     "//third_party/gl3w:gl3w",
   ]

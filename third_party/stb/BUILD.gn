@@ -13,7 +13,9 @@ source_set("stb_lib") {
     # The STB libraries are header-only: the implementation is guarded by a
     # macro define. The implentation .cc makes all the implementation includes.
     "implementations.cc",
-    "stb_sprintf.h"
+    "stb_image.h",
+    "stb_sprintf.h",
+
   ]
   # We don't care about the warnings of this library.
   configs -= [ "//build/config/compiler:default_warnings" ]

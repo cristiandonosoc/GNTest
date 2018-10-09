@@ -5,16 +5,19 @@
 #include <stdio.h>
 
 #include <GL/gl3w.h>
-
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
+#include <third_party/stb/stb_image.h>
 
-#include "sdl_context.h"
-#include "shader.h"
-#include "utils/file.h"
-#include "utils/log.h"
+#include "src/arch/arch_provider.h"
+#include "src/sdl_context.h"
+#include "src/shader.h"
+#include "src/utils/file.h"
+#include "src/utils/log.h"
 
 using namespace warhol;
+
+void GenerateTexture();
 
 int main() {
   SDLContext sdl_context;
@@ -25,10 +28,13 @@ int main() {
   }
   gl3wInit();
 
+  // Test current executable path.
+  LOG(DEBUG) << "Current executable: "
+             << arch::ArchProvider::GetCurrentExecutablePath();
+
   // Data about displays.
   LOG(DEBUG) << "Information from SDL:" << std::endl
              << "Amount of displays: " << SDL_GetNumVideoDisplays();
-
 
   // Test OpenGL is running.
   LOG(DEBUG) << std::endl
@@ -68,13 +74,6 @@ int main() {
 
   LOG(DEBUG) << "Successfully compiled a shader!";
 
-  /* // Vertices example. */
-  /* float vertices[] = { */
-  /*   -0.5f, -0.5f, 0.0f, */
-  /*    0.5f, -0.5f, 0.0f, */
-  /*    0.0f,  0.5f, 0.0f */
-  /* }; */
-
   float vertices[] = {
     // positions         // colors
      0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
@@ -82,6 +81,11 @@ int main() {
      0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top
   };
 
+  /* float tex_coords[] = { */
+  /*   0.0f, 0.0f,  // lower-left corner */
+  /*   1.0f, 0.0f,  // lower-right corner */
+  /*   0.5f, 1.0f   // top-center corner */
+  /* }; */
 
 
 
@@ -156,3 +160,11 @@ int main() {
 
   return 0;
 }
+
+
+/* void GenerateTexture() { */
+/*   int width, height; */
+
+/*   uint8_t* data = stbi_load( */
+
+/* } */

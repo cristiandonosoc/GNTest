@@ -4,6 +4,9 @@
 
 declare_args() {
   is_debug = true
+  is_linux = false
+  is_osx = false
+  is_windows = false
 }
 
 # OS/Compiler Targets
@@ -17,16 +20,19 @@ if (target_os == "") {
 # Host to compiler mapping
 compiler = ""
 if (target_os == "win") {
+  is_windows = true
   compiler = "msvc"
   set_default_toolchain("//build/toolchains:msvc")
 }
 
 if (target_os == "linux") {
+  is_linux = true
   compiler = "clang"
   set_default_toolchain("//build/toolchains:clang")
 }
 
 if (target_os == "mac") {
+  is_osx = true
   compiler = "clang"
   set_default_toolchain("//build/toolchains:clang")
 }

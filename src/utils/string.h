@@ -11,4 +11,6 @@ std::string StringPrintf(const char* fmt, ...);
 
 std::string StringPrintfV(const char* fmt, va_list);
 
+std::string Concatenate(std::initializer_list<std::string> strings);
+
 }  // namespace warhol
