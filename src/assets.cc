@@ -11,6 +11,7 @@ namespace warhol {
 std::string
 Assets::ShaderPath(std::string shader_name) {
   return PathJoin({arch::ArchProvider::GetBasePath(),
+                   "assets",
                    "shaders",
                    std::move(shader_name)});
 }

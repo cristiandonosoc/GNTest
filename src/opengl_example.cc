@@ -18,7 +18,10 @@
 
 using namespace warhol;
 
+// Returns whether the program should still be running.
+bool HandleKeyUp(const SDL_KeyboardEvent&);
 void GenerateTexture();
+
 
 int main() {
   SDLContext sdl_context;
@@ -128,8 +131,14 @@ int main() {
   while (running) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_QUIT) {
-        running = false;
+      switch (event.type) {
+        case SDL_QUIT:
+          running = false;
+          break;
+        case SDL_KEYUP:
+          running = HandleKeyUp(event.key);
+        default:
+          break;
       }
     }
     if (!running)
@@ -160,6 +169,15 @@ int main() {
   SDL_Quit();
 
   return 0;
+}
+
+bool HandleKeyUp(const SDL_KeyboardEvent& key_event) {
+  switch (key_event.keysym.scancode) {
+    case SDL_SCANCODE_ESCAPE:
+      return false;
+    default:
+      return true;
+  }
 }
 
 
