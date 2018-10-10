@@ -10,6 +10,7 @@
 #include <third_party/stb/stb_image.h>
 
 #include "src/arch/arch_provider.h"
+#include "src/assets.h"
 #include "src/sdl_context.h"
 #include "src/shader.h"
 #include "src/utils/file.h"
@@ -49,14 +50,14 @@ int main() {
   LOG(DEBUG) << "Max Vertex Attributes: " << vert_attribs;
 
   std::vector<char> vertex_shader;
-  res = ReadWholeFile("shaders/simple.vert", &vertex_shader);
+  res = ReadWholeFile(Assets::ShaderPath("simple.vert"), &vertex_shader);
   if (!res.ok()) {
     LOG(ERROR) << res;
     return 1;
   }
 
   std::vector<char> fragment_shader;
-  res = ReadWholeFile("shaders/simple.frag", &fragment_shader);
+  res = ReadWholeFile(Assets::ShaderPath("simple.frag"), &fragment_shader);
   if (!res.ok()) {
     LOG_STATUS(res);
     return 1;

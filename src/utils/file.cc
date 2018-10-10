@@ -3,12 +3,15 @@
 
 #include <stdlib.h>
 
-#include "utils/file.h"
+#include "src/utils/file.h"
+#include "src/utils/log.h"
 
 namespace warhol {
 
 Status
 ReadWholeFile(const std::string& path, std::vector<char>* out) {
+
+  LOG(DEBUG) << "Trying to read: " << path;
   FILE* file;
   size_t file_size;
 

@@ -3,12 +3,9 @@
 
 #include <third_party/stb/stb_sprintf.h>
 
-#include "string.h"
-#include "log.h"
+#include "src/utils/string.h"
 
 namespace warhol {
-
-#define STRING_PRINTF_BUF_LEN 256
 
 std::string StringPrintf(const char* fmt, ...) {
   va_list va;
@@ -19,22 +16,20 @@ std::string StringPrintf(const char* fmt, ...) {
 }
 
 std::string StringPrintfV(const char* fmt, va_list va) {
-  char buf[STRING_PRINTF_BUF_LEN];
+  char buf[256];
   stbsp_vsnprintf(buf, sizeof(buf), fmt, va);
   return std::string(buf);
 }
 
-std::string Concatenate(std::initializer_list<std::string> strings) {
+std::string Concatenate(std::vector<std::string> strings) {
   std::string result;
   size_t size = 0;
   for (const std::string& str : strings)
     size += str.size();
 
   result.reserve(size);
-  for (const std::string& str : strings) {
-    LOG(DEBUG) << "Concatenating: " << str;
-    result.append(str.data(), str.size());
-
+  for (std::string& str : strings) {
+    result.append(std::move(str));
   }
 
   return result;

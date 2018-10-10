@@ -4,6 +4,7 @@
 #include <stdarg.h>
 
 #include <string>
+#include <vector>
 
 namespace warhol {
 
@@ -11,6 +12,6 @@ std::string StringPrintf(const char* fmt, ...);
 
 std::string StringPrintfV(const char* fmt, va_list);
 
-std::string Concatenate(std::initializer_list<std::string> strings);
+std::string Concatenate(std::vector<std::string> strings);
 
 }  // namespace warhol

@@ -80,6 +80,8 @@ source_set("vulkan_lib") {
 
 source_set("warhol_lib") {
   sources = [
+    "assets.cc",
+    "assets.h",
     "sdl_context.cc",
     "sdl_context.h",
     "shader.cc",

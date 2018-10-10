@@ -16,11 +16,14 @@ source_set("utils") {
     "status.h",
     "string.cc",
     "string.h",
+    "path.cc",
+    "path.h",
   ]
   configs += [
     "//third_party/gl3w:gl3w_config",
   ]
   deps = [
+    "//src/arch:arch_provider",
     "//third_party/stb",
     "//third_party/gl3w:gl3w",
   ]
