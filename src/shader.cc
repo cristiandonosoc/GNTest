@@ -143,6 +143,20 @@ bool Shader::SetFloat(const std::string& name, float val) const {
   return true;
 }
 
+
+bool Shader::SetInt(const std::string& name, int val) const {
+  const Uniform* uniform = GetUniform(name);
+  if (!uniform) {
+    LOG(WARNING) << "Could not find uniform: " << name;
+    return false;
+  }
+
+  glUniform1i(uniform->location, val);
+  return true;
+}
+
+
+
 // Helpers Implementation ------------------------------------------------------
 
 namespace {

@@ -129,10 +129,13 @@ int main() {
 
   shader.Use();
 
-  // Generate the texture.
-  Texture texture(Assets::TexturePath("wall.jpg"));
-  assert(texture.valid());
-
+  // Generate the textures.
+  Texture wall(Assets::TexturePath("wall.jpg"));
+  LOG(DEBUG) << "Wall channels: " << wall.channels();
+  assert(wall.valid());
+  Texture face(Assets::TexturePath("awesomeface.png"));
+  assert(face.valid());
+  LOG(DEBUG) << "Face channels: " << face.channels();
 
   bool running = true;
   while (running) {
@@ -155,20 +158,10 @@ int main() {
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    /* // Get a color and send the uniform. */
-    /* float ticks = (float)SDL_GetTicks() / 1000.0f; */
-    /* float green = sin(ticks) / 2.0f + 0.5f; */
-    /* const Uniform* uniform = shader.GetUniform("u_color"); */
-    /* glUniform4f(uniform->location, 0.0f, green, 0.0f, 1.0f); */
-
-
-    /* shader.SetFloat("u_x_offset", green); */
-
-		texture.Use();
+		wall.Use(shader, GL_TEXTURE0);
+    face.Use(shader, GL_TEXTURE1);
 
     glBindVertexArray(vao);
-    /* glDrawArrays(GL_TRIANGLES, 0, 3); */
-    /* glDrawElements(GL_TRIANGLE_STRIP, 2, GL_UNSIGNED_INT, 0); */
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     SDL_GL_SwapWindow(sdl_context.window);

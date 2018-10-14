@@ -7,7 +7,10 @@
 
 #include <third_party/stb/stb_image.h>
 
+#include "src/shader.h"
+#include "src/utils/gl.h"
 #include "src/utils/log.h"
+
 namespace warhol {
 
 Texture::Texture(std::string path) {
@@ -34,13 +37,19 @@ Texture& Texture::operator=(Texture&& other) {
   return *this;
 }
 
-void Texture::Use() const {
+void Texture::Use(const Shader& shader, GLenum tex_unit) const {
 	assert(valid());
+  auto index = TextureUnitToUniform(tex_unit);
+  glActiveTexture(tex_unit);
 	glBindTexture(GL_TEXTURE_2D, handle_);
+  shader.SetInt(index.second, index.first);
 }
 
 void
 Texture::Init() {
+  // So that this matches what OpenGL expects.
+  stbi_set_flip_vertically_on_load(true);
+
   uint8_t* data = stbi_load(path().data(),
                             &data_.x, &data_.y, &data_.channels,
                             0);
@@ -56,6 +65,10 @@ Texture::Init() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+  // Format
+  GLenum format = channels() == 3 ? GL_RGB : GL_RGBA;
+
+
   // Send the bits over.
   // TODO(Cristian): Check for errors.
   // TODO(Cristian): When multi-threading is done, use this async.
@@ -66,7 +79,7 @@ Texture::Init() {
                data_.x,           // width,
                data_.y,           // height
                0,                 // border
-               GL_RGB,            // format
+               format,            // format
                GL_UNSIGNED_BYTE,  // type,
                data);
   glGenerateMipmap(GL_TEXTURE_2D);

@@ -12,7 +12,7 @@ out vec2 tex_coord;
 void main() {
   gl_Position = vec4(a_pos, 1.0f);
 
-  vertex_color = a_pos;
+  vertex_color = a_color;
   tex_coord = a_tex_coord;
 
 }
