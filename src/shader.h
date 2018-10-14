@@ -38,6 +38,9 @@ class Shader {
 
   bool SetInt(const std::string& name, int) const;
   bool SetFloat(const std::string& name, float) const;
+  bool SetMatrix(const std::string&, size_t mat_length, const float* data);
+
+  // NOTE: This is a square matrix.
 
  private:
   // Clears all the handles that the shader owns.

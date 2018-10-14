@@ -13,6 +13,18 @@
 #define PRINTF_FORMAT(format_param, dots_param)
 #endif
 
+// Ignore warnings for Windows because they don't have a good way
+// of ignoring warnings for certain includes
+// (I mean, they did add it in 2018...)
+#ifdef _WIN32
+#define BEGIN_IGNORE_WARNINGS() __pragma(warning(push, 0))
+#define END_IGNORE_WARNINGS() __pragma(warning(pop))
+#else
+// Other compilers have decent ways of dealing with warnings on external code.
+#define BEGIN_IGNORE_WARNINGS()
+#define END_IGNORE_WARNINGS()
+#endif
+
 #if defined(_MSC_VER)
   #define PRETTY_FUNCTION __FUNCTION__
 #elif defined(__GNUC__) || defined(__clang__)

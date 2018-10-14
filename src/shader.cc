@@ -12,8 +12,9 @@ namespace warhol {
 // Helpers Declarations --------------------------------------------------------
 
 namespace {
-Status CompileShader(GLenum kind, const std::string& src, int* handle);
 
+Status CompileShader(GLenum kind, const std::string& src, int* handle);
+typedef void(*GLMatrixFunction)(GLint, GLsizei, GLboolean, const GLfloat*);
 
 }  // namespace
 
@@ -155,7 +156,26 @@ bool Shader::SetInt(const std::string& name, int val) const {
   return true;
 }
 
+bool
+Shader::SetMatrix(const std::string& name,
+                  size_t mat_length,
+                  const float* data) {
+  const Uniform* uniform = GetUniform(name);
+  if (!uniform) {
+    LOG(WARNING) << "Could not find uniform: " << name;
+    return false;
+  }
 
+  int loc = uniform->location;
+  switch (mat_length) {
+    case 2: glUniformMatrix2fv(loc, 1, GL_FALSE, data); return true;
+    case 3: glUniformMatrix3fv(loc, 1, GL_FALSE, data); return true;
+    case 4: glUniformMatrix4fv(loc, 1, GL_FALSE, data); return true;
+    default:
+      LOG(WARNING) << "Wrong matrix length: " << mat_length;
+      return false;
+  }
+}
 
 // Helpers Implementation ------------------------------------------------------
 

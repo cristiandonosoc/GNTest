@@ -1,11 +1,14 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
+
 // TODO(Cristian): Write own assert.
 #include <assert.h>
 
 #include <math.h>
 #include <stdio.h>
+
+#include <iostream>
 
 #include <GL/gl3w.h>
 #define SDL_MAIN_HANDLED
@@ -17,8 +20,17 @@
 #include "src/sdl_context.h"
 #include "src/shader.h"
 #include "src/texture.h"
+#include "src/utils/macros.h"
 #include "src/utils/file.h"
 #include "src/utils/log.h"
+
+BEGIN_IGNORE_WARNINGS()
+#include <third_party/include/glm/glm.hpp>
+#include <third_party/include/glm/gtc/matrix_transform.hpp>
+#include <third_party/include/glm/gtc/type_ptr.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
+END_IGNORE_WARNINGS()
 
 using namespace warhol;
 
@@ -137,6 +149,20 @@ int main() {
   assert(face.valid());
   LOG(DEBUG) << "Face channels: " << face.channels();
 
+  // Simple transformations.
+  glm::mat4 trans(1.0f);
+  trans = glm::rotate(trans, glm::radians(90.f), glm::vec3(0, 0, 1));
+  trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
+
+  glm::to_string(trans);
+
+  for (int row = 0; row < 4; row++) {
+    for (int col = 0; col < 4; col++)
+      printf("%10f ", trans[col][row]);
+    std::cout << std::endl;
+  }
+
+
   bool running = true;
   while (running) {
     SDL_Event event;
@@ -162,6 +188,10 @@ int main() {
     face.Use(shader, GL_TEXTURE1);
 
     glBindVertexArray(vao);
+
+
+    shader.SetMatrix("transform", 4, glm::value_ptr(trans));
+
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     SDL_GL_SwapWindow(sdl_context.window);
