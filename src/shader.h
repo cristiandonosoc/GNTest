@@ -22,7 +22,6 @@ struct Uniform {
   size_t size;    // The size of the type in bytes.
 };
 
-
 class Shader {
  public:
   Shader();

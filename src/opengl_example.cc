@@ -1,6 +1,9 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
+// TODO(Cristian): Write own assert.
+#include <assert.h>
+
 #include <math.h>
 #include <stdio.h>
 
@@ -13,6 +16,7 @@
 #include "src/assets.h"
 #include "src/sdl_context.h"
 #include "src/shader.h"
+#include "src/texture.h"
 #include "src/utils/file.h"
 #include "src/utils/log.h"
 
@@ -20,7 +24,7 @@ using namespace warhol;
 
 // Returns whether the program should still be running.
 bool HandleKeyUp(const SDL_KeyboardEvent&);
-void GenerateTexture();
+void GenerateTextures();
 
 
 int main() {
@@ -78,53 +82,56 @@ int main() {
 
   LOG(DEBUG) << "Successfully compiled a shader!";
 
-  float vertices[] = {
-    // positions         // colors
-     0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
-    -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
-     0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top
-  };
+	float vertices[] = {
+	   // positions         // colors           // texture coords
+	   0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
+	   0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
+	  -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
+	  -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left
+	};
 
-  /* float tex_coords[] = { */
-  /*   0.0f, 0.0f,  // lower-left corner */
-  /*   1.0f, 0.0f,  // lower-right corner */
-  /*   0.5f, 1.0f   // top-center corner */
-  /* }; */
-
-
+	unsigned int indices[] = {  // note that we start from 0!
+    0, 1, 3,   // first triangle
+    1, 2, 3    // second triangle
+	};
 
   // Generate the VAO that will hold the configuration.
   uint32_t vao;
   glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
 
   // Generate the vertices buffer object.
   uint32_t vbo;
   glGenBuffers(1, &vbo);
 
-  glBindVertexArray(vao);
+
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   // Send the vertex data over.
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  // Tell OpenGL how to interpret the buffer.
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+  // Tell OpenGL how to interpret the buffer
+  GLsizei stride = 8 * sizeof(float);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-                        6 * sizeof(float), (void*)(3 * sizeof(float)));
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride,
+												(void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride,
+												(void*)(6 * sizeof(float)));
+  glEnableVertexAttribArray(2);
+
+  // Indices
+  uint32_t ebo;
+  glGenBuffers(1, &ebo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+							 GL_STATIC_DRAW);
 
   shader.Use();
 
-
-    // Get a color and send the uniform.
-    /* float ticks = (float)SDL_GetTicks() / 1000.0f; */
-    /* float green = sin(ticks) / 2.0f + 0.5f; */
-    const Uniform* uniform = shader.GetUniform("u_color");
-    if (!uniform) {
-      LOG(WARNING) << "Could not find uniform \"u_color\"";
-      /* glUniform4f(uniform->location, 0.0f, green, 0.0f, 1.0f); */
-    }
-
+  // Generate the texture.
+  Texture texture(Assets::TexturePath("wall.jpg"));
+  assert(texture.valid());
 
 
   bool running = true;
@@ -149,16 +156,20 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     /* // Get a color and send the uniform. */
-    float ticks = (float)SDL_GetTicks() / 1000.0f;
-    float green = sin(ticks) / 2.0f + 0.5f;
+    /* float ticks = (float)SDL_GetTicks() / 1000.0f; */
+    /* float green = sin(ticks) / 2.0f + 0.5f; */
     /* const Uniform* uniform = shader.GetUniform("u_color"); */
     /* glUniform4f(uniform->location, 0.0f, green, 0.0f, 1.0f); */
 
 
-    shader.SetFloat("u_x_offset", green);
+    /* shader.SetFloat("u_x_offset", green); */
+
+		texture.Use();
 
     glBindVertexArray(vao);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    /* glDrawArrays(GL_TRIANGLES, 0, 3); */
+    /* glDrawElements(GL_TRIANGLE_STRIP, 2, GL_UNSIGNED_INT, 0); */
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     SDL_GL_SwapWindow(sdl_context.window);
 
@@ -180,10 +191,11 @@ bool HandleKeyUp(const SDL_KeyboardEvent& key_event) {
   }
 }
 
+void GenerateTextures() {
 
-/* void GenerateTexture() { */
-/*   int width, height; */
 
-/*   uint8_t* data = stbi_load( */
 
-/* } */
+
+
+
+}

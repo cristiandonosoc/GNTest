@@ -86,6 +86,8 @@ source_set("warhol_lib") {
     "sdl_context.h",
     "shader.cc",
     "shader.h",
+    "texture.cc",
+    "texture.h",
   ]
   configs += [
     ":sdl2_config",

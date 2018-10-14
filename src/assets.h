@@ -10,8 +10,8 @@ namespace warhol {
 // Grab-bag of functionality for assets handling.
 class Assets {
  public:
-  // Returns the path to a shader.
   static std::string ShaderPath(std::string shader_name);
+  static std::string TexturePath(std::string texture_name);
 };
 
 }  // namespace warhol

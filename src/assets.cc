@@ -16,4 +16,14 @@ Assets::ShaderPath(std::string shader_name) {
                    std::move(shader_name)});
 }
 
+std::string
+Assets::TexturePath(std::string shader_name) {
+  return PathJoin({arch::ArchProvider::GetBasePath(),
+                   "assets",
+                   "textures",
+                   std::move(shader_name)});
+}
+
+
+
 }  // namespace warhol
