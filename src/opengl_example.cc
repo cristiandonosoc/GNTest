@@ -149,19 +149,23 @@ int main() {
   assert(face.valid());
   LOG(DEBUG) << "Face channels: " << face.channels();
 
-  // Simple transformations.
-  glm::mat4 trans(1.0f);
-  trans = glm::rotate(trans, glm::radians(90.f), glm::vec3(0, 0, 1));
-  trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
+  int width, height;
+  SDL_GetWindowSize(sdl_context.window, &width, &height);
+  LOG(INFO) << "Window size. WIDTH: " << width << ", HEIGHT: " << height;
 
-  glm::to_string(trans);
+  glm::mat4 model = glm::rotate(
+      glm::mat4(1.0f), glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-  for (int row = 0; row < 4; row++) {
-    for (int col = 0; col < 4; col++)
-      printf("%10f ", trans[col][row]);
-    std::cout << std::endl;
-  }
+  glm::mat4 view =
+      glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
 
+  glm::mat4 projection = glm::perspective(glm::radians(45.0f),
+                                          (float)width / (float)height,
+                                          0.1f, 100.0f);
+
+  shader.SetMatrix("model", 4, glm::value_ptr(model));
+  shader.SetMatrix("view", 4, glm::value_ptr(view));
+  shader.SetMatrix("projection", 4, glm::value_ptr(projection));
 
   bool running = true;
   while (running) {
@@ -190,7 +194,7 @@ int main() {
     glBindVertexArray(vao);
 
 
-    shader.SetMatrix("transform", 4, glm::value_ptr(trans));
+    /* shader.SetMatrix("transform", 4, glm::value_ptr(trans)); */
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
