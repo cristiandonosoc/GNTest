@@ -17,6 +17,7 @@
 
 #include "src/arch/arch_provider.h"
 #include "src/assets.h"
+#include "src/model/cube.h"
 #include "src/sdl_context.h"
 #include "src/shader.h"
 #include "src/texture.h"
@@ -64,6 +65,8 @@ int main() {
              << "OpenGL Shading Language Version: "
              << glGetString(GL_SHADING_LANGUAGE_VERSION);
 
+  glEnable(GL_DEPTH_TEST);
+
   int vert_attribs;
   glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &vert_attribs);
   LOG(DEBUG) << "Max Vertex Attributes: " << vert_attribs;
@@ -94,7 +97,14 @@ int main() {
 
   LOG(DEBUG) << "Successfully compiled a shader!";
 
-	float vertices[] = {
+  // Generate the VAO that will hold the configuration.
+  uint32_t vao;
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+
+  // Plane "model" -------------------------------------------------------------
+
+  float vertices[] = {
 	   // positions         // colors           // texture coords
 	   0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
 	   0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
@@ -107,17 +117,9 @@ int main() {
     1, 2, 3    // second triangle
 	};
 
-  // Generate the VAO that will hold the configuration.
-  uint32_t vao;
-  glGenVertexArrays(1, &vao);
-  glBindVertexArray(vao);
-
   // Generate the vertices buffer object.
   uint32_t vbo;
   glGenBuffers(1, &vbo);
-
-
-
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   // Send the vertex data over.
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -131,7 +133,6 @@ int main() {
   glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride,
 												(void*)(6 * sizeof(float)));
   glEnableVertexAttribArray(2);
-
   // Indices
   uint32_t ebo;
   glGenBuffers(1, &ebo);
@@ -139,7 +140,31 @@ int main() {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
 							 GL_STATIC_DRAW);
 
+  // Cube "model" --------------------------------------------------------------
+
+  const auto& cube_vertices = Cube::GetVertices();
+
+  // Create cube VBO
+  uint32_t cube_vbo;
+  glGenBuffers(1, &cube_vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
+  glBufferData(GL_ARRAY_BUFFER,
+               sizeof(float) * cube_vertices.size(),
+               cube_vertices.data(),
+               GL_STATIC_DRAW);
+  // How to interpret the buffer
+  stride = 5 * sizeof(float);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+  glEnableVertexAttribArray(0);
+  /* glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, */
+												/* (void*)(3 * sizeof(float))); */
+  glDisableVertexAttribArray(1);
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride,
+												(void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(2);
   shader.Use();
+
+  // Textures ------------------------------------------------------------------
 
   // Generate the textures.
   Texture wall(Assets::TexturePath("wall.jpg"));
@@ -149,23 +174,34 @@ int main() {
   assert(face.valid());
   LOG(DEBUG) << "Face channels: " << face.channels();
 
+
+  // Matrices ------------------------------------------------------------------
+
+  // TODO(Cristian): Move this to SDLContext.
   int width, height;
   SDL_GetWindowSize(sdl_context.window, &width, &height);
   LOG(INFO) << "Window size. WIDTH: " << width << ", HEIGHT: " << height;
 
-  glm::mat4 model = glm::rotate(
-      glm::mat4(1.0f), glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-
+  // These are static for now.
   glm::mat4 view =
       glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
+  shader.SetMatrix("view", 4, glm::value_ptr(view));
 
   glm::mat4 projection = glm::perspective(glm::radians(45.0f),
                                           (float)width / (float)height,
                                           0.1f, 100.0f);
-
-  shader.SetMatrix("model", 4, glm::value_ptr(model));
-  shader.SetMatrix("view", 4, glm::value_ptr(view));
   shader.SetMatrix("projection", 4, glm::value_ptr(projection));
+
+  glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
+                                glm::vec3(2.0f, 5.0f, -15.0f),
+                                glm::vec3(-1.5f, -2.2f, -2.5f),
+                                glm::vec3(-3.8f, -2.0f, -12.3f),
+                                glm::vec3(2.4f, -0.4f, -3.5f),
+                                glm::vec3(-1.7f, 3.0f, -7.5f),
+                                glm::vec3(1.3f, -2.0f, -2.5f),
+                                glm::vec3(1.5f, 2.0f, -2.5f),
+                                glm::vec3(1.5f, 0.2f, -1.5f),
+                                glm::vec3(-1.3f, 1.0f, -1.5f)};
 
   bool running = true;
   while (running) {
@@ -193,10 +229,18 @@ int main() {
 
     glBindVertexArray(vao);
 
+    for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
+      glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
+      float angle = (float)SDL_GetTicks() / 1000.0f * glm::radians(20.0f * i);
+      model =
+          glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
+      shader.SetMatrix("model", 4, glm::value_ptr(model));
 
-    /* shader.SetMatrix("transform", 4, glm::value_ptr(trans)); */
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		/* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
+    glDrawArrays(GL_TRIANGLES, 0, 36);
 
     SDL_GL_SwapWindow(sdl_context.window);
 

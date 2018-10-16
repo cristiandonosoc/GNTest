@@ -94,6 +94,7 @@ source_set("warhol_lib") {
     "//third_party/gl3w:gl3w_config",
   ]
   deps = [
+    "//src/model",
     "//src/utils",
     "//third_party/gl3w:gl3w",
   ]
