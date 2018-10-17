@@ -37,6 +37,10 @@ SDLContext::Init() {
   return Status::Ok();
 }
 
+float SDLContext::GetSeconds() const {
+  return (float)SDL_GetTicks() / 1000.f;
+}
+
 void
 SDLContext::Clear() {
   if (gl_context)

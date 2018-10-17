@@ -19,6 +19,9 @@ struct SDLContext {
   SDL_Window* window = nullptr;
   SDL_GLContext gl_context = nullptr;
 
+  // Returns the seconds since Init() was called. This is a fractional number.
+  float GetSeconds() const;
+
   DELETE_COPY_AND_ASSIGN(SDLContext);
 };
 

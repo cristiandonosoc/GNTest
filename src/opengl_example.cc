@@ -35,10 +35,17 @@ END_IGNORE_WARNINGS()
 
 using namespace warhol;
 
-// Returns whether the program should still be running.
-bool HandleKeyUp(const SDL_KeyboardEvent&);
-void GenerateTextures();
+struct ControlState {
+  bool up = false;
+  bool down = false;
+  bool left = false;
+  bool right = false;
+  bool escape = false;
+};
 
+// Returns whether the program should still be running.
+void HandleKeyUp(const SDL_KeyboardEvent&, ControlState*);
+void HandleKeyboard(ControlState*);
 
 int main() {
   SDLContext sdl_context;
@@ -214,12 +221,27 @@ int main() {
   glm::vec3 camera_right = glm::normalize(glm::cross(up, camera_dir));
   glm::vec3 camera_up = glm::cross(camera_dir, camera_right);
 
-  view = glm::lookAt(camera_pos, camera_target, camera_up);
+  glm::vec3 camera_front = glm::vec3(0.0f, 0.0f, -1.0f);
+
+  float camera_speed = 5.0f;
 
   // Game loop -----------------------------------------------------------------
 
+
+  // When the last frame started.
+  float last_frame_time = 0.0f;
+  // Time from previous frame start to the current.
+  float time_delta = 0.0f;
+
   bool running = true;
   while (running) {
+
+
+    float current_time = sdl_context.GetSeconds();
+    time_delta = current_time - last_frame_time;
+    last_frame_time = current_time;
+
+    ControlState control = {};
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.type) {
@@ -227,13 +249,34 @@ int main() {
           running = false;
           break;
         case SDL_KEYUP:
-          running = HandleKeyUp(event.key);
+          HandleKeyUp(event.key, &control);
         default:
           break;
       }
     }
-    if (!running)
+
+    HandleKeyboard(&control);
+
+    if (!running || control.escape)
       break;
+
+    if (control.up) {
+      camera_pos += camera_front * camera_speed * time_delta;
+    }
+    if (control.down) {
+      camera_pos -= camera_front * camera_speed * time_delta;
+    }
+    if (control.left) {
+      camera_pos -= glm::normalize(glm::cross(camera_front, camera_up)) *
+                    camera_speed * time_delta;
+    }
+    if (control.right) {
+      camera_pos += glm::normalize(glm::cross(camera_front, camera_up)) *
+                    camera_speed * time_delta;
+    }
+
+    view = glm::lookAt(camera_pos, camera_target, camera_up);
+
 
     // Draw the triangle.
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
@@ -244,12 +287,18 @@ int main() {
 
     glBindVertexArray(vao);
 
+    float seconds = sdl_context.GetSeconds();
+
+    /* float radius = 10.0f; */
+    /* float cam_x = sin(seconds) * radius; */
+    /* float cam_z = cos(seconds) * radius; */
+    /* view = glm::lookAt(glm::vec3(cam_x, 0.0f, cam_z), camera_target, camera_up); */
 
     shader.SetMat4("view", view);
 
     for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
       glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
-      float angle = (float)SDL_GetTicks() / 1000.0f * glm::radians(20.0f * i);
+      float angle = seconds * glm::radians(20.0f * i);
       model =
           glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
       shader.SetMat4("model", model);
@@ -272,20 +321,25 @@ int main() {
   return 0;
 }
 
-bool HandleKeyUp(const SDL_KeyboardEvent& key_event) {
+void
+HandleKeyUp(const SDL_KeyboardEvent& key_event, ControlState* state) {
   switch (key_event.keysym.scancode) {
-    case SDL_SCANCODE_ESCAPE:
-      return false;
-    default:
-      return true;
+    case SDL_SCANCODE_ESCAPE: state->escape = true; break;
+    default: break;
   }
 }
 
-void GenerateTextures() {
+void
+HandleKeyboard(ControlState* state) {
+  const uint8_t* key_state = SDL_GetKeyboardState(0);
 
-
-
-
-
-
+  if (key_state[SDL_SCANCODE_UP] || key_state[SDL_SCANCODE_W])
+    state->up = true;
+  if (key_state[SDL_SCANCODE_DOWN] || key_state[SDL_SCANCODE_S])
+      state->down = true;
+  if (key_state[SDL_SCANCODE_LEFT] || key_state[SDL_SCANCODE_A])
+      state->left = true;
+  if (key_state[SDL_SCANCODE_RIGHT] || key_state[SDL_SCANCODE_D])
+    state->right = true;
 }
+
