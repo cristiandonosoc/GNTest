@@ -164,6 +164,17 @@ int main() {
   glEnableVertexAttribArray(2);
   shader.Use();
 
+  glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
+                                glm::vec3(2.0f, 5.0f, -15.0f),
+                                glm::vec3(-1.5f, -2.2f, -2.5f),
+                                glm::vec3(-3.8f, -2.0f, -12.3f),
+                                glm::vec3(2.4f, -0.4f, -3.5f),
+                                glm::vec3(-1.7f, 3.0f, -7.5f),
+                                glm::vec3(1.3f, -2.0f, -2.5f),
+                                glm::vec3(1.5f, 2.0f, -2.5f),
+                                glm::vec3(1.5f, 0.2f, -1.5f),
+                                glm::vec3(-1.3f, 1.0f, -1.5f)};
+
   // Textures ------------------------------------------------------------------
 
   // Generate the textures.
@@ -185,23 +196,27 @@ int main() {
   // These are static for now.
   glm::mat4 view =
       glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
-  shader.SetMatrix("view", 4, glm::value_ptr(view));
+  shader.SetMat4("view", view);
 
   glm::mat4 projection = glm::perspective(glm::radians(45.0f),
                                           (float)width / (float)height,
                                           0.1f, 100.0f);
-  shader.SetMatrix("projection", 4, glm::value_ptr(projection));
+  shader.SetMat4("projection", projection);
 
-  glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
-                                glm::vec3(2.0f, 5.0f, -15.0f),
-                                glm::vec3(-1.5f, -2.2f, -2.5f),
-                                glm::vec3(-3.8f, -2.0f, -12.3f),
-                                glm::vec3(2.4f, -0.4f, -3.5f),
-                                glm::vec3(-1.7f, 3.0f, -7.5f),
-                                glm::vec3(1.3f, -2.0f, -2.5f),
-                                glm::vec3(1.5f, 2.0f, -2.5f),
-                                glm::vec3(1.5f, 0.2f, -1.5f),
-                                glm::vec3(-1.3f, 1.0f, -1.5f)};
+  // Camera --------------------------------------------------------------------
+
+
+  glm::vec3 camera_pos = glm::vec3(1.0f, 0.0f, 10.0f);
+  glm::vec3 camera_target = glm::vec3(0.0f, 0.0f, 0.0f);
+  glm::vec3 camera_dir = glm::normalize(camera_pos - camera_target);
+
+  glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+  glm::vec3 camera_right = glm::normalize(glm::cross(up, camera_dir));
+  glm::vec3 camera_up = glm::cross(camera_dir, camera_right);
+
+  view = glm::lookAt(camera_pos, camera_target, camera_up);
+
+  // Game loop -----------------------------------------------------------------
 
   bool running = true;
   while (running) {
@@ -229,15 +244,19 @@ int main() {
 
     glBindVertexArray(vao);
 
+
+    shader.SetMat4("view", view);
+
     for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
       glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
       float angle = (float)SDL_GetTicks() / 1000.0f * glm::radians(20.0f * i);
       model =
           glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
-      shader.SetMatrix("model", 4, glm::value_ptr(model));
+      shader.SetMat4("model", model);
 
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
+
 
 		/* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
     glDrawArrays(GL_TRIANGLES, 0, 36);

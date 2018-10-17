@@ -11,6 +11,10 @@
 #include "utils/macros.h"
 #include "utils/status.h"
 
+BEGIN_IGNORE_WARNINGS()
+#include <third_party/include/glm/glm.hpp>
+END_IGNORE_WARNINGS()
+
 namespace warhol {
 
 struct Uniform {
@@ -38,7 +42,8 @@ class Shader {
 
   bool SetInt(const std::string& name, int) const;
   bool SetFloat(const std::string& name, float) const;
-  bool SetMatrix(const std::string&, size_t mat_length, const float* data);
+
+  bool SetMat4(const std::string&, const glm::mat4&);
 
   // NOTE: This is a square matrix.
 
@@ -47,6 +52,9 @@ class Shader {
   void Clear();
   // So that Init can clear resources on failure.
   Status InternalInit();
+
+  // Internal function to set up the matrices.
+  bool SetMatrix(const std::string&, size_t mat_length, const float* data);
 
   void ObtainUniforms();
 

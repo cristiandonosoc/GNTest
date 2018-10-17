@@ -5,6 +5,14 @@
 
 #include <assert.h>
 
+BEGIN_IGNORE_WARNINGS()
+#include <third_party/include/glm/glm.hpp>
+#include <third_party/include/glm/gtc/matrix_transform.hpp>
+#include <third_party/include/glm/gtc/type_ptr.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
+END_IGNORE_WARNINGS()
+
 #include "utils/gl.h"
 
 namespace warhol {
@@ -156,13 +164,17 @@ bool Shader::SetInt(const std::string& name, int val) const {
   return true;
 }
 
+bool Shader::SetMat4(const std::string& uniform_name, const glm::mat4& mat) {
+  return SetMatrix(uniform_name, 4, glm::value_ptr(mat));
+}
+
 bool
-Shader::SetMatrix(const std::string& name,
+Shader::SetMatrix(const std::string& uniform_name,
                   size_t mat_length,
                   const float* data) {
-  const Uniform* uniform = GetUniform(name);
+  const Uniform* uniform = GetUniform(uniform_name);
   if (!uniform) {
-    LOG(WARNING) << "Could not find uniform: " << name;
+    LOG(WARNING) << "Could not find uniform: " << uniform_name;
     return false;
   }
 
