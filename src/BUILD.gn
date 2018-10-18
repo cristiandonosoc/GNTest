@@ -82,6 +82,8 @@ source_set("warhol_lib") {
   sources = [
     "assets.cc",
     "assets.h",
+    "camera.cc",
+    "camera.h",
     "sdl_context.cc",
     "sdl_context.h",
     "shader.cc",

@@ -17,6 +17,7 @@
 
 #include "src/arch/arch_provider.h"
 #include "src/assets.h"
+#include "src/camera.h"
 #include "src/model/cube.h"
 #include "src/sdl_context.h"
 #include "src/shader.h"
@@ -200,33 +201,12 @@ int main() {
   SDL_GetWindowSize(sdl_context.window, &width, &height);
   LOG(INFO) << "Window size. WIDTH: " << width << ", HEIGHT: " << height;
 
-  // These are static for now.
-  glm::mat4 view =
-      glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
-  shader.SetMat4("view", view);
-
-  glm::mat4 projection = glm::perspective(glm::radians(45.0f),
-                                          (float)width / (float)height,
-                                          0.1f, 100.0f);
-  shader.SetMat4("projection", projection);
-
   // Camera --------------------------------------------------------------------
 
-
-  glm::vec3 camera_pos = glm::vec3(1.0f, 0.0f, 10.0f);
-  glm::vec3 camera_target = glm::vec3(0.0f, 0.0f, 0.0f);
-  glm::vec3 camera_dir = glm::normalize(camera_pos - camera_target);
-
-  glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-  glm::vec3 camera_right = glm::normalize(glm::cross(up, camera_dir));
-  glm::vec3 camera_up = glm::cross(camera_dir, camera_right);
-
-  glm::vec3 camera_front = glm::vec3(0.0f, 0.0f, -1.0f);
-
   float camera_speed = 5.0f;
+  Camera camera(&sdl_context, {1.0f, 0.0f, 10.0f});
 
   // Game loop -----------------------------------------------------------------
-
 
   // When the last frame started.
   float last_frame_time = 0.0f;
@@ -261,29 +241,28 @@ int main() {
       break;
 
     if (control.up) {
-      camera_pos += camera_front * camera_speed * time_delta;
+      camera.pos -= camera.front() * camera_speed * time_delta;
     }
     if (control.down) {
-      camera_pos -= camera_front * camera_speed * time_delta;
+      camera.pos += camera.front() * camera_speed * time_delta;
     }
     if (control.left) {
-      camera_pos -= glm::normalize(glm::cross(camera_front, camera_up)) *
+      camera.pos += glm::normalize(glm::cross(camera.front(), camera.up())) *
                     camera_speed * time_delta;
     }
     if (control.right) {
-      camera_pos += glm::normalize(glm::cross(camera_front, camera_up)) *
+      camera.pos -= glm::normalize(glm::cross(camera.front(), camera.up())) *
                     camera_speed * time_delta;
     }
 
-    view = glm::lookAt(camera_pos, camera_target, camera_up);
-
+    camera.UpdateView();
 
     // Draw the triangle.
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		wall.Use(shader, GL_TEXTURE0);
-    face.Use(shader, GL_TEXTURE1);
+		wall.Use(&shader, GL_TEXTURE0);
+    face.Use(&shader, GL_TEXTURE1);
 
     glBindVertexArray(vao);
 
@@ -292,9 +271,10 @@ int main() {
     /* float radius = 10.0f; */
     /* float cam_x = sin(seconds) * radius; */
     /* float cam_z = cos(seconds) * radius; */
-    /* view = glm::lookAt(glm::vec3(cam_x, 0.0f, cam_z), camera_target, camera_up); */
+    /* auto view = glm::lookAt(glm::vec3(cam_x, 0.0f, cam_z), camera_target, camera_up); */
+    /* shader.SetMat4("view", view); */
 
-    shader.SetMat4("view", view);
+    camera.SetView(&shader);
 
     for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
       glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
@@ -308,7 +288,7 @@ int main() {
 
 
 		/* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    /* glDrawArrays(GL_TRIANGLES, 0, 36); */
 
     SDL_GL_SwapWindow(sdl_context.window);
 

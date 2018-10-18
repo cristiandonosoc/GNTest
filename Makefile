@@ -1,5 +1,12 @@
 WARHOL_BASE=/mnt/c/Programming/projects/warhol
 
+
+make:
+	ninja -C out opengl_example
+
+win_make:
+	win_ninja -C out opengl_example
+
 shaders: FORCE
 	glslangValidator -V shaders/simple.vert -o out/simple.vert.spv
 	glslangValidator -V shaders/simple.frag -o out/simple.frag.spv

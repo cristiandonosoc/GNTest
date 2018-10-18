@@ -141,7 +141,7 @@ const Uniform* Shader::GetUniform(const std::string& uniform_name) const {
   return &it->second;
 }
 
-bool Shader::SetFloat(const std::string& name, float val) const {
+bool Shader::SetFloat(const std::string& name, float val) {
   const Uniform* uniform = GetUniform(name);
   if (!uniform) {
     LOG(WARNING) << "Could not find uniform: " << name;
@@ -153,7 +153,7 @@ bool Shader::SetFloat(const std::string& name, float val) const {
 }
 
 
-bool Shader::SetInt(const std::string& name, int val) const {
+bool Shader::SetInt(const std::string& name, int val) {
   const Uniform* uniform = GetUniform(name);
   if (!uniform) {
     LOG(WARNING) << "Could not find uniform: " << name;

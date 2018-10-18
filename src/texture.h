@@ -25,7 +25,7 @@ class Texture {
   // Will assert the texture is valid.
   // Will set uniforms for the given shader. The shader should be already set.
   // |tex_unit| is in which texture unit we need to supply this texture.
-	void Use(const Shader&, GLenum tex_unit) const;
+	void Use(Shader*, GLenum tex_unit) const;
 
   const std::string& path() const { return data_.path; }
 

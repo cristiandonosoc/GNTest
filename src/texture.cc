@@ -37,12 +37,12 @@ Texture& Texture::operator=(Texture&& other) {
   return *this;
 }
 
-void Texture::Use(const Shader& shader, GLenum tex_unit) const {
+void Texture::Use(Shader* shader, GLenum tex_unit) const {
 	assert(valid());
   auto index = TextureUnitToUniform(tex_unit);
   glActiveTexture(tex_unit);
 	glBindTexture(GL_TEXTURE_2D, handle_);
-  shader.SetInt(index.second, index.first);
+  shader->SetInt(index.second, index.first);
 }
 
 void

@@ -40,8 +40,8 @@ class Shader {
   const Uniform* GetUniform(const std::string& uniform_name) const;
   const std::map<std::string, Uniform> uniforms() const { return uniforms_; }
 
-  bool SetInt(const std::string& name, int) const;
-  bool SetFloat(const std::string& name, float) const;
+  bool SetInt(const std::string& name, int);
+  bool SetFloat(const std::string& name, float);
 
   bool SetMat4(const std::string&, const glm::mat4&);
 

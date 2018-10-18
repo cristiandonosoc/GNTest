@@ -9,7 +9,8 @@
 
 namespace warhol {
 
-struct SDLContext {
+class SDLContext {
+ public:
   SDLContext();
   ~SDLContext();
 
