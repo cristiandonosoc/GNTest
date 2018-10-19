@@ -196,10 +196,8 @@ int main() {
 
   // Matrices ------------------------------------------------------------------
 
-  // TODO(Cristian): Move this to SDLContext.
-  int width, height;
-  SDL_GetWindowSize(sdl_context.window, &width, &height);
-  LOG(INFO) << "Window size. WIDTH: " << width << ", HEIGHT: " << height;
+  LOG(INFO) << "Window size. WIDTH: " << sdl_context.width()
+            << ", HEIGHT: " << sdl_context.height();
 
   // Camera --------------------------------------------------------------------
 
@@ -290,7 +288,7 @@ int main() {
 		/* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
     /* glDrawArrays(GL_TRIANGLES, 0, 36); */
 
-    SDL_GL_SwapWindow(sdl_context.window);
+    SDL_GL_SwapWindow(sdl_context.GetWindow());
 
     SDL_Delay(10);
   }

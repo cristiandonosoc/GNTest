@@ -36,11 +36,11 @@ void Camera::UpdateView() {
 }
 
 void Camera::UpdateProjection() {
-  // TODO(Cristian): Move this calculation to SDLContext.
-  int width, height;
-  SDL_GetWindowSize(sdl_context_->window, &width, &height);
   proj_ = glm::perspective(
-      glm::radians(fov), (float)width / (float)height, near, far);
+      glm::radians(fov),
+      (float)sdl_context_->width() / (float)sdl_context_->height(),
+      near,
+      far);
 }
 
 void Camera::SetView(Shader* shader) const {
