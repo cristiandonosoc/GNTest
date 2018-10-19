@@ -35,6 +35,22 @@ BEGIN_IGNORE_WARNINGS()
 #include <glm/gtx/string_cast.hpp>
 END_IGNORE_WARNINGS()
 
+/**
+ * Simple OpenGL experiments to understand how to build a renderer.
+ *
+ * TODOs:
+ *
+ * - Stop using Status and start logging directly at the call site.
+ *   This is what Status is doing anyway and we might just as well return a
+ *   boolean.
+ * - Change GLM importing to use our headers so we can ignore the annoying
+ *   BEGIN/END_IGNORE_WARNINGS macros.
+ * - Have the shader receive the camera and set the projection/view matrices
+ *   and not the other way around as it is now.
+ * - Find out a way to better handle assets instead of just having them
+ *   committed to github.
+ */
+
 using namespace warhol;
 
 struct ControlState {
@@ -104,7 +120,15 @@ int main() {
     return 1;
   }
 
-  LOG(DEBUG) << "Successfully compiled a shader!";
+  std::vector<char> alpha_test_frag;
+  ReadWholeFile(Assets::ShaderPath("alpha_test.frag"), &alpha_test_frag);
+  Shader alpha_test_shader(vertex_shader.data(), alpha_test_frag.data());
+
+  res = alpha_test_shader.Init();
+  if (!res.ok()) {
+    LOG_STATUS(res);
+    return 1;
+  }
 
   // Cube "model" --------------------------------------------------------------
 
@@ -250,13 +274,13 @@ int main() {
 
     float seconds = sdl_context.GetSeconds();
 
-    camera.SetProjection(&shader);
-    camera.SetView(&shader);
 
 
     // Draw the cubes.
     glBindVertexArray(cube_vao);
     shader.Use();
+    camera.SetProjection(&shader);
+    camera.SetView(&shader);
 
     // Set the cube textures.
 		wall.Set(&shader, GL_TEXTURE0);
@@ -278,6 +302,10 @@ int main() {
     Texture::Disable(GL_TEXTURE1);
 
     // Draw the plane.
+    alpha_test_shader.Use();
+    camera.SetProjection(&alpha_test_shader);
+    camera.SetView(&alpha_test_shader);
+
     glBindVertexArray(plane_vao);
     // The model at the origin.
     shader.SetMat4("model", glm::mat4(1.0f));
