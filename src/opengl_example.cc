@@ -19,6 +19,7 @@
 #include "src/assets.h"
 #include "src/camera.h"
 #include "src/model/cube.h"
+#include "src/model/plane.h"
 #include "src/sdl_context.h"
 #include "src/shader.h"
 #include "src/texture.h"
@@ -105,52 +106,14 @@ int main() {
 
   LOG(DEBUG) << "Successfully compiled a shader!";
 
-  // Generate the VAO that will hold the configuration.
-  uint32_t vao;
-  glGenVertexArrays(1, &vao);
-  glBindVertexArray(vao);
-
-  // Plane "model" -------------------------------------------------------------
-
-  float vertices[] = {
-	   // positions         // colors           // texture coords
-	   0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
-	   0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
-	  -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
-	  -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left
-	};
-
-	unsigned int indices[] = {  // note that we start from 0!
-    0, 1, 3,   // first triangle
-    1, 2, 3    // second triangle
-	};
-
-  // Generate the vertices buffer object.
-  uint32_t vbo;
-  glGenBuffers(1, &vbo);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  // Send the vertex data over.
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  // Tell OpenGL how to interpret the buffer
-  GLsizei stride = 8 * sizeof(float);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride,
-												(void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride,
-												(void*)(6 * sizeof(float)));
-  glEnableVertexAttribArray(2);
-  // Indices
-  uint32_t ebo;
-  glGenBuffers(1, &ebo);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-							 GL_STATIC_DRAW);
-
   // Cube "model" --------------------------------------------------------------
 
   const auto& cube_vertices = Cube::GetVertices();
+
+  // Generate the VAO that will hold the configuration.
+  uint32_t cube_vao;
+  glGenVertexArrays(1, &cube_vao);
+  glBindVertexArray(cube_vao);
 
   // Create cube VBO
   uint32_t cube_vbo;
@@ -161,16 +124,15 @@ int main() {
                cube_vertices.data(),
                GL_STATIC_DRAW);
   // How to interpret the buffer
-  stride = 5 * sizeof(float);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+  float cube_stride = 5 * sizeof(float);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, cube_stride, (void*)0);
   glEnableVertexAttribArray(0);
-  /* glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, */
-												/* (void*)(3 * sizeof(float))); */
   glDisableVertexAttribArray(1);
-  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride,
-												(void*)(3 * sizeof(float)));
+  glVertexAttribPointer(
+      2, 2, GL_FLOAT, GL_FALSE, cube_stride, (void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(2);
-  shader.Use();
+
+  glBindVertexArray(NULL);
 
   glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
                                 glm::vec3(2.0f, 5.0f, -15.0f),
@@ -183,16 +145,44 @@ int main() {
                                 glm::vec3(1.5f, 0.2f, -1.5f),
                                 glm::vec3(-1.3f, 1.0f, -1.5f)};
 
+  // Plane "model" -------------------------------------------------------------
+
+  auto plane_vertices = Plane::Create(10.0f, 10.0f);
+
+  uint32_t plane_vao;
+  glGenVertexArrays(1, &plane_vao);
+  glBindVertexArray(plane_vao);
+
+  uint32_t plane_vbo;
+  glGenBuffers(1, &plane_vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, plane_vbo);
+
+  // Send the vertices over.
+  glBufferData(GL_ARRAY_BUFFER,
+               sizeof(float) * plane_vertices.size(),
+               plane_vertices.data(),
+               GL_STATIC_DRAW);
+
+  // How to interpret the plane.
+  float plane_stride = 5 * sizeof(float);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, plane_stride, (void*)0);
+  glEnableVertexAttribArray(0);
+  glDisableVertexAttribArray(1);
+  glVertexAttribPointer(
+      2, 2, GL_FLOAT, GL_FALSE, plane_stride, (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(2);
+
+  glBindVertexArray(NULL);
+
   // Textures ------------------------------------------------------------------
 
   // Generate the textures.
   Texture wall(Assets::TexturePath("wall.jpg"));
-  LOG(DEBUG) << "Wall channels: " << wall.channels();
   assert(wall.valid());
   Texture face(Assets::TexturePath("awesomeface.png"));
   assert(face.valid());
-  LOG(DEBUG) << "Face channels: " << face.channels();
-
+  Texture grid(Assets::TexturePath("grid.png"));
+  assert(grid.valid());
 
   // Matrices ------------------------------------------------------------------
 
@@ -202,7 +192,7 @@ int main() {
   // Camera --------------------------------------------------------------------
 
   float camera_speed = 5.0f;
-  Camera camera(&sdl_context, {1.0f, 0.0f, 10.0f});
+  Camera camera(&sdl_context, {1.0f, 5.0f, 10.0f});
 
   // Game loop -----------------------------------------------------------------
 
@@ -213,8 +203,6 @@ int main() {
 
   bool running = true;
   while (running) {
-
-
     float current_time = sdl_context.GetSeconds();
     time_delta = current_time - last_frame_time;
     last_frame_time = current_time;
@@ -259,20 +247,20 @@ int main() {
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		wall.Use(&shader, GL_TEXTURE0);
-    face.Use(&shader, GL_TEXTURE1);
-
-    glBindVertexArray(vao);
 
     float seconds = sdl_context.GetSeconds();
 
-    /* float radius = 10.0f; */
-    /* float cam_x = sin(seconds) * radius; */
-    /* float cam_z = cos(seconds) * radius; */
-    /* auto view = glm::lookAt(glm::vec3(cam_x, 0.0f, cam_z), camera_target, camera_up); */
-    /* shader.SetMat4("view", view); */
-
+    camera.SetProjection(&shader);
     camera.SetView(&shader);
+
+
+    // Draw the cubes.
+    glBindVertexArray(cube_vao);
+    shader.Use();
+
+    // Set the cube textures.
+		wall.Set(&shader, GL_TEXTURE0);
+    face.Set(&shader, GL_TEXTURE1);
 
     for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
       glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
@@ -283,6 +271,17 @@ int main() {
 
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
+
+
+    // We only need one texture for the plane.
+    grid.Set(&shader, GL_TEXTURE0);
+    Texture::Disable(GL_TEXTURE1);
+
+    // Draw the plane.
+    glBindVertexArray(plane_vao);
+    // The model at the origin.
+    shader.SetMat4("model", glm::mat4(1.0f));
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 
 		/* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */

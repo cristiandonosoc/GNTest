@@ -37,12 +37,23 @@ Texture& Texture::operator=(Texture&& other) {
   return *this;
 }
 
-void Texture::Use(Shader* shader, GLenum tex_unit) const {
+void Texture::Set(Shader* shader, GLenum tex_unit) const {
 	assert(valid());
-  auto index = TextureUnitToUniform(tex_unit);
+  glEnable(tex_unit);
   glActiveTexture(tex_unit);
 	glBindTexture(GL_TEXTURE_2D, handle_);
+
+  // TODO(Cristian): enable C++17 so I can use tuple expansion.
+  auto index = TextureUnitToUniform(tex_unit);
   shader->SetInt(index.second, index.first);
+  glActiveTexture(NULL);
+}
+
+void Texture::Disable(GLenum tex_unit) {
+  glActiveTexture(tex_unit);
+  glBindTexture(tex_unit, NULL);
+  glDisable(GL_TEXTURE_2D);
+  glActiveTexture(NULL);
 }
 
 void

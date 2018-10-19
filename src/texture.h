@@ -22,10 +22,13 @@ class Texture {
   Texture(Texture&&);
   Texture& operator=(Texture&&);
 
+  // Removes a texture from a texture unit. Will disable that texture unit.
+  static void Disable(GLenum tex_unit);
+
   // Will assert the texture is valid.
   // Will set uniforms for the given shader. The shader should be already set.
   // |tex_unit| is in which texture unit we need to supply this texture.
-	void Use(Shader*, GLenum tex_unit) const;
+	void Set(Shader*, GLenum tex_unit) const;
 
   const std::string& path() const { return data_.path; }
 
@@ -37,6 +40,8 @@ class Texture {
   bool valid() const { return handle_ != 0; }
 
  private:
+  // TODO(Cristian): Move this outside of the constructor so we can call this
+  //                 when we see fit.
   void Init();
 
   struct MovableData {
