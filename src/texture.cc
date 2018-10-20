@@ -79,14 +79,13 @@ Texture::Init() {
   // Format
   GLenum format = channels() == 3 ? GL_RGB : GL_RGBA;
 
-
   // Send the bits over.
   // TODO(Cristian): Check for errors.
   // TODO(Cristian): When multi-threading is done, use this async.
   //                 Think what to do about in memory buffer.
   glTexImage2D(GL_TEXTURE_2D,     // target
                0,                 // level
-               GL_RGB,            // internalformat
+               format,            // internalformat
                data_.x,           // width,
                data_.y,           // height
                0,                 // border
