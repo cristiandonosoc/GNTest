@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <stdlib.h>
+
 #include "src/utils/macros.h"
 
 BEGIN_IGNORE_WARNINGS()
@@ -35,8 +37,10 @@ class Camera {
   // TODO(Cristian): Verify if this is the access we want.
 
   float fov = 45.0f;
-  float near = 0.1f;
-  float far = 100.0f;
+  // Sadly, Windef.h has defines for near and far. Because no one would ever use
+  // those words right?
+  float near_plane = 0.1f;
+  float far_plane = 100.0f;
   const glm::mat4 proj() const { return proj_; }
 
   void UpdateProjection();

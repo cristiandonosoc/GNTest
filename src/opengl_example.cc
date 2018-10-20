@@ -148,7 +148,7 @@ int main() {
                cube_vertices.data(),
                GL_STATIC_DRAW);
   // How to interpret the buffer
-  float cube_stride = 5 * sizeof(float);
+  GLsizei cube_stride = (GLsizei)(5 * sizeof(float));
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, cube_stride, (void*)0);
   glEnableVertexAttribArray(0);
   glDisableVertexAttribArray(1);
@@ -188,7 +188,7 @@ int main() {
                GL_STATIC_DRAW);
 
   // How to interpret the plane.
-  float plane_stride = 5 * sizeof(float);
+  GLsizei plane_stride = (GLsizei)(5 * sizeof(float));
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, plane_stride, (void*)0);
   glEnableVertexAttribArray(0);
   glDisableVertexAttribArray(1);

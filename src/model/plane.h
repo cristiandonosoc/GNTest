@@ -11,7 +11,9 @@ class Plane {
  public:
   // Will return a plane that's centered in the origin with width and length
   // provided. Will also have UV coordinates equal to the plane position.
-  static std::vector<float> Create(size_t width, size_t length);
+  static std::vector<float> Create(float width, float length);
+
+
 };
 
 }  // namespace warhol

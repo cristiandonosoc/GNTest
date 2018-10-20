@@ -39,8 +39,8 @@ void Camera::UpdateProjection() {
   proj_ = glm::perspective(
       glm::radians(fov),
       (float)sdl_context_->width() / (float)sdl_context_->height(),
-      near,
-      far);
+      near_plane,
+      far_plane);
 }
 
 void Camera::SetView(Shader* shader) const {
