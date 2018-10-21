@@ -155,16 +155,16 @@ int main() {
 
   glBindVertexArray(NULL);
 
-  glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
-                                glm::vec3(2.0f, 5.0f, -15.0f),
-                                glm::vec3(-1.5f, -2.2f, -2.5f),
-                                glm::vec3(-3.8f, -2.0f, -12.3f),
-                                glm::vec3(2.4f, -0.4f, -3.5f),
-                                glm::vec3(-1.7f, 3.0f, -7.5f),
-                                glm::vec3(1.3f, -2.0f, -2.5f),
-                                glm::vec3(1.5f, 2.0f, -2.5f),
-                                glm::vec3(1.5f, 0.2f, -1.5f),
-                                glm::vec3(-1.3f, 1.0f, -1.5f)};
+  /* glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f), */
+  /*                               glm::vec3(2.0f, 5.0f, -15.0f), */
+  /*                               glm::vec3(-1.5f, -2.2f, -2.5f), */
+  /*                               glm::vec3(-3.8f, -2.0f, -12.3f), */
+  /*                               glm::vec3(2.4f, -0.4f, -3.5f), */
+  /*                               glm::vec3(-1.7f, 3.0f, -7.5f), */
+  /*                               glm::vec3(1.3f, -2.0f, -2.5f), */
+  /*                               glm::vec3(1.5f, 2.0f, -2.5f), */
+  /*                               glm::vec3(1.5f, 0.2f, -1.5f), */
+  /*                               glm::vec3(-1.3f, 1.0f, -1.5f)}; */
 
   // Plane "model" -------------------------------------------------------------
 
@@ -204,13 +204,6 @@ int main() {
   MinecraftCube minecraft_cube(&atlas);
   minecraft_cube.Init();
   minecraft_cube.set_position({1.0f, 1.0f, 1.0f});
-  /* minecraft_cube.SetFront(MinecraftAtlas::kGrassDirt); */
-  /* minecraft_cube.SetBack(MinecraftAtlas::kGrassDirt); */
-  /* minecraft_cube.SetLeft(MinecraftAtlas::kGrassDirt); */
-  /* minecraft_cube.SetRight(MinecraftAtlas::kGrassDirt); */
-  /* minecraft_cube.SetTop(MinecraftAtlas::kDirt); */
-  /* minecraft_cube.SetBottom(MinecraftAtlas::kGrass); */
-
 
   // Textures ------------------------------------------------------------------
 
@@ -299,18 +292,16 @@ int main() {
 		wall.Set(&shader, GL_TEXTURE0);
     face.Set(&shader, GL_TEXTURE1);
 
-    /* //minecraft_cube.SetPosition(...) */
+    /* float seconds = sdl_context.GetSeconds(); */
+    /* for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) { */
+    /*   glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]); */
+    /*   float angle = seconds * glm::radians(20.0f * i); */
+    /*   model = */
+    /*       glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f)); */
+    /*   shader.SetMat4("model", model); */
 
-    float seconds = sdl_context.GetSeconds();
-    for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
-      glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
-      float angle = seconds * glm::radians(20.0f * i);
-      model =
-          glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
-      shader.SetMat4("model", model);
-
-      glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
+    /*   glDrawArrays(GL_TRIANGLES, 0, 36); */
+    /* } */
 
 
     // minecraft_cube.SetUniforms(&shader);

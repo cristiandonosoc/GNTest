@@ -3,10 +3,41 @@
 
 #include "src/texture_atlas.h"
 
+#include <assert.h>
+
 namespace warhol {
 
-TextureAtlas::TextureAtlas(Texture atlas, int x, int y) : tex_(std::move(atlas)), x_(x), y_(y) {
+TextureAtlas::TextureAtlas(Texture atlas, size_t x, size_t y)
+    : tex_(std::move(atlas)), x_(x), y_(y) {}
 
+TextureAtlas::UVs TextureAtlas::GetUVs(size_t index) {
+  assert(index < count());
+
+  UVs uvs = {};
+  auto [x, y] = IndexToCoord(index);
+  auto [offsetx, offsety] = TextureOffset(index);
+
+  uvs.top_left = { x * offsetx, y * offsety };
+  uvs.bottom_right = { (x + 1) * offsetx, (y + 1) * offsety };
+  return uvs;
+}
+
+// TODO(donosoc): Unhardcode from the uniform atlas.
+Vec2<size_t> TextureAtlas::TextureSize(size_t) const {
+  size_t x = texture().x() / this->x();
+  size_t y = texture().y() / this->y();
+  return {x, y};
+}
+
+Vec2<float>
+TextureAtlas::TextureOffset(size_t index) const {
+  auto[sizex, sizey] = TextureSize(index);
+  return {(float)texture().x() / sizex, (float)texture().y() / sizey};
+}
+
+Vec2<size_t> TextureAtlas::IndexToCoord(size_t index) const {
+  assert(index < count());
+  return { index % x(), index / y() };
 }
 
 }  // namespace warhol

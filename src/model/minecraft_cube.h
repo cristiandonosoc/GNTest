@@ -43,6 +43,7 @@ class MinecraftCube {
   uint32_t vao_;
   uint32_t vertex_vbo_;
   uint32_t uv_vbo_;
+  uint32_t ebo_;
 
   bool dirty_ = true;
 };
