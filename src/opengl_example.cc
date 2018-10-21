@@ -195,16 +195,6 @@ int main() {
 
   glBindVertexArray(NULL);
 
-  // Minecraft Cube ------------------------------------------------------------
-
-  Texture atlas_texture(Assets::TexturePath("atlas.png"));
-  TextureAtlas atlas(std::move(atlas_texture), 16, 16);
-
-  /* // The minecraft cube handles the VAO, VBO */
-  MinecraftCube minecraft_cube(&atlas);
-  minecraft_cube.Init();
-  minecraft_cube.set_position({1.0f, 1.0f, 1.0f});
-
   // Textures ------------------------------------------------------------------
 
   // Generate the textures.
@@ -224,6 +214,19 @@ int main() {
 
   float camera_speed = 5.0f;
   Camera camera(&sdl_context, {1.0f, 5.0f, 10.0f});
+
+  // Minecraft Cube ------------------------------------------------------------
+
+  Texture atlas_texture(Assets::TexturePath("atlas.png"));
+  TextureAtlas atlas(std::move(atlas_texture), 16, 16);
+
+  /* // The minecraft cube handles the VAO, VBO */
+  MinecraftCube minecraft_cube(&atlas);
+  minecraft_cube.Init();
+  minecraft_cube.set_position({1.0f, 1.0f, 1.0f});
+  minecraft_cube.SetFace(MinecraftCube::Face::kBack, kRock);
+
+
 
   // Game loop -----------------------------------------------------------------
 

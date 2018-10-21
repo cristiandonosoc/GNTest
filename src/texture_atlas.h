@@ -29,8 +29,8 @@ class TextureAtlas {
  public:
   // Represents the UVs coordinates of a particular entry in the atlas.
   struct UVs {
-    Vec2<float> top_left;
-    Vec2<float> bottom_right;
+    Vec2<float> bottom_left;
+    Vec2<float> top_right;
   };
 
   // x and y defines the amount of elements per row and columns.

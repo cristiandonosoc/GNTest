@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "src/utils/glm.h"
 
 namespace warhol {
@@ -44,6 +46,8 @@ class MinecraftCube {
   uint32_t vertex_vbo_;
   uint32_t uv_vbo_;
   uint32_t ebo_;
+
+  std::vector<float> uvs_;
 
   bool dirty_ = true;
 };

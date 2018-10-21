@@ -5,6 +5,8 @@
 
 #include <assert.h>
 
+#include "src/utils/log.h"
+
 namespace warhol {
 
 TextureAtlas::TextureAtlas(Texture atlas, size_t x, size_t y)
@@ -17,8 +19,10 @@ TextureAtlas::UVs TextureAtlas::GetUVs(size_t index) {
   auto [x, y] = IndexToCoord(index);
   auto [offsetx, offsety] = TextureOffset(index);
 
-  uvs.top_left = { x * offsetx, y * offsety };
-  uvs.bottom_right = { (x + 1) * offsetx, (y + 1) * offsety };
+  LOG(DEBUG) << "OFFSETX: " << offsetx << ", OFFSETY: " << offsety;
+
+  uvs.bottom_left = { x * offsetx, y * offsety };
+  uvs.top_right = { (x + 1) * offsetx, (y + 1) * offsety };
   return uvs;
 }
 
@@ -32,7 +36,8 @@ Vec2<size_t> TextureAtlas::TextureSize(size_t) const {
 Vec2<float>
 TextureAtlas::TextureOffset(size_t index) const {
   auto[sizex, sizey] = TextureSize(index);
-  return {(float)texture().x() / sizex, (float)texture().y() / sizey};
+  return {(float)sizex / (float)texture().x(),
+          (float)sizey / (float)texture().y()};
 }
 
 Vec2<size_t> TextureAtlas::IndexToCoord(size_t index) const {
