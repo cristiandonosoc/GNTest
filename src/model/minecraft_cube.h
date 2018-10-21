@@ -26,7 +26,12 @@ class MinecraftCube {
   MinecraftCube(TextureAtlas*);
   bool Init();
 
-  void SetFace(Face, size_t index);
+  // Set the textures index for the face. -1 means don't change the texture for
+  // this layer.
+  void SetFace(Face, int index1, int index2 = -1);
+
+  // Will load the atlas as the default texture.
+  void SetTextures(Shader*) const;
 
   const glm::vec3& position() const { return position_; }
   void set_position(glm::vec3 pos) {
@@ -44,10 +49,12 @@ class MinecraftCube {
 
   uint32_t vao_;
   uint32_t vertex_vbo_;
-  uint32_t uv_vbo_;
+  uint32_t uv_vbo1_;
+  uint32_t uv_vbo2_;
   uint32_t ebo_;
 
-  std::vector<float> uvs_;
+  std::vector<float> uvs1_;
+  std::vector<float> uvs2_;
 
   bool dirty_ = true;
 };

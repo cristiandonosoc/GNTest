@@ -12,7 +12,7 @@ namespace warhol {
 TextureAtlas::TextureAtlas(Texture atlas, size_t x, size_t y)
     : tex_(std::move(atlas)), x_(x), y_(y) {}
 
-TextureAtlas::UVs TextureAtlas::GetUVs(size_t index) {
+TextureAtlas::UVs TextureAtlas::GetUVs(size_t index) const {
   assert(index < count());
 
   UVs uvs = {};

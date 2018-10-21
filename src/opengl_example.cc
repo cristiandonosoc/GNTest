@@ -148,23 +148,16 @@ int main() {
   GLsizei cube_stride = (GLsizei)(5 * sizeof(float));
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, cube_stride, (void*)0);
   glEnableVertexAttribArray(0);
-  glDisableVertexAttribArray(1);
+  glVertexAttribPointer(
+      1, 2, GL_FLOAT, GL_FALSE, cube_stride, (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
   glVertexAttribPointer(
       2, 2, GL_FLOAT, GL_FALSE, cube_stride, (void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(2);
 
-  glBindVertexArray(NULL);
 
-  /* glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f), */
-  /*                               glm::vec3(2.0f, 5.0f, -15.0f), */
-  /*                               glm::vec3(-1.5f, -2.2f, -2.5f), */
-  /*                               glm::vec3(-3.8f, -2.0f, -12.3f), */
-  /*                               glm::vec3(2.4f, -0.4f, -3.5f), */
-  /*                               glm::vec3(-1.7f, 3.0f, -7.5f), */
-  /*                               glm::vec3(1.3f, -2.0f, -2.5f), */
-  /*                               glm::vec3(1.5f, 2.0f, -2.5f), */
-  /*                               glm::vec3(1.5f, 0.2f, -1.5f), */
-  /*                               glm::vec3(-1.3f, 1.0f, -1.5f)}; */
+
+  glBindVertexArray(NULL);
 
   // Plane "model" -------------------------------------------------------------
 
@@ -188,7 +181,9 @@ int main() {
   GLsizei plane_stride = (GLsizei)(5 * sizeof(float));
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, plane_stride, (void*)0);
   glEnableVertexAttribArray(0);
-  glDisableVertexAttribArray(1);
+  glVertexAttribPointer(
+      1, 2, GL_FLOAT, GL_FALSE, plane_stride, (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
   glVertexAttribPointer(
       2, 2, GL_FLOAT, GL_FALSE, plane_stride, (void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(2);
@@ -224,9 +219,12 @@ int main() {
   MinecraftCube minecraft_cube(&atlas);
   minecraft_cube.Init();
   minecraft_cube.set_position({1.0f, 1.0f, 1.0f});
-  minecraft_cube.SetFace(MinecraftCube::Face::kBack, kRock);
-
-
+  minecraft_cube.SetFace(MinecraftCube::Face::kBack, kGrassDirt, kTransparent);
+  minecraft_cube.SetFace(MinecraftCube::Face::kFront, kGrassDirt, kTransparent);
+  minecraft_cube.SetFace(MinecraftCube::Face::kLeft, kGrassDirt, kCrack4);
+  minecraft_cube.SetFace(MinecraftCube::Face::kRight, kGrassDirt, kTransparent);
+  minecraft_cube.SetFace(MinecraftCube::Face::kTop, kGrass, kCrack9);
+  minecraft_cube.SetFace(MinecraftCube::Face::kBottom, kDirt, kTransparent);
 
   // Game loop -----------------------------------------------------------------
 
@@ -281,10 +279,6 @@ int main() {
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
-
-
-
     // Draw the cubes.
     glBindVertexArray(cube_vao);
     shader.Use();
@@ -294,6 +288,19 @@ int main() {
     // Set the cube textures.
 		wall.Set(&shader, GL_TEXTURE0);
     face.Set(&shader, GL_TEXTURE1);
+    shader.SetMat4("model", glm::translate(glm::mat4(1.0f), {5.0f, 0.0, 0.0f}));
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    /* glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f), */
+    /*                               glm::vec3(2.0f, 5.0f, -15.0f), */
+    /*                               glm::vec3(-1.5f, -2.2f, -2.5f), */
+    /*                               glm::vec3(-3.8f, -2.0f, -12.3f), */
+    /*                               glm::vec3(2.4f, -0.4f, -3.5f), */
+    /*                               glm::vec3(-1.7f, 3.0f, -7.5f), */
+    /*                               glm::vec3(1.3f, -2.0f, -2.5f), */
+    /*                               glm::vec3(1.5f, 2.0f, -2.5f), */
+    /*                               glm::vec3(1.5f, 0.2f, -1.5f), */
+    /*                               glm::vec3(-1.3f, 1.0f, -1.5f)}; */
 
     /* float seconds = sdl_context.GetSeconds(); */
     /* for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) { */
@@ -308,11 +315,11 @@ int main() {
 
 
     // minecraft_cube.SetUniforms(&shader);
+    minecraft_cube.SetTextures(&shader);
     minecraft_cube.Render(&shader);
 
     // We only need one texture for the plane.
     grid.Set(&shader, GL_TEXTURE0);
-    Texture::Disable(GL_TEXTURE1);
 
     // Draw the plane.
     alpha_test_shader.Use();

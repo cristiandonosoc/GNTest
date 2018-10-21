@@ -1,19 +1,17 @@
 #version 330 core
 
 in vec3 vertex_color;
-in vec2 tex_coord;
+in vec2 tex_coord0;
 
 out vec4 out_color;
 
 uniform sampler2D tex0;
 
 void main() {
-  vec4 texel = texture(tex0, tex_coord);
-  if (texel.a < 0.5) {
+  vec4 texel = texture(tex0, tex_coord0);
+  if (texel.a < 0.5)
     discard;
-  } else {
-    out_color = texel;
-  }
+  out_color = texel;
 }
 
 
