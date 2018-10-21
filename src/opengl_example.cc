@@ -27,13 +27,7 @@
 #include "src/utils/file.h"
 #include "src/utils/log.h"
 
-BEGIN_IGNORE_WARNINGS()
-#include <third_party/include/glm/glm.hpp>
-#include <third_party/include/glm/gtc/matrix_transform.hpp>
-#include <third_party/include/glm/gtc/type_ptr.hpp>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/string_cast.hpp>
-END_IGNORE_WARNINGS()
+#include "src/utils/glm_impl.h"
 
 /**
  * Simple OpenGL experiments to understand how to build a renderer.

@@ -8,12 +8,9 @@
 
 #include <GL/gl3w.h>
 
-#include "utils/macros.h"
-#include "utils/status.h"
-
-BEGIN_IGNORE_WARNINGS()
-#include <third_party/include/glm/glm.hpp>
-END_IGNORE_WARNINGS()
+#include "src/utils/macros.h"
+#include "src/utils/status.h"
+#include "src/utils/glm.h"
 
 namespace warhol {
 

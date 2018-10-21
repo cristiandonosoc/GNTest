@@ -5,11 +5,7 @@
 
 #include <stdlib.h>
 
-#include "src/utils/macros.h"
-
-BEGIN_IGNORE_WARNINGS()
-#include <third_party/include/glm/glm.hpp>
-END_IGNORE_WARNINGS()
+#include "src/utils/glm.h"
 
 namespace warhol {
 

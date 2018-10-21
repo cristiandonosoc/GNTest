@@ -9,6 +9,8 @@ source_set("utils") {
     "file.h",
     "gl.cc",
     "gl.h",
+    "glm.h",
+    "glm_impl.h",
     "log.cc",
     "log.h",
     "macros.h",
