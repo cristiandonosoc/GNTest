@@ -23,11 +23,14 @@
 #include "src/sdl_context.h"
 #include "src/shader.h"
 #include "src/texture.h"
+#include "src/texture_atlas.h"
 #include "src/utils/macros.h"
 #include "src/utils/file.h"
 #include "src/utils/log.h"
 
 #include "src/utils/glm_impl.h"
+
+#include "src/model/minecraft_cube.h"
 
 /**
  * Simple OpenGL experiments to understand how to build a renderer.
@@ -192,6 +195,23 @@ int main() {
 
   glBindVertexArray(NULL);
 
+  // Minecraft Cube ------------------------------------------------------------
+
+  Texture atlas_texture(Assets::TexturePath("atlas.png"));
+  TextureAtlas atlas(std::move(atlas_texture), 16, 16);
+
+  /* // The minecraft cube handles the VAO, VBO */
+  MinecraftCube minecraft_cube(&atlas);
+  minecraft_cube.Init();
+  minecraft_cube.set_position({1.0f, 1.0f, 1.0f});
+  /* minecraft_cube.SetFront(MinecraftAtlas::kGrassDirt); */
+  /* minecraft_cube.SetBack(MinecraftAtlas::kGrassDirt); */
+  /* minecraft_cube.SetLeft(MinecraftAtlas::kGrassDirt); */
+  /* minecraft_cube.SetRight(MinecraftAtlas::kGrassDirt); */
+  /* minecraft_cube.SetTop(MinecraftAtlas::kDirt); */
+  /* minecraft_cube.SetBottom(MinecraftAtlas::kGrass); */
+
+
   // Textures ------------------------------------------------------------------
 
   // Generate the textures.
@@ -266,7 +286,6 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-    float seconds = sdl_context.GetSeconds();
 
 
 
@@ -280,6 +299,9 @@ int main() {
 		wall.Set(&shader, GL_TEXTURE0);
     face.Set(&shader, GL_TEXTURE1);
 
+    /* //minecraft_cube.SetPosition(...) */
+
+    float seconds = sdl_context.GetSeconds();
     for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
       glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
       float angle = seconds * glm::radians(20.0f * i);
@@ -290,6 +312,9 @@ int main() {
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
 
+
+    // minecraft_cube.SetUniforms(&shader);
+    minecraft_cube.Render(&shader);
 
     // We only need one texture for the plane.
     grid.Set(&shader, GL_TEXTURE0);

@@ -12,8 +12,7 @@ void main() {
   if (texel.a < 0.5) {
     discard;
   } else {
-    /* out_color = texel; */
-    out_color = vec4(texel.a, 0.0f, texel.a, 1.0f);
+    out_color = texel;
   }
 }
 
