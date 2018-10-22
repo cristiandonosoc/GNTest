@@ -89,6 +89,10 @@ int main() {
              << glGetString(GL_SHADING_LANGUAGE_VERSION);
 
   glEnable(GL_DEPTH_TEST);
+  /* glEnable(GL_TEXTURE_2D); */
+
+  if (CHECK_GL_ERRORS("GL enables"))
+    exit(1);
 
   int vert_attribs;
   glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &vert_attribs);
@@ -128,6 +132,11 @@ int main() {
     return 1;
   }
 
+
+  if (CHECK_GL_ERRORS("Creating shaders"))
+    exit(1);
+
+
   // Cube "model" --------------------------------------------------------------
 
   const auto& cube_vertices = Cube::GetVertices();
@@ -159,7 +168,7 @@ int main() {
   glBindVertexArray(NULL);
 
   if (CHECK_GL_ERRORS("Creating cube"))
-    return 1;
+    exit(1);
 
   // Plane "model" -------------------------------------------------------------
 
@@ -290,17 +299,27 @@ int main() {
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Draw the cubes.
-    glBindVertexArray(cube_vao);
+    if (CHECK_GL_ERRORS("Clear"))
+      return 1;
+
     shader.Use();
     camera.SetProjection(&shader);
     camera.SetView(&shader);
 
+    if (CHECK_GL_ERRORS("Setting Camera"))
+      return 1;
+
+    // Draw the cubes.
+    glBindVertexArray(cube_vao);
     // Set the cube textures.
 		wall.Set(&shader, GL_TEXTURE0);
     face.Set(&shader, GL_TEXTURE1);
     shader.SetMat4("model", glm::translate(glm::mat4(1.0f), {5.0f, 0.0, 0.0f}));
     glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+    if (CHECK_GL_ERRORS("Drawing cube"))
+      return 1;
 
     /* glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f), */
     /*                               glm::vec3(2.0f, 5.0f, -15.0f), */
@@ -329,6 +348,9 @@ int main() {
     minecraft_cube.SetTextures(&shader);
     minecraft_cube.Render(&shader);
 
+    if (CHECK_GL_ERRORS("Drawing minecraft cube"))
+      return 1;
+
     // We only need one texture for the plane.
     grid.Set(&shader, GL_TEXTURE0);
 
@@ -342,9 +364,10 @@ int main() {
     shader.SetMat4("model", glm::mat4(1.0f));
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+    if (CHECK_GL_ERRORS("Drawing plane"))
+      return 1;
 
-    /* if (CHECK_GL_ERRORS("Render loop")) */
-    /*   return 1; */
+
 
 		/* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
     /* glDrawArrays(GL_TRIANGLES, 0, 36); */
