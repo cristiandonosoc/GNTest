@@ -18,6 +18,7 @@
 #include "src/arch/arch_provider.h"
 #include "src/assets.h"
 #include "src/camera.h"
+#include "src/graphics/GL/utils.h"
 #include "src/model/cube.h"
 #include "src/model/plane.h"
 #include "src/sdl_context.h"
@@ -155,9 +156,10 @@ int main() {
       2, 2, GL_FLOAT, GL_FALSE, cube_stride, (void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(2);
 
-
-
   glBindVertexArray(NULL);
+
+  if (CHECK_GL_ERRORS("Creating cube"))
+    return 1;
 
   // Plane "model" -------------------------------------------------------------
 
@@ -190,6 +192,9 @@ int main() {
 
   glBindVertexArray(NULL);
 
+  if (CHECK_GL_ERRORS("Creating plane"))
+    return 1;
+
   // Textures ------------------------------------------------------------------
 
   // Generate the textures.
@@ -199,6 +204,9 @@ int main() {
   assert(face.valid());
   Texture grid(Assets::TexturePath("grid.png"));
   assert(grid.valid());
+
+  if (CHECK_GL_ERRORS("Create textures"))
+    return 1;
 
   // Matrices ------------------------------------------------------------------
 
@@ -225,6 +233,9 @@ int main() {
   minecraft_cube.SetFace(MinecraftCube::Face::kRight, kGrassDirt, kTransparent);
   minecraft_cube.SetFace(MinecraftCube::Face::kTop, kGrass, kCrack9);
   minecraft_cube.SetFace(MinecraftCube::Face::kBottom, kDirt, kTransparent);
+
+  if (CHECK_GL_ERRORS("Creating minecraft cube"))
+    return 1;
 
   // Game loop -----------------------------------------------------------------
 
@@ -331,6 +342,9 @@ int main() {
     shader.SetMat4("model", glm::mat4(1.0f));
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+
+    /* if (CHECK_GL_ERRORS("Render loop")) */
+    /*   return 1; */
 
 		/* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
     /* glDrawArrays(GL_TRIANGLES, 0, 36); */

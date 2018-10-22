@@ -10,10 +10,7 @@ source_set("model") {
     "plane.cc",
     "plane.h",
   ]
-  configs += [
-    "//third_party/gl3w:gl3w_config",
-  ]
   deps = [
-    "//third_party/gl3w",
+    "//src/graphics/GL",
   ]
 }

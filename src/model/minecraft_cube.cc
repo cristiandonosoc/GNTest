@@ -8,6 +8,7 @@
 #include "src/shader.h"
 #include "src/texture_atlas.h"
 #include "src/utils/glm_impl.h"
+#include "src/graphics/GL/utils.h"
 
 namespace warhol {
 
@@ -101,11 +102,14 @@ bool MinecraftCube::Init() {
   glBindVertexArray(vao_);
 
   uint32_t buffers[4];
-  glGenBuffers(3, buffers);
+  glGenBuffers(ARRAY_SIZE(buffers), buffers);
   vertex_vbo_ = buffers[0];
   uv_vbo1_ = buffers[1];
   uv_vbo2_ = buffers[2];
   ebo_ = buffers[3];
+
+  if (CHECK_GL_ERRORS("Creating buffers"))
+    exit(1);
 
   uvs1_.reserve(ARRAY_SIZE(indexed_uvs));
   uvs2_.reserve(ARRAY_SIZE(indexed_uvs));
@@ -124,6 +128,9 @@ bool MinecraftCube::Init() {
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
 
+  if (CHECK_GL_ERRORS("Buffering vertices"))
+    exit(1);
+
   // UV
   glBindBuffer(GL_ARRAY_BUFFER, uv_vbo1_);
   glBufferData(GL_ARRAY_BUFFER,
@@ -132,6 +139,9 @@ bool MinecraftCube::Init() {
                GL_DYNAMIC_DRAW);
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(1);
+
+  if (CHECK_GL_ERRORS("Buffering UV1"))
+    exit(1);
 
   // UV2
   glBindBuffer(GL_ARRAY_BUFFER, uv_vbo2_);
@@ -142,15 +152,23 @@ bool MinecraftCube::Init() {
   glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(2);
 
+  if (CHECK_GL_ERRORS("Buffering UV2"))
+    exit(1);
+
   // Indices
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
   glBufferData(
       GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
+  if (CHECK_GL_ERRORS("Buffering indices"))
+    exit(1);
+
   glBindVertexArray(NULL);
   glBindBuffer(GL_ARRAY_BUFFER, NULL);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, NULL);
 
+  if (CHECK_GL_ERRORS("Unbinding"))
+    exit(1);
   return true;
 }
 

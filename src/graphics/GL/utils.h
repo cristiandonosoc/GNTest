@@ -16,4 +16,10 @@ size_t GLEnumToSize(GLenum);
 // to the uniform.
 std::pair<int, const char*> TextureUnitToUniform(GLenum);
 
+#define CHECK_GL_ERRORS(context) \
+  ::warhol::CheckGLErrors(__FILE__, __LINE__, context)
+
+// Returns whether there was an error. Will log out the error.
+bool CheckGLErrors(const char* file, int line, const char* context);
+
 }  // namespace warhol

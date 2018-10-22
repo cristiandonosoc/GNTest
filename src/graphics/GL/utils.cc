@@ -4,8 +4,9 @@
 #include "src/graphics/GL/utils.h"
 
 #include <assert.h>
+#include <stdio.h>
 
-#include "utils/log.h"
+#include "src/utils/log.h"
 
 namespace warhol {
 
@@ -134,6 +135,14 @@ GLEnumToString(GLenum type) {
     case GL_VERTEX_SHADER: return "GL_VERTEX_SHADER";
     case GL_FRAGMENT_SHADER: return "GL_FRAGMENT_SHADER";
     case GL_LINK_STATUS: return "GL_LINK_STATUS";
+
+    case GL_INVALID_OPERATION: return "GL_INVALID_OPERATION";
+    case GL_INVALID_ENUM: return "GL_INVALID_ENUM";
+    case GL_INVALID_VALUE: return "GL_INVALID_VALUE";
+    case GL_OUT_OF_MEMORY: return "GL_OUT_OF_MEMORY";
+    case GL_INVALID_FRAMEBUFFER_OPERATION:
+      return "GL_INVALID_FRAMEBUFFER_OPERATION";
+
     default:
       LOG(ERROR) << "Uncovered GLenum type: " << (uint32_t)type;
       assert(false);
@@ -282,6 +291,19 @@ std::pair<int, const char*> TextureUnitToUniform(GLenum tex) {
       assert(false);
       return {0, nullptr};
   }
+}
+
+bool
+CheckGLErrors(const char* file, int line, const char* context) {
+  GLenum err = glGetError();
+  bool error_found = false;
+  while (err != GL_NO_ERROR) {
+    fprintf(stderr, "[ERROR][%s:%d] OpenGL Error %s: %s\n", file, line,
+                    GLEnumToString(err), context);
+    error_found = true;
+    err = glGetError();
+  }
+  return error_found;
 }
 
 }  // namespace warhol
