@@ -5,15 +5,8 @@
 
 #include <assert.h>
 
-BEGIN_IGNORE_WARNINGS()
-#include <third_party/include/glm/glm.hpp>
-#include <third_party/include/glm/gtc/matrix_transform.hpp>
-#include <third_party/include/glm/gtc/type_ptr.hpp>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/string_cast.hpp>
-END_IGNORE_WARNINGS()
-
-#include "utils/gl.h"
+#include "src/graphics/GL/utils.h"
+#include "src/utils/glm_impl.h"
 
 namespace warhol {
 

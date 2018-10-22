@@ -95,13 +95,14 @@ source_set("warhol_lib") {
   ]
   configs += [
     ":sdl2_config",
-    "//third_party/gl3w:gl3w_config",
   ]
   deps = [
     "//src/math",
     "//src/model",
     "//src/utils",
-    "//third_party/gl3w:gl3w",
+  ]
+  public_deps = [
+    "//src/graphics/GL",
   ]
 }
 
@@ -136,12 +137,10 @@ executable("opengl_example") {
   ]
   configs += [
     ":sdl2_config",
-    "//third_party/gl3w:gl3w_config",
   ]
   deps = [
     ":warhol_lib",
     "//src/arch:arch_provider",
     "//src/utils",
-    "//third_party/gl3w:gl3w",
   ]
 }

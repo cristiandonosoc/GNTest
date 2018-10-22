@@ -1,0 +1,15 @@
+# Copyright 2018, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+source_set("GL") {
+  sources = [
+    "utils.cc",
+    "utils.h",
+  ]
+  public_configs = [
+    "//third_party/gl3w:gl3w_config",
+  ]
+  public_deps = [
+    "//third_party/gl3w",
+  ]
+}

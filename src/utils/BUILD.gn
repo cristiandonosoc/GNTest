@@ -7,8 +7,6 @@ source_set("utils") {
     "debug.h",
     "file.cc",
     "file.h",
-    "gl.cc",
-    "gl.h",
     "glm.h",
     "glm_impl.h",
     "log.cc",
@@ -21,12 +19,8 @@ source_set("utils") {
     "path.cc",
     "path.h",
   ]
-  configs += [
-    "//third_party/gl3w:gl3w_config",
-  ]
   deps = [
     "//src/arch:arch_provider",
     "//third_party/stb",
-    "//third_party/gl3w:gl3w",
   ]
 }

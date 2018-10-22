@@ -7,8 +7,8 @@
 
 #include <third_party/stb/stb_image.h>
 
+#include "src/graphics/GL/utils.h"
 #include "src/shader.h"
-#include "src/utils/gl.h"
 #include "src/utils/log.h"
 
 namespace warhol {

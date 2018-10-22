@@ -8,7 +8,7 @@
 
 #include <GL/gl3w.h>
 
-#include "utils/macros.h"
+#include "src/utils/macros.h"
 
 namespace warhol {
 
