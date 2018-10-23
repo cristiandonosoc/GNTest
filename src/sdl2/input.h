@@ -13,5 +13,6 @@ struct InputState;
 
 void HandleKeyUp(const SDL_KeyboardEvent&, InputState*);
 void HandleKeysDown(InputState*);
+void HandleMouse(InputState*);
 
 }  // namespace

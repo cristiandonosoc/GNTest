@@ -89,6 +89,9 @@ SDL_Window* SDLContext::GetWindow() const  {
 
 SDLContext::EventAction
 SDLContext::HandleInputAndEvents(InputState* input) {
+  // We do the frame flip.
+  InputState::InitFrame(input);
+
   // Handle events.
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
@@ -100,7 +103,9 @@ SDLContext::HandleInputAndEvents(InputState* input) {
   }
 
   HandleKeysDown(input);
+  HandleMouse(input);
   return SDLContext::EventAction::kContinue;
+
 }
 
 }  // namespace warhol

@@ -57,5 +57,13 @@ HandleKeysDown(InputState* input) {
   }
 }
 
+void HandleMouse(InputState* input) {
+  auto mouse_state = SDL_GetMouseState(&input->cur_mouse.x,
+                                       &input->cur_mouse.y);
+  input->cur_mouse.left = mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT);
+  input->cur_mouse.middle = mouse_state & SDL_BUTTON(SDL_BUTTON_MIDDLE);
+  input->cur_mouse.right = mouse_state & SDL_BUTTON(SDL_BUTTON_RIGHT);
+}
+
 
 }  // namespace warhol

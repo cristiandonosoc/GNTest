@@ -33,9 +33,22 @@ struct InputState {
   bool left = false;
   bool right = false;
 
+  struct MouseState {
+    int x;   // In pixels.
+    int y;   // In pixels.
+    bool left = false;
+    bool middle = false;
+    bool right = false;
+  };
+  MouseState prev_mouse;
+  MouseState cur_mouse;
+
   // API.
   static InputState Create();
-  static void Reset(InputState*);
+
+  // Clears the current state of the frame and moves any state that needs to be
+  // tracked inter-frame (eg. mouse positions).
+  static void InitFrame(InputState*);
 };
 
 }  // warhol

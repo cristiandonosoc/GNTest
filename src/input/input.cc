@@ -14,7 +14,7 @@ InputState InputState::Create() {
 
 }
 
-void InputState::Reset(InputState* input) {
+void InputState::InitFrame(InputState* input) {
   for (int i = 0; i < kInputSize; i++) {
     input->keys_up[i] = false;
     input->keys_down[i] = false;
@@ -25,6 +25,9 @@ void InputState::Reset(InputState* input) {
   input->down = false;
   input->left = false;
   input->right = false;
+
+  input->prev_mouse = input->cur_mouse;
+  input->cur_mouse = {};
 }
 
 }  // namespace warhol

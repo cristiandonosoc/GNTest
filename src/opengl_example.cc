@@ -39,6 +39,7 @@
  *
  * TODOs:
  *
+ * - Handle screen resize correctly.
  * - Stop using Status and start logging directly at the call site.
  *   This is what Status is doing anyway and we might just as well return a
  *   boolean.
@@ -48,6 +49,7 @@
  *   committed to github.
  * - Move EventAction outside of SDL, as we could use it with another window
  *   library and it should just work (tm).
+ * - Handle mouse buttons similar as keyboard (ask for down and up).
  */
 
 using namespace warhol;
@@ -250,7 +252,6 @@ int main() {
     time_delta = current_time - last_frame_time;
     last_frame_time = current_time;
 
-    InputState::Reset(&input);
     SDLContext::EventAction action = sdl_context.HandleInputAndEvents(&input);
     if (action == SDLContext::EventAction::kQuit)
       break;
@@ -272,8 +273,19 @@ int main() {
       camera.pos -= glm::normalize(glm::cross(camera.front(), camera.up())) *
                     camera_speed * time_delta;
     }
-
     camera.UpdateView();
+
+    // Log the mouse.
+
+    std::stringstream ss;
+    ss << "MOUSE X: " << input.cur_mouse.x << ", Y: " << input.cur_mouse.y;
+    if (input.cur_mouse.left)
+      ss << " LEFT";
+    if (input.cur_mouse.middle)
+      ss << " MIDDLE";
+    if (input.cur_mouse.right)
+      ss << " RIGHT";
+    LOG(DEBUG) << ss.str();
 
     // Draw the triangle.
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
