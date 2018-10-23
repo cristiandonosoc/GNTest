@@ -5,17 +5,24 @@
 
 #include <memory>
 
-#include "utils/macros.h"
-#include "utils/status.h"
+#include "src/input/input.h"
+#include "src/utils/macros.h"
+#include "src/utils/status.h"
 
 struct SDL_Window;
 
 namespace warhol {
 
+struct InputState;
 struct SDLContextImpl;
 
 class SDLContext {
  public:
+  enum class EventAction {
+    kContinue,
+    kQuit,
+  };
+
   SDLContext();
   ~SDLContext();
 
@@ -34,6 +41,10 @@ class SDLContext {
 
   // Returns the seconds since Init() was called. This is a fractional number.
   float GetSeconds() const;
+
+  // TODO(Cristian): Perhaps later we're going to need an array of actions.
+  //                 This also should be separated from SDL.
+  EventAction HandleInputAndEvents(InputState*);
 
  private:
   std::unique_ptr<SDLContextImpl> impl_;

@@ -8,6 +8,8 @@
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 
+#include "src/sdl2/input.h"
+
 namespace warhol {
 
 struct SDLContextImpl {
@@ -83,6 +85,22 @@ SDL_Window* SDLContext::GetWindow() const  {
   if (!impl_)
     return nullptr;
   return impl_->window;
+}
+
+SDLContext::EventAction
+SDLContext::HandleInputAndEvents(InputState* input) {
+  // Handle events.
+  SDL_Event event;
+  while (SDL_PollEvent(&event)) {
+    switch (event.type) {
+      case SDL_QUIT: return SDLContext::EventAction::kQuit;
+      case SDL_KEYUP: HandleKeyUp(event.key, input); break;
+      default: break;
+    }
+  }
+
+  HandleKeysDown(input);
+  return SDLContext::EventAction::kContinue;
 }
 
 }  // namespace warhol

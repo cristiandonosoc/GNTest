@@ -18,6 +18,7 @@
 #include "src/arch/arch_provider.h"
 #include "src/assets.h"
 #include "src/camera.h"
+#include "src/input/input.h"
 #include "src/graphics/GL/utils.h"
 #include "src/model/cube.h"
 #include "src/model/plane.h"
@@ -41,27 +42,15 @@
  * - Stop using Status and start logging directly at the call site.
  *   This is what Status is doing anyway and we might just as well return a
  *   boolean.
- * - Change GLM importing to use our headers so we can ignore the annoying
- *   BEGIN/END_IGNORE_WARNINGS macros.
  * - Have the shader receive the camera and set the projection/view matrices
  *   and not the other way around as it is now.
  * - Find out a way to better handle assets instead of just having them
  *   committed to github.
+ * - Move EventAction outside of SDL, as we could use it with another window
+ *   library and it should just work (tm).
  */
 
 using namespace warhol;
-
-struct ControlState {
-  bool up = false;
-  bool down = false;
-  bool left = false;
-  bool right = false;
-  bool escape = false;
-};
-
-// Returns whether the program should still be running.
-void HandleKeyUp(const SDL_KeyboardEvent&, ControlState*);
-void HandleKeyboard(ControlState*);
 
 int main() {
   SDLContext sdl_context;
@@ -253,42 +242,33 @@ int main() {
   // Time from previous frame start to the current.
   float time_delta = 0.0f;
 
+  InputState input = InputState::Create();
+
   bool running = true;
   while (running) {
     float current_time = sdl_context.GetSeconds();
     time_delta = current_time - last_frame_time;
     last_frame_time = current_time;
 
-    ControlState control = {};
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-      switch (event.type) {
-        case SDL_QUIT:
-          running = false;
-          break;
-        case SDL_KEYUP:
-          HandleKeyUp(event.key, &control);
-        default:
-          break;
-      }
-    }
-
-    HandleKeyboard(&control);
-
-    if (!running || control.escape)
+    InputState::Reset(&input);
+    SDLContext::EventAction action = sdl_context.HandleInputAndEvents(&input);
+    if (action == SDLContext::EventAction::kQuit)
       break;
 
-    if (control.up) {
+    if (input.keys_up[GET_KEY(Escape)])
+      break;
+
+    if (input.up) {
       camera.pos -= camera.front() * camera_speed * time_delta;
     }
-    if (control.down) {
+    if (input.down) {
       camera.pos += camera.front() * camera_speed * time_delta;
     }
-    if (control.left) {
+    if (input.left) {
       camera.pos += glm::normalize(glm::cross(camera.front(), camera.up())) *
                     camera_speed * time_delta;
     }
-    if (control.right) {
+    if (input.right) {
       camera.pos -= glm::normalize(glm::cross(camera.front(), camera.up())) *
                     camera_speed * time_delta;
     }
@@ -382,26 +362,3 @@ int main() {
 
   return 0;
 }
-
-void
-HandleKeyUp(const SDL_KeyboardEvent& key_event, ControlState* state) {
-  switch (key_event.keysym.scancode) {
-    case SDL_SCANCODE_ESCAPE: state->escape = true; break;
-    default: break;
-  }
-}
-
-void
-HandleKeyboard(ControlState* state) {
-  const uint8_t* key_state = SDL_GetKeyboardState(0);
-
-  if (key_state[SDL_SCANCODE_UP] || key_state[SDL_SCANCODE_W])
-    state->up = true;
-  if (key_state[SDL_SCANCODE_DOWN] || key_state[SDL_SCANCODE_S])
-      state->down = true;
-  if (key_state[SDL_SCANCODE_LEFT] || key_state[SDL_SCANCODE_A])
-      state->left = true;
-  if (key_state[SDL_SCANCODE_RIGHT] || key_state[SDL_SCANCODE_D])
-    state->right = true;
-}
-

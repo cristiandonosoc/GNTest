@@ -33,9 +33,14 @@ source_set("sdl2") {
   sources = [
     "sdl_context.cc",
     "sdl_context.h",
+    "input.cc",
+    "input.h",
   ]
   public_configs = [
     ":sdl2_config",
+  ]
+  deps = [
+    "//src/input",
   ]
 }
 
