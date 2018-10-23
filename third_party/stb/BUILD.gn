@@ -1,14 +1,7 @@
 # These are the libraries corresponding to STB.
 # See: https://github.com/nothings/stb
 
-
-group("stb") {
-  public_deps = [
-    ":stb_lib"
-  ]
-}
-
-source_set("stb_lib") {
+source_set("stb") {
   sources = [
     # The STB libraries are header-only: the implementation is guarded by a
     # macro define. The implentation .cc makes all the implementation includes.

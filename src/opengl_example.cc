@@ -50,6 +50,7 @@
  * - Move EventAction outside of SDL, as we could use it with another window
  *   library and it should just work (tm).
  * - Handle mouse buttons similar as keyboard (ask for down and up).
+ * - Use the `typedef union foo foo` to forward declare SDL elements.
  */
 
 using namespace warhol;
