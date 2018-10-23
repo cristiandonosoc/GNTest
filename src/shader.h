@@ -16,7 +16,14 @@ namespace warhol {
 
 struct Uniform {
   std::string name;
+  int location;
+  GLenum type;
+  size_t count;   // Whether it's an array.
+  size_t size;    // The size of the type in bytes.
+};
 
+struct Attribute {
+  std::string name;
   int location;
   GLenum type;
   size_t count;   // Whether it's an array.
@@ -29,13 +36,21 @@ class Shader {
   Shader(std::string vert_src, std::string frag_src);
   ~Shader();
 
+  DELETE_COPY_AND_ASSIGN(Shader);
+  DEFAULT_MOVE_AND_ASSIGN(Shader);
+
   Status Init();
   bool valid() const { return handle_ != 0; }
 
   void Use();
 
-  const Uniform* GetUniform(const std::string& uniform_name) const;
-  const std::map<std::string, Uniform> uniforms() const { return uniforms_; }
+  const Attribute* GetAttribute(const std::string& name) const;
+  const std::map<std::string, Attribute>& attributes() const {
+    return attributes_;
+  }
+
+  const Uniform* GetUniform(const std::string& name) const;
+  const std::map<std::string, Uniform>& uniforms() const { return uniforms_; }
 
   bool SetInt(const std::string& name, int);
   bool SetFloat(const std::string& name, float);
@@ -53,6 +68,8 @@ class Shader {
   // Internal function to set up the matrices.
   bool SetMatrix(const std::string&, size_t mat_length, const float* data);
 
+  // TODO(Cristian): These should log and return false.
+  void ObtainAttributes();
   void ObtainUniforms();
 
   int handle_ = 0;
@@ -63,8 +80,7 @@ class Shader {
   std::string frag_src_;
 
   std::map<std::string, Uniform> uniforms_;
-
-  DELETE_COPY_AND_ASSIGN(Shader);
+  std::map<std::string, Attribute> attributes_;
 };
 
 }  // namespace warhol

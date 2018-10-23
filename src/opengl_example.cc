@@ -128,6 +128,9 @@ int main() {
   if (CHECK_GL_ERRORS("Creating shaders"))
     exit(1);
 
+  for (const auto& [key, attrib] : shader.attributes()) {
+    LOG(DEBUG) << "Attribute " << key << ": " << attrib.location;
+  }
 
   // Cube "model" --------------------------------------------------------------
 
@@ -148,14 +151,27 @@ int main() {
                GL_STATIC_DRAW);
   // How to interpret the buffer
   GLsizei cube_stride = (GLsizei)(5 * sizeof(float));
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, cube_stride, (void*)0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(
-      1, 2, GL_FLOAT, GL_FALSE, cube_stride, (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glVertexAttribPointer(
-      2, 2, GL_FLOAT, GL_FALSE, cube_stride, (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(2);
+  auto a_pos = shader.GetAttribute("a_pos");
+  glVertexAttribPointer(a_pos->location, 3, GL_FLOAT, GL_FALSE, cube_stride, (void*)0);
+  glEnableVertexAttribArray(a_pos->location);
+
+  auto a_tex_coord0 = shader.GetAttribute("a_tex_coord0");
+  glVertexAttribPointer(a_tex_coord0->location,
+                        2,
+                        GL_FLOAT,
+                        GL_FALSE,
+                        cube_stride,
+                        (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(a_tex_coord0->location);
+
+  auto a_tex_coord1 = shader.GetAttribute("a_tex_coord1");
+  glVertexAttribPointer(a_tex_coord1->location,
+                        2,
+                        GL_FLOAT,
+                        GL_FALSE,
+                        cube_stride,
+                        (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(a_tex_coord1->location);
 
   glBindVertexArray(NULL);
 
@@ -276,17 +292,17 @@ int main() {
     }
     camera.UpdateView();
 
-    // Log the mouse.
+    /* // Log the mouse. */
 
-    std::stringstream ss;
-    ss << "MOUSE X: " << input.cur_mouse.x << ", Y: " << input.cur_mouse.y;
-    if (input.cur_mouse.left)
-      ss << " LEFT";
-    if (input.cur_mouse.middle)
-      ss << " MIDDLE";
-    if (input.cur_mouse.right)
-      ss << " RIGHT";
-    LOG(DEBUG) << ss.str();
+    /* std::stringstream ss; */
+    /* ss << "MOUSE X: " << input.cur_mouse.x << ", Y: " << input.cur_mouse.y; */
+    /* if (input.cur_mouse.left) */
+    /*   ss << " LEFT"; */
+    /* if (input.cur_mouse.middle) */
+    /*   ss << " MIDDLE"; */
+    /* if (input.cur_mouse.right) */
+    /*   ss << " RIGHT"; */
+    /* LOG(DEBUG) << ss.str(); */
 
     // Draw the triangle.
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);

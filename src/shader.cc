@@ -64,8 +64,8 @@ Shader::InternalInit() {
     return STATUS_VA("Could not link shader: %s", log);
   }
 
+  ObtainAttributes();
   ObtainUniforms();
-  // TODO: Obtain attributes.
 
   return Status::Ok();
 }
@@ -85,21 +85,15 @@ void Shader::Clear() {
 }
 
 void Shader::ObtainUniforms() {
-
-  LOG(DEBUG) << "Running: " << PRETTY_FUNCTION;
-
-
   char buf[256];
   // Size of the longest uniform name.
   GLint max_name_size;
   glGetProgramiv(handle_, GL_ACTIVE_UNIFORM_MAX_LENGTH, &max_name_size);
-  LOG(DEBUG) << "MAX NAME SIZE: " << max_name_size;
   assert((uint32_t)max_name_size <= sizeof(buf));
 
   // Get the uniforms.
   GLint uniform_count = 0;
   glGetProgramiv(handle_, GL_ACTIVE_UNIFORMS, &uniform_count);
-  LOG(DEBUG) << "Found uniforms: " << uniform_count;
   for (GLint i = 0; i < uniform_count; i++) {
     // Get type data.
     GLsizei length, count;
@@ -118,18 +112,48 @@ void Shader::ObtainUniforms() {
     uniform.type = type;
     uniform.count = count;
     uniform.size = GLEnumToSize(type);
-
-    LOG(DEBUG) << "Found uniform: " << uniform.name << ", "
-               << "location: " << uniform.location << ", "
-               << "type: " << GLEnumToString(uniform.type);
-
     uniforms_[uniform.name] = std::move(uniform);
   }
 }
 
-const Uniform* Shader::GetUniform(const std::string& uniform_name) const {
-  auto it = uniforms_.find(uniform_name);
+void Shader::ObtainAttributes() {
+  char buf[256];
+  GLint max_name_size;
+  glGetProgramiv(handle_, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &max_name_size);
+  assert((uint32_t)max_name_size <= sizeof(buf));
+
+  GLint attribute_count = 0;
+  glGetProgramiv(handle_, GL_ACTIVE_ATTRIBUTES, &attribute_count);
+  for (GLint i = 0; i < attribute_count; i++) {
+    GLsizei length, count;
+    GLenum type;
+    glGetActiveAttrib(handle_, i, max_name_size, &length, &count, &type, buf);
+    GLint location = glGetAttribLocation(handle_, buf);
+    if (location < 0) {
+      LOG(ERROR) << "Could not find attribute for attribute: " << buf;
+      assert(false);
+    }
+
+    Attribute attribute = {};
+    attribute.name = buf;
+    attribute.location = location;
+    attribute.type = type;
+    attribute.count = count;
+    attribute.size = GLEnumToSize(type);
+    attributes_[attribute.name] = std::move(attribute);
+  }
+}
+
+const Uniform* Shader::GetUniform(const std::string& name) const {
+  auto it = uniforms_.find(name);
   if (it == uniforms_.end())
+    return nullptr;
+  return &it->second;
+}
+
+const Attribute* Shader::GetAttribute(const std::string& name) const {
+  auto it = attributes_.find(name);
+  if (it == attributes_.end())
     return nullptr;
   return &it->second;
 }
