@@ -1,0 +1,71 @@
+# Copyright 2018, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+declare_args() {
+  vulkan_include_path = getenv("VULKAN_SDK") + "/include"
+  vulkan_lib_path = getenv("VULKAN_SDK") + "/lib"
+}
+
+config("vulkan_config") {
+  handled = false
+  include_dirs = [ "${vulkan_include_path}" ]
+  if (target_os == "win" && compiler == "msvc") {
+    libs = [ "${vulkan_include_path}/vulkan/vulkan-1.lib" ]
+    handled = true
+  } else if (target_os == "mac" && compiler == "clang") {
+    # IMPORTANT: vulkan for mac requires certain env variables to be set in
+    #            order to work correctly. Eg:
+    #
+    # export VULKAN_SDK="/Users/donosoc/SDKs/vulkansdk-macos-1.1.82.0/macOS"
+
+    # Installable Client Driver interfaces:
+    # The ICD are the drivers available to expose the physical devices.
+    # This env variable allows the loader to find the ICDs molten provides.
+    #   export VK_ICD_FILENAMES="$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json"
+
+    # Point the loader to the manifest where the layers are specified.
+    # export VK_LAYER_PATH = "$VULKAN_SDK/etc/vulkan/explicit_layers.d"
+    libs = [ "${vulkan_lib_path}/libvulkan.dylib" ]
+    handled = true
+  } else if (target_os == "linux") {
+    if (compiler == "clang") {
+      libs = [ "-lvulkan" ]
+      ldflags = [ "-L${vulkan_lib_path}" ]
+      handled = true
+    }
+  }
+
+  if (!handled) {
+    assert(false, "Vulkan: Unhandled OS/Compiler combo: $target_os/$compiler")
+  }
+}
+
+source_set("vulkan_lib") {
+  sources = [
+    "vulkan_context.cc",
+    "vulkan_context.h",
+    "vulkan_utils.cc",
+    "vulkan_utils.h",
+  ]
+  configs += [
+    # TODO(donosoc): Abstract the SDL2 dependencies for vulkan so this config
+    #                dependency can be avoided.
+    "//src/sdl2:sdl2_config",
+    ":vulkan_config",
+  ]
+}
+
+executable("vulkan_test") {
+  sources = [
+    "vulkan_test.cc"
+  ]
+  deps = [
+    ":vulkan_lib",
+    "//src/utils",
+  ]
+  configs += [
+    ":vulkan_config",
+  ]
+}
+
+

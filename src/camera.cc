@@ -3,7 +3,7 @@
 
 #include "src/camera.h"
 
-#include "src/sdl_context.h"
+#include "src/sdl2/sdl_context.h"
 #include "src/shader.h"
 #include "src/utils/glm_impl.h"
 

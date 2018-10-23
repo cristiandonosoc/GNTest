@@ -8,7 +8,7 @@
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 
-#include "vulkan_context.h"
+#include "src/graphics/vulkan/vulkan_context.h"
 
 #include "utils/file.h"
 #include "utils/log.h"

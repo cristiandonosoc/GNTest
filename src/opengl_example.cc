@@ -21,7 +21,7 @@
 #include "src/graphics/GL/utils.h"
 #include "src/model/cube.h"
 #include "src/model/plane.h"
-#include "src/sdl_context.h"
+#include "src/sdl2/sdl_context.h"
 #include "src/shader.h"
 #include "src/texture.h"
 #include "src/texture_atlas.h"
