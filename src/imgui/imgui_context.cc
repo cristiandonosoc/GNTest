@@ -3,10 +3,11 @@
 
 #include "src/imgui/imgui_context.h"
 
-#include <SDL2/SDL.h>
 #include <third_party/imgui/imgui.h>
 
 #include "src/input/input.h"
+#include "src/sdl2/def.h"
+#include "src/sdl2/sdl_context.h"
 
 namespace warhol {
 
@@ -79,18 +80,21 @@ bool ImguiContext::Init() {
 }
 
 void
-ImguiContext::NewFrame(InputState* input) {
+ImguiContext::NewFrame(const SDLContext& sdl_context, InputState* input) {
   assert(init_);
   assert(io_->Fonts->IsBuilt());  // See imgui_impl_sdl.cpp
+
   // Setup display size (every frame to accommodate for window resizing)
-  int w, h;
-  int display_w, display_h;
-  // TODO(Cristian): Get this through SDLContext?
-  SDL_GetWindowSize(window_, &w, &h);
-  SDL_GL_GetDrawableSize(window_, &display_w, &display_h);
-  io_->DisplaySize = ImVec2((float)w, (float)h);
-  io_->DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0,
-                                        h > 0 ? ((float)display_h / h) : 0);
+  /* int w, h; */
+  /* int display_w, display_h; */
+  /* SDL_GetWindowSize(window_, &w, &h); */
+  /* SDL_GL_GetDrawableSize(window_, &display_w, &display_h); */
+  /* io_->DisplaySize = ImVec2((float)w, (float)h); */
+  /* io_->DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, */
+  /*                                       h > 0 ? ((float)display_h / h) : 0); */
+  io_->DisplaySize = {(float)sdl_context.width(), (float)sdl_context.height()};
+  // TODO(donosoc): Do we need to revisit this?
+  io_->DisplayFramebufferScale =  { 1.0f, 1.0f };
 
   // Setup time step (we don't use SDL_GetTicks() because it is using
   // millisecond resolution)

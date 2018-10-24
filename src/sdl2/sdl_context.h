@@ -47,6 +47,7 @@ class SDLContext {
   double frame_delta_average() const;
   // 1.0 / frame_delta_average()
   double framerate() const;
+  double frame_delta_accum() const;
 
   // Returns the seconds since Init() was called. This is a fractional number.
   float GetSeconds() const;

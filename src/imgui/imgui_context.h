@@ -17,6 +17,7 @@ struct SDL_Cursor;
 namespace warhol {
 
 struct InputState;
+class SDLContext;
 
 // TODOs:
 // - Do clipboard.
@@ -33,7 +34,7 @@ class ImguiContext {
   ~ImguiContext();
 
   bool Init();
-  void NewFrame(InputState*);
+  void NewFrame(const SDLContext&, InputState*);
   void Render();
 
   // Do not pass the keyboard/mouse to the underlying application.

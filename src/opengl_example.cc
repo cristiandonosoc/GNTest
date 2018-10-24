@@ -53,6 +53,9 @@
  *   library and it should just work (tm).
  * - Handle mouse buttons similar as keyboard (ask for down and up).
  * - Use the `typedef union foo foo` to forward declare SDL elements.
+ * - Calculate a start->end frame timing. Right now we measure complete round
+ *   trip, which is gated by OpenGL's buffer swap timing, so we don't know how
+ *   much we take to calculate a frame.
  */
 
 using namespace warhol;
@@ -283,7 +286,7 @@ int main() {
     if (action == SDLContext::EventAction::kQuit)
       break;
 
-    imgui_context.NewFrame(&input);
+    imgui_context.NewFrame(sdl_context, &input);
 
     if (input.keys_up[GET_KEY(Escape)])
       break;
@@ -342,27 +345,27 @@ int main() {
     if (CHECK_GL_ERRORS("Drawing cube"))
       return 1;
 
-    /* glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f), */
-    /*                               glm::vec3(2.0f, 5.0f, -15.0f), */
-    /*                               glm::vec3(-1.5f, -2.2f, -2.5f), */
-    /*                               glm::vec3(-3.8f, -2.0f, -12.3f), */
-    /*                               glm::vec3(2.4f, -0.4f, -3.5f), */
-    /*                               glm::vec3(-1.7f, 3.0f, -7.5f), */
-    /*                               glm::vec3(1.3f, -2.0f, -2.5f), */
-    /*                               glm::vec3(1.5f, 2.0f, -2.5f), */
-    /*                               glm::vec3(1.5f, 0.2f, -1.5f), */
-    /*                               glm::vec3(-1.3f, 1.0f, -1.5f)}; */
+    glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec3(2.0f, 5.0f, -15.0f),
+                                  glm::vec3(-1.5f, -2.2f, -2.5f),
+                                  glm::vec3(-3.8f, -2.0f, -12.3f),
+                                  glm::vec3(2.4f, -0.4f, -3.5f),
+                                  glm::vec3(-1.7f, 3.0f, -7.5f),
+                                  glm::vec3(1.3f, -2.0f, -2.5f),
+                                  glm::vec3(1.5f, 2.0f, -2.5f),
+                                  glm::vec3(1.5f, 0.2f, -1.5f),
+                                  glm::vec3(-1.3f, 1.0f, -1.5f)};
 
-    /* float seconds = sdl_context.GetSeconds(); */
-    /* for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) { */
-    /*   glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]); */
-    /*   float angle = seconds * glm::radians(20.0f * i); */
-    /*   model = */
-    /*       glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f)); */
-    /*   shader.SetMat4("model", model); */
+    float seconds = sdl_context.GetSeconds();
+    for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
+      glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
+      float angle = seconds * glm::radians(20.0f * i);
+      model =
+          glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
+      shader.SetMat4("model", model);
 
-    /*   glDrawArrays(GL_TRIANGLES, 0, 36); */
-    /* } */
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 
 
     // minecraft_cube.SetUniforms(&shader);
@@ -398,8 +401,11 @@ int main() {
       ImGui::Begin("Test window");
 
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-                  1000.0 * sdl_context.frame_delta(), sdl_context.framerate());
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+                  1000.0 * sdl_context.frame_delta(),
+                  sdl_context.framerate());
+      ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+                  1000.0f / ImGui::GetIO().Framerate,
+                  ImGui::GetIO().Framerate);
 
       ImGui::End();
 

@@ -5,6 +5,8 @@
 
 #include <assert.h>
 
+#include <limits>
+
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 
@@ -24,7 +26,6 @@ struct SDLContextImpl {
 
   // Total time since the start of the game.
   uint64_t total_time = 0;
-  double last_frame_delta;
   double frame_delta;
   // The accumulated average.
   double frame_delta_accum;
@@ -32,8 +33,8 @@ struct SDLContextImpl {
   double framerate;
 
   // TODO(Cristian): When we're interested, start tracking these times.
-  // double  frame_times[kFrameTimesCounts];
-  // int frame_times_index = 0;
+  double  frame_times[kFrameTimesCounts];
+  int frame_times_index = 0;
 };
 
 SDLContext::SDLContext() = default;
@@ -93,6 +94,7 @@ double SDLContext::frame_delta_average() const {
   return impl_->frame_delta_average;
 }
 double SDLContext::framerate() const { return impl_->framerate; }
+double SDLContext::frame_delta_accum() const { return impl_->frame_delta_accum; }
 
 void
 SDLContext::Clear() {
@@ -141,20 +143,16 @@ void SDLContext::CalculateFramerate() {
   uint64_t frequency = SDL_GetPerformanceFrequency();
   uint64_t current_time = SDL_GetPerformanceCounter();
 
-  // First frame initialization.
-  if (impl_->total_time == 0) {
-    // We assume 60 FPS.
-    // TODO(Cristian): Remove the 60 FPS assumption.
-    impl_->frame_delta = 1.0 / 60.0;
-  } else {
-    impl_->frame_delta =
-        (double)(current_time - impl_->total_time) / (double)frequency;
-  }
+  auto total_time = impl_->total_time;
+  impl_->frame_delta = total_time > 0
+                           ? ((double)(current_time - total_time) / frequency)
+                           : (1.0 / 60.0);
   impl_->total_time = current_time;
 
   // Calculate the rolling average.
-  impl_->frame_delta_accum += impl_->frame_delta - impl_->last_frame_delta;
-  impl_->last_frame_delta = impl_->frame_delta;
+  impl_->frame_delta_accum += impl_->frame_delta - impl_->frame_times[impl_->frame_times_index];
+  impl_->frame_times[impl_->frame_times_index] = impl_->frame_delta;
+  impl_->frame_times_index = (impl_->frame_times_index + 1) % SDLContextImpl::kFrameTimesCounts;
   if (impl_->frame_delta_accum > 0.0) {
     impl_->frame_delta_average = impl_->frame_delta_accum /
                                  SDLContextImpl::kFrameTimesCounts;
