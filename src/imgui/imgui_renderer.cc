@@ -6,38 +6,31 @@
 #include <third_party/imgui/imgui.h>
 
 #include "src/utils/macros.h"
+#include "src/assets.h"
+#include "src/utils/file.h"
 
 namespace warhol {
 
 namespace {
 
-// TODO(Cristian): Move these shaders to assets.
+std::tuple<bool, std::vector<char>, std::vector<char>>
+ReadShaders(const char* vert_file, const char* frag_file) {
+  std::vector<char> vert;
+  auto status = ReadWholeFile(Assets::ShaderPath(vert_file), &vert);
+  if (!status.ok()) {
+    LOG(ERROR) << status.err_msg();
+    return {false, {}, {}};
+  }
 
-const GLchar* vertex_shader_src =
-    "precision mediump float;\n"
-    "layout (location = 0) in vec2 a_pos;\n"
-    "layout (location = 1) in vec2 a_uv;\n"
-    "layout (location = 2) in vec4 a_color;\n"
-    "uniform mat4 u_proj;\n"
-    "out vec2 frag_uv;\n"
-    "out vec4 frag_color;\n"
-    "void main()\n"
-    "{\n"
-    "    frag_uv = a_uv;\n"
-    "    frag_color = a_color;\n"
-    "    gl_Position = u_proj * vec4(a_pos.xy,0,1);\n"
-    "}\n";
+  std::vector<char> frag;
+  status = ReadWholeFile(Assets::ShaderPath(frag_file), &frag);
+  if (!status.ok()) {
+    LOG(ERROR) << status.err_msg();
+    return {false, {}, {}};
+  }
 
-const GLchar* fragment_shader_src =
-    "precision mediump float;\n"
-    "uniform sampler2D tex;\n"
-    "in vec2 frag_uv;\n"
-    "in vec4 frag_color;\n"
-    "layout (location = 0) out vec4 out_color;\n"
-    "void main()\n"
-    "{\n"
-    "    out_color = frag_color * texture(tex, frag_uv);\n"
-    "}\n";
+  return {true, std::move(vert), std::move(frag)};
+}
 
 }  // namespace
 
@@ -56,12 +49,16 @@ ImguiRenderer::~ImguiRenderer() {
   }
 }
 
-
 bool ImguiRenderer::Init(ImGuiIO* io) {
-  shader_ = Shader(vertex_shader_src, fragment_shader_src);
-  auto status = shader_.Init();
-  if (!status.ok()) {
-    LOG(ERROR) << status.err_msg();
+  if (auto [ok, vert_src, frag_src] = ReadShaders("imgui.vert", "imgui.frag");
+      ok) {
+    shader_ = Shader(vert_src.data(), frag_src.data());
+    auto status = shader_.Init();
+    if (!status.ok()) {
+      LOG(ERROR) << status.err_msg();
+      return false;
+    }
+  } else {
     return false;
   }
 

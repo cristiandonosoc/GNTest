@@ -12,8 +12,7 @@ out vec2 tex_coord0;
 out vec2 tex_coord1;
 
 void main() {
-  gl_Position = projection * view * model * vec4(a_pos, 1.0f);
-
   tex_coord0 = a_tex_coord0;
   tex_coord1 = a_tex_coord1;
+  gl_Position = projection * view * model * vec4(a_pos, 1.0f);
 }

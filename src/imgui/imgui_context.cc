@@ -114,6 +114,9 @@ ImguiContext::NewFrame(InputState* input) {
 
   // Update Mouse.
   io_->MousePos = {(float)input->cur_mouse.x, (float)input->cur_mouse.y};
+  io_->MouseDown[0] = input->cur_mouse.left;
+  io_->MouseDown[1] = input->cur_mouse.right;
+  io_->MouseDown[2] = input->cur_mouse.middle;
 
   // Hide or update mouse cursor.
   ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
