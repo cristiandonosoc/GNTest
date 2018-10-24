@@ -12,6 +12,7 @@
 // TODO(Cristian): See if we can forward declare SDL_GLContext and thus avoid
 //                 the whole SDLContextImpl.
 struct SDL_Window;
+struct SDL_WindowEvent;
 
 namespace warhol {
 
@@ -54,7 +55,7 @@ class SDLContext {
 
  private:
   void CalculateFramerate();
-
+  void HandleWindowEvent(const SDL_WindowEvent&);
 
   std::unique_ptr<SDLContextImpl> impl_;
 

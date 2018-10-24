@@ -3,11 +3,8 @@
 
 #include "src/sdl2/input.h"
 
-
-#define SDL_MAIN_HANDLED
-#include <SDL2/SDL.h>
-
 #include "src/input/input.h"
+#include "src/sdl2/def.h"
 
 namespace warhol {
 

@@ -1,16 +1,17 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include "sdl_context.h"
+#include "src/sdl2/sdl_context.h"
 
 #include <assert.h>
 
 #include <limits>
 
-#define SDL_MAIN_HANDLED
-#include <SDL2/SDL.h>
+#include "src/graphics/GL/def.h"
 
 #include "src/sdl2/input.h"
+#include "src/sdl2/def.h"
+#include "src/sdl2/utils.h"
 
 namespace warhol {
 
@@ -126,9 +127,7 @@ SDLContext::NewFrame(InputState* input) {
     switch (event.type) {
       case SDL_QUIT: return SDLContext::EventAction::kQuit;
       case SDL_KEYUP: HandleKeyUp(event.key, input); break;
-      case SDL_WINDOWEVENT:
-        LOG(DEBUG) << "Window event!";
-        break;
+      case SDL_WINDOWEVENT: HandleWindowEvent(event.window); break;
       default: break;
     }
   }
@@ -137,6 +136,10 @@ SDLContext::NewFrame(InputState* input) {
   HandleMouse(input);
   return SDLContext::EventAction::kContinue;
 }
+
+
+// Sigh...
+#undef max
 
 void SDLContext::CalculateFramerate() {
   // Get the current time.
@@ -160,6 +163,22 @@ void SDLContext::CalculateFramerate() {
     impl_->frame_delta_average = std::numeric_limits<double>::max();
   }
   impl_->framerate = 1.0 / impl_->frame_delta_average;
+}
+
+void
+SDLContext::HandleWindowEvent(const SDL_WindowEvent& window_event) {
+  /* const char* event_name = SDLWindowEventToString(window_event); */
+
+  // Fow now we're interested in window changed.
+  if (window_event.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+    impl_->width = window_event.data1;
+    impl_->height = window_event.data2;
+
+    // Update viewport
+    // TODO(Cristian): I shouldn't tie SDL and OpenGL like this.
+    glViewport(0, 0, width(), height());
+
+  }
 }
 
 

@@ -3,6 +3,7 @@
 
 source_set("GL") {
   sources = [
+    "def.h",
     "utils.cc",
     "utils.h",
   ]

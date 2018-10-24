@@ -31,16 +31,20 @@ config("sdl2_config") {
 
 source_set("sdl2") {
   sources = [
-    "sdl_context.cc",
-    "sdl_context.h",
+    "def.h",  # This is the header to import generally.
     "input.cc",
     "input.h",
+    "sdl_context.cc",
+    "sdl_context.h",
+    "utils.cc",
+    "utils.h",
   ]
   public_configs = [
     ":sdl2_config",
   ]
   deps = [
     "//src/input",
+    "//src/graphics/GL",
   ]
 }
 

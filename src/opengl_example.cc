@@ -10,9 +10,6 @@
 
 #include <iostream>
 
-#include <GL/gl3w.h>
-#define SDL_MAIN_HANDLED
-#include <SDL2/SDL.h>
 #include <third_party/imgui/imgui.h>
 #include <third_party/stb/stb_image.h>
 
@@ -21,10 +18,12 @@
 #include "src/camera.h"
 #include "src/imgui/imgui_context.h"
 #include "src/input/input.h"
+#include "src/graphics/GL/def.h"
 #include "src/graphics/GL/utils.h"
 #include "src/model/cube.h"
 #include "src/model/plane.h"
 #include "src/sdl2/sdl_context.h"
+#include "src/sdl2/def.h"
 #include "src/shader.h"
 #include "src/texture.h"
 #include "src/texture_atlas.h"
@@ -56,6 +55,7 @@
  * - Calculate a start->end frame timing. Right now we measure complete round
  *   trip, which is gated by OpenGL's buffer swap timing, so we don't know how
  *   much we take to calculate a frame.
+ * - Remove all the #include <SDL2/SDL.h> to #include "src/sdl2/def.h"
  */
 
 using namespace warhol;
