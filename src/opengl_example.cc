@@ -279,7 +279,7 @@ int main() {
     time_delta = current_time - last_frame_time;
     last_frame_time = current_time;
 
-    SDLContext::EventAction action = sdl_context.HandleInputAndEvents(&input);
+    SDLContext::EventAction action = sdl_context.NewFrame(&input);
     if (action == SDLContext::EventAction::kQuit)
       break;
 
@@ -388,20 +388,28 @@ int main() {
     if (CHECK_GL_ERRORS("Drawing plane"))
       return 1;
 
-
-
 		/* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
     /* glDrawArrays(GL_TRIANGLES, 0, 36); */
 
     // ImGUI
-
     ImGui::ShowDemoWindow(nullptr);
+
+    {
+      ImGui::Begin("Test window");
+
+      ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+                  1000.0 * sdl_context.frame_delta(), sdl_context.framerate());
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+      ImGui::End();
+
+    }
     imgui_context.Render();
 
 
     SDL_GL_SwapWindow(sdl_context.get_window());
 
-    SDL_Delay(10);
+    /* SDL_Delay(1); */
   }
 
   sdl_context.Clear();

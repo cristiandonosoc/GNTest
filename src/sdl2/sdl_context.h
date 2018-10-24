@@ -32,23 +32,29 @@ class SDLContext {
   // destroyed.
   Status Init();
   void Clear();
+  // TODO(Cristian): Perhaps later we're going to need an array of actions.
+  //                 EventAction should also be separated from SDL.
+  EventAction NewFrame(InputState*);
 
   bool valid() const { return impl_ != nullptr; }
-
   // Can be null if !valid().
   SDL_Window* get_window() const;
-
   int width() const;
   int height() const;
+
+  double frame_delta() const;
+  // A rolling average of many frames.
+  double frame_delta_average() const;
+  // 1.0 / frame_delta_average()
+  double framerate() const;
 
   // Returns the seconds since Init() was called. This is a fractional number.
   float GetSeconds() const;
 
-  // TODO(Cristian): Perhaps later we're going to need an array of actions.
-  //                 This also should be separated from SDL.
-  EventAction HandleInputAndEvents(InputState*);
-
  private:
+  void CalculateFramerate();
+
+
   std::unique_ptr<SDLContextImpl> impl_;
 
   DELETE_COPY_AND_ASSIGN(SDLContext);

@@ -13,10 +13,27 @@
 namespace warhol {
 
 struct SDLContextImpl {
+  // Amount of frames to keep track of in order to get an average of the frame
+  // times.
+  static constexpr int kFrameTimesCounts = 128;
+
   SDL_Window* window;
   SDL_GLContext gl_context;
   int width;
   int height;
+
+  // Total time since the start of the game.
+  uint64_t total_time = 0;
+  double last_frame_delta;
+  double frame_delta;
+  // The accumulated average.
+  double frame_delta_accum;
+  double frame_delta_average;
+  double framerate;
+
+  // TODO(Cristian): When we're interested, start tracking these times.
+  // double  frame_times[kFrameTimesCounts];
+  // int frame_times_index = 0;
 };
 
 SDLContext::SDLContext() = default;
@@ -70,6 +87,13 @@ int SDLContext::height() const {
   return impl_->height;
 }
 
+double
+SDLContext::frame_delta() const { return impl_->frame_delta; }
+double SDLContext::frame_delta_average() const {
+  return impl_->frame_delta_average;
+}
+double SDLContext::framerate() const { return impl_->framerate; }
+
 void
 SDLContext::Clear() {
   if (!impl_)
@@ -88,7 +112,9 @@ SDL_Window* SDLContext::get_window() const  {
 }
 
 SDLContext::EventAction
-SDLContext::HandleInputAndEvents(InputState* input) {
+SDLContext::NewFrame(InputState* input) {
+  CalculateFramerate();
+
   // We do the frame flip.
   InputState::InitFrame(input);
 
@@ -98,6 +124,9 @@ SDLContext::HandleInputAndEvents(InputState* input) {
     switch (event.type) {
       case SDL_QUIT: return SDLContext::EventAction::kQuit;
       case SDL_KEYUP: HandleKeyUp(event.key, input); break;
+      case SDL_WINDOWEVENT:
+        LOG(DEBUG) << "Window event!";
+        break;
       default: break;
     }
   }
@@ -105,7 +134,35 @@ SDLContext::HandleInputAndEvents(InputState* input) {
   HandleKeysDown(input);
   HandleMouse(input);
   return SDLContext::EventAction::kContinue;
-
 }
+
+void SDLContext::CalculateFramerate() {
+  // Get the current time.
+  uint64_t frequency = SDL_GetPerformanceFrequency();
+  uint64_t current_time = SDL_GetPerformanceCounter();
+
+  // First frame initialization.
+  if (impl_->total_time == 0) {
+    // We assume 60 FPS.
+    // TODO(Cristian): Remove the 60 FPS assumption.
+    impl_->frame_delta = 1.0 / 60.0;
+  } else {
+    impl_->frame_delta =
+        (double)(current_time - impl_->total_time) / (double)frequency;
+  }
+  impl_->total_time = current_time;
+
+  // Calculate the rolling average.
+  impl_->frame_delta_accum += impl_->frame_delta - impl_->last_frame_delta;
+  impl_->last_frame_delta = impl_->frame_delta;
+  if (impl_->frame_delta_accum > 0.0) {
+    impl_->frame_delta_average = impl_->frame_delta_accum /
+                                 SDLContextImpl::kFrameTimesCounts;
+  } else {
+    impl_->frame_delta_average = std::numeric_limits<double>::max();
+  }
+  impl_->framerate = 1.0 / impl_->frame_delta_average;
+}
+
 
 }  // namespace warhol
