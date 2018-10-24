@@ -1,0 +1,23 @@
+# Copyright 2018, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+# This is the integration build file to integrating imgui code.
+# See third_party/imgui/LICENSE.txt or licenses/imgui.license for info about
+# the license.
+
+
+    # "imgui_demo.cpp",
+
+source_set("imgui") {
+  sources = [
+    "imconfig.h",
+    "imgui.cpp",
+    "imgui.h",
+    "imgui_draw.cpp",
+    "imgui_internal.h",
+    "imgui_widgets.cpp",
+    "imstb_rectpack.h",
+    "imstb_textedit.h",
+    "imstb_truetype.h",
+  ]
+}

@@ -22,6 +22,7 @@ source_set("warhol_lib") {
   ]
   public_deps = [
     "//src/graphics/GL",
+    "//src/imgui",
     "//src/sdl2",
   ]
 }

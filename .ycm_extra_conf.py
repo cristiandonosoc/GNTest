@@ -43,6 +43,7 @@ flags = [
 '-I', os.path.join(os.getcwd(), 'src'),
 '-isystem', os.path.join(os.getcwd(), 'third_party'),
 '-isystem', os.path.join(os.getcwd(), 'third_party', 'include'),
+'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui'),
 # Fake headers so that YCM doesn't explode win windows
 '-isystem', '/mnt/c/Programming/external/fake-windows-headers-for-ycm',
 '-isystem', '/mnt/c/Programming/include',
