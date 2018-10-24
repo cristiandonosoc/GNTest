@@ -11,9 +11,19 @@
 namespace warhol {
 
 ImguiContext::ImguiContext(SDL_Window* window)
-    : window_(window), io_(&ImGui::GetIO()) {};
+    : window_(window) {};
+
+ImguiContext::~ImguiContext() {
+  for (SDL_Cursor* cursor : cursors_)
+    SDL_FreeCursor(cursor);
+  ImGui::DestroyContext();
+}
 
 bool ImguiContext::Init() {
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  io_ = &ImGui::GetIO();
+
   // Init the renderer.
   if (!renderer_.Init(io_)) {
     LOG(ERROR) << "Could not initialize Imgui Renderer";
@@ -46,7 +56,7 @@ bool ImguiContext::Init() {
 
   // Cursors
   // TODO(Cristian): Check for cursor errors.
-  cursors_.reserve(ImGuiMouseCursor_COUNT);
+  cursors_.resize(ImGuiMouseCursor_COUNT);
   cursors_[ImGuiMouseCursor_Arrow] =
       SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
   cursors_[ImGuiMouseCursor_TextInput] =
@@ -68,13 +78,8 @@ bool ImguiContext::Init() {
   return true;
 }
 
-ImguiContext::~ImguiContext() {
-  for (SDL_Cursor* cursor : cursors_)
-    SDL_FreeCursor(cursor);
-}
-
 void
-ImguiContext::Update(InputState* input) {
+ImguiContext::NewFrame(InputState* input) {
   assert(init_);
   assert(io_->Fonts->IsBuilt());  // See imgui_impl_sdl.cpp
   // Setup display size (every frame to accommodate for window resizing)
@@ -120,10 +125,15 @@ ImguiContext::Update(InputState* input) {
     SDL_SetCursor(cursors_[imgui_cursor] ? cursors_[imgui_cursor]
                                          : cursors_[ImGuiMouseCursor_Arrow]);
   }
+
+  // Mark the frame as starting.
+  ImGui::NewFrame();
 }
 
 void ImguiContext::Render() {
   assert(init_);
+  // Construct all the draw orders.
+  ImGui::Render();
   renderer_.Render(io_, ImGui::GetDrawData());
 }
 

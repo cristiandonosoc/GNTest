@@ -33,7 +33,7 @@ class ImguiContext {
   ~ImguiContext();
 
   bool Init();
-  void Update(InputState*);
+  void NewFrame(InputState*);
   void Render();
 
   // Do not pass the keyboard/mouse to the underlying application.

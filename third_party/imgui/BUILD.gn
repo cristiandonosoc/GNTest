@@ -5,14 +5,12 @@
 # See third_party/imgui/LICENSE.txt or licenses/imgui.license for info about
 # the license.
 
-
-    # "imgui_demo.cpp",
-
 source_set("imgui") {
   sources = [
     "imconfig.h",
     "imgui.cpp",
     "imgui.h",
+    "imgui_demo.cpp",
     "imgui_draw.cpp",
     "imgui_internal.h",
     "imgui_widgets.cpp",

@@ -13,11 +13,13 @@
 #include <GL/gl3w.h>
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
+#include <third_party/imgui/imgui.h>
 #include <third_party/stb/stb_image.h>
 
 #include "src/arch/arch_provider.h"
 #include "src/assets.h"
 #include "src/camera.h"
+#include "src/imgui/imgui_context.h"
 #include "src/input/input.h"
 #include "src/graphics/GL/utils.h"
 #include "src/model/cube.h"
@@ -254,6 +256,14 @@ int main() {
   if (CHECK_GL_ERRORS("Creating minecraft cube"))
     return 1;
 
+  // ImGUI ---------------------------------------------------------------------
+
+  ImguiContext imgui_context(sdl_context.get_window());
+  if (!imgui_context.Init()) {
+    LOG(ERROR) << "Could not initialize ImguiContext";
+    exit(1);
+  }
+
   // Game loop -----------------------------------------------------------------
 
   // When the last frame started.
@@ -272,6 +282,8 @@ int main() {
     SDLContext::EventAction action = sdl_context.HandleInputAndEvents(&input);
     if (action == SDLContext::EventAction::kQuit)
       break;
+
+    imgui_context.NewFrame(&input);
 
     if (input.keys_up[GET_KEY(Escape)])
       break;
@@ -381,7 +393,13 @@ int main() {
 		/* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
     /* glDrawArrays(GL_TRIANGLES, 0, 36); */
 
-    SDL_GL_SwapWindow(sdl_context.GetWindow());
+    // ImGUI
+
+    ImGui::ShowDemoWindow(nullptr);
+    imgui_context.Render();
+
+
+    SDL_GL_SwapWindow(sdl_context.get_window());
 
     SDL_Delay(10);
   }

@@ -65,6 +65,11 @@ bool ImguiRenderer::Init(ImGuiIO* io) {
     return false;
   }
 
+  LOG(DEBUG) << "Created imgui renderer shader";
+  for (auto [key, attrib] : shader_.attributes()) {
+    LOG(DEBUG) << key << ": " << attrib.location;
+  }
+
   CreateFontTexture(io);
 
   // Generate the buffers
@@ -115,9 +120,6 @@ ImguiRenderer::CreateFontTexture(ImGuiIO* io) {
 
   // Store our identifier
   io->Fonts->TexID = (ImTextureID)(intptr_t)font_texture_;
-
-  /* // Restore state */
-  /* glBindTexture(GL_TEXTURE_2D, last_texture); */
 }
 
 void
@@ -220,36 +222,36 @@ ImguiRenderer::Render(ImGuiIO* io, ImDrawData* draw_data) {
   glBindVertexArray(vao_handle);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);
 
-  const Uniform* uniform;
-  uniform = shader_.GetUniform("a_pos");
-  assert(uniform);
-  glVertexAttribPointer(uniform->location,
+  const Attribute* attribute;
+  attribute = shader_.GetAttribute("a_pos");
+  assert(attribute );
+  glVertexAttribPointer(attribute ->location,
                         2,
                         GL_FLOAT,
                         GL_FALSE,
                         sizeof(ImDrawVert),
                         (GLvoid*)IM_OFFSETOF(ImDrawVert, pos));
-  glEnableVertexAttribArray(uniform->location);
+  glEnableVertexAttribArray(attribute ->location);
 
-  uniform = shader_.GetUniform("a_uv");
-  assert(uniform);
-  glVertexAttribPointer(uniform->location,
+  attribute = shader_.GetAttribute("a_uv");
+  assert(attribute );
+  glVertexAttribPointer(attribute ->location,
                         2,
                         GL_FLOAT,
                         GL_FALSE,
                         sizeof(ImDrawVert),
                         (GLvoid*)IM_OFFSETOF(ImDrawVert, uv));
-  glEnableVertexAttribArray(uniform->location);
+  glEnableVertexAttribArray(attribute ->location);
 
-  uniform = shader_.GetUniform("a_color");
-  assert(uniform);
-  glVertexAttribPointer(uniform->location,
+  attribute = shader_.GetAttribute("a_color");
+  assert(attribute );
+  glVertexAttribPointer(attribute ->location,
                         4,
                         GL_UNSIGNED_BYTE,
                         GL_TRUE,
                         sizeof(ImDrawVert),
                         (GLvoid*)IM_OFFSETOF(ImDrawVert, col));
-  glEnableVertexAttribArray(uniform->location);
+  glEnableVertexAttribArray(attribute ->location);
 
   // Draw
   ImVec2 pos = draw_data->DisplayPos;

@@ -81,7 +81,7 @@ SDLContext::Clear() {
     SDL_DestroyWindow(impl_->window);
 }
 
-SDL_Window* SDLContext::GetWindow() const  {
+SDL_Window* SDLContext::get_window() const  {
   if (!impl_)
     return nullptr;
   return impl_->window;

@@ -9,6 +9,8 @@
 #include "src/utils/macros.h"
 #include "src/utils/status.h"
 
+// TODO(Cristian): See if we can forward declare SDL_GLContext and thus avoid
+//                 the whole SDLContextImpl.
 struct SDL_Window;
 
 namespace warhol {
@@ -34,7 +36,7 @@ class SDLContext {
   bool valid() const { return impl_ != nullptr; }
 
   // Can be null if !valid().
-  SDL_Window* GetWindow() const;
+  SDL_Window* get_window() const;
 
   int width() const;
   int height() const;
