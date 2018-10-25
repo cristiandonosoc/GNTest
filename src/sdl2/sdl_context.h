@@ -4,6 +4,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "src/input/input.h"
 #include "src/utils/macros.h"
@@ -42,22 +43,25 @@ class SDLContext {
   SDL_Window* get_window() const;
   int width() const;
   int height() const;
+  // If not empty, always will be a null-terminated string.
+  const std::vector<char>& utf8_input() const { return utf8_chars_inputted_; }
 
+  // Delta of time within the last frame in seconds.
   double frame_delta() const;
   // A rolling average of many frames.
   double frame_delta_average() const;
   // 1.0 / frame_delta_average()
   double framerate() const;
-  double frame_delta_accum() const;
-
-  // Returns the seconds since Init() was called. This is a fractional number.
-  float GetSeconds() const;
 
  private:
   void CalculateFramerate();
   void HandleWindowEvent(const SDL_WindowEvent&);
 
   std::unique_ptr<SDLContextImpl> impl_;
+  // Chars received through the SDL_TEXTINPUT events during a frame.
+  // Will be cleared at the beginning of calling NewFrame.
+  // The string inside the vector will be null-terminated.
+  std::vector<char> utf8_chars_inputted_;
 
   DELETE_COPY_AND_ASSIGN(SDLContext);
 };

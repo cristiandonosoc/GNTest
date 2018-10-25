@@ -38,7 +38,9 @@ struct SDLContextImpl {
   int frame_times_index = 0;
 };
 
-SDLContext::SDLContext() = default;
+SDLContext::SDLContext() {
+  utf8_chars_inputted_.reserve(32);
+}
 
 SDLContext::~SDLContext() {
   Clear();
@@ -75,10 +77,6 @@ SDLContext::Init() {
   return Status::Ok();
 }
 
-float SDLContext::GetSeconds() const {
-  return (float)SDL_GetTicks() / 1000.f;
-}
-
 int SDLContext::width() const {
   assert(impl_ != nullptr);
   return impl_->width;
@@ -95,7 +93,6 @@ double SDLContext::frame_delta_average() const {
   return impl_->frame_delta_average;
 }
 double SDLContext::framerate() const { return impl_->framerate; }
-double SDLContext::frame_delta_accum() const { return impl_->frame_delta_accum; }
 
 void
 SDLContext::Clear() {
@@ -121,6 +118,8 @@ SDLContext::NewFrame(InputState* input) {
   // We do the frame flip.
   InputState::InitFrame(input);
 
+  utf8_chars_inputted_.clear();
+
   // Handle events.
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
@@ -128,6 +127,14 @@ SDLContext::NewFrame(InputState* input) {
       case SDL_QUIT: return SDLContext::EventAction::kQuit;
       case SDL_KEYUP: HandleKeyUp(event.key, input); break;
       case SDL_WINDOWEVENT: HandleWindowEvent(event.window); break;
+      case SDL_TEXTINPUT: {
+        // event.text.text is a char[32].
+        for (char c : event.text.text) {
+          utf8_chars_inputted_.emplace_back(c);
+          if (c == 0)
+            break;
+        }
+      }
       default: break;
     }
   }
@@ -139,7 +146,9 @@ SDLContext::NewFrame(InputState* input) {
 
 
 // Sigh...
+#ifdef max
 #undef max
+#endif
 
 void SDLContext::CalculateFramerate() {
   // Get the current time.

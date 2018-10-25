@@ -116,6 +116,11 @@ ImguiContext::NewFrame(const SDLContext& sdl_context, InputState* input) {
   io_->KeyShift = input->keys_down[GET_KEY(Shift)];
   io_->KeySuper = input->keys_down[GET_KEY(Super)];
 
+  // Pass in the text input characters.
+  const auto& input_str_vec = sdl_context.utf8_input();
+  if (!input_str_vec.empty())
+    io_->AddInputCharactersUTF8(input_str_vec.data());
+
   // Update Mouse.
   io_->MousePos = {(float)input->cur_mouse.x, (float)input->cur_mouse.y};
   io_->MouseDown[0] = input->cur_mouse.left;
