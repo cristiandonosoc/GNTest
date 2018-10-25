@@ -52,6 +52,8 @@ class SDLContext {
   float frame_delta_average() const;
   // 1.0 / frame_delta_average()
   float framerate() const;
+  // Seconds since the Init() was called.
+  float seconds() const;
 
  private:
   void CalculateFramerate();

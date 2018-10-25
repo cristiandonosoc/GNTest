@@ -26,6 +26,7 @@ struct SDLContextImpl {
 
   // Total time since the start of the game.
   uint64_t total_time = 0;
+  float seconds;
   float frame_delta;
   // The accumulated average.
   float frame_delta_accum;
@@ -91,6 +92,8 @@ float SDLContext::frame_delta_average() const {
   return impl_->frame_delta_average;
 }
 float SDLContext::framerate() const { return impl_->framerate; }
+
+float SDLContext::seconds() const { return impl_->seconds; }
 
 void
 SDLContext::Clear() {
@@ -158,6 +161,7 @@ void SDLContext::CalculateFramerate() {
                            ? ((double)(current_time - total_time) / frequency)
                            : (1.0 / 60.0);
   impl_->total_time = current_time;
+  impl_->seconds = (double)impl_->total_time / frequency;
 
   // Calculate the rolling average.
   impl_->frame_delta_accum += impl_->frame_delta - impl_->frame_times[impl_->frame_times_index];

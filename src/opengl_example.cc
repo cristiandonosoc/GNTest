@@ -282,33 +282,23 @@ int main() {
     if (input.keys_up[GET_KEY(Escape)])
       break;
 
-    if (input.up) {
-      camera.pos -= camera.front() * camera_speed * sdl_context.frame_delta();
+    if (!imgui_context.keyboard_captured()) {
+      if (input.up) {
+        camera.pos -= camera.front() * camera_speed * sdl_context.frame_delta();
+      }
+      if (input.down) {
+        camera.pos += camera.front() * camera_speed * sdl_context.frame_delta();
+      }
+      if (input.left) {
+        camera.pos += glm::normalize(glm::cross(camera.front(), camera.up())) *
+                      camera_speed * sdl_context.frame_delta();
+      }
+      if (input.right) {
+        camera.pos -= glm::normalize(glm::cross(camera.front(), camera.up())) *
+                      camera_speed * sdl_context.frame_delta();
+      }
+      camera.UpdateView();
     }
-    if (input.down) {
-      camera.pos += camera.front() * camera_speed * sdl_context.frame_delta();
-    }
-    if (input.left) {
-      camera.pos += glm::normalize(glm::cross(camera.front(), camera.up())) *
-                    camera_speed * sdl_context.frame_delta();
-    }
-    if (input.right) {
-      camera.pos -= glm::normalize(glm::cross(camera.front(), camera.up())) *
-                    camera_speed * sdl_context.frame_delta();
-    }
-    camera.UpdateView();
-
-    /* // Log the mouse. */
-
-    /* std::stringstream ss; */
-    /* ss << "MOUSE X: " << input.cur_mouse.x << ", Y: " << input.cur_mouse.y; */
-    /* if (input.cur_mouse.left) */
-    /*   ss << " LEFT"; */
-    /* if (input.cur_mouse.middle) */
-    /*   ss << " MIDDLE"; */
-    /* if (input.cur_mouse.right) */
-    /*   ss << " RIGHT"; */
-    /* LOG(DEBUG) << ss.str(); */
 
     // Draw the triangle.
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
@@ -336,27 +326,26 @@ int main() {
     if (CHECK_GL_ERRORS("Drawing cube"))
       return 1;
 
-    /* glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f), */
-    /*                               glm::vec3(2.0f, 5.0f, -15.0f), */
-    /*                               glm::vec3(-1.5f, -2.2f, -2.5f), */
-    /*                               glm::vec3(-3.8f, -2.0f, -12.3f), */
-    /*                               glm::vec3(2.4f, -0.4f, -3.5f), */
-    /*                               glm::vec3(-1.7f, 3.0f, -7.5f), */
-    /*                               glm::vec3(1.3f, -2.0f, -2.5f), */
-    /*                               glm::vec3(1.5f, 2.0f, -2.5f), */
-    /*                               glm::vec3(1.5f, 0.2f, -1.5f), */
-    /*                               glm::vec3(-1.3f, 1.0f, -1.5f)}; */
+    glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec3(2.0f, 5.0f, -15.0f),
+                                  glm::vec3(-1.5f, -2.2f, -2.5f),
+                                  glm::vec3(-3.8f, -2.0f, -12.3f),
+                                  glm::vec3(2.4f, -0.4f, -3.5f),
+                                  glm::vec3(-1.7f, 3.0f, -7.5f),
+                                  glm::vec3(1.3f, -2.0f, -2.5f),
+                                  glm::vec3(1.5f, 2.0f, -2.5f),
+                                  glm::vec3(1.5f, 0.2f, -1.5f),
+                                  glm::vec3(-1.3f, 1.0f, -1.5f)};
 
-    /* float seconds = sdl_context.GetSeconds(); */
-    /* for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) { */
-    /*   glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]); */
-    /*   float angle = seconds * glm::radians(20.0f * i); */
-    /*   model = */
-    /*       glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f)); */
-    /*   shader.SetMat4("model", model); */
+    for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
+      glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
+      float angle = sdl_context.seconds() * glm::radians(20.0f * i);
+      model =
+          glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
+      shader.SetMat4("model", model);
 
-    /*   glDrawArrays(GL_TRIANGLES, 0, 36); */
-    /* } */
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 
 
     // minecraft_cube.SetUniforms(&shader);
