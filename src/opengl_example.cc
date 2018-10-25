@@ -261,7 +261,7 @@ int main() {
 
   // ImGUI ---------------------------------------------------------------------
 
-  ImguiContext imgui_context(sdl_context.get_window());
+  ImguiContext imgui_context;
   if (!imgui_context.Init()) {
     LOG(ERROR) << "Could not initialize ImguiContext";
     exit(1);
@@ -269,19 +269,10 @@ int main() {
 
   // Game loop -----------------------------------------------------------------
 
-  // When the last frame started.
-  float last_frame_time = 0.0f;
-  // Time from previous frame start to the current.
-  float time_delta = 0.0f;
-
   InputState input = InputState::Create();
 
   bool running = true;
   while (running) {
-    float current_time = sdl_context.GetSeconds();
-    time_delta = current_time - last_frame_time;
-    last_frame_time = current_time;
-
     SDLContext::EventAction action = sdl_context.NewFrame(&input);
     if (action == SDLContext::EventAction::kQuit)
       break;
@@ -292,18 +283,18 @@ int main() {
       break;
 
     if (input.up) {
-      camera.pos -= camera.front() * camera_speed * time_delta;
+      camera.pos -= camera.front() * camera_speed * sdl_context.frame_delta();
     }
     if (input.down) {
-      camera.pos += camera.front() * camera_speed * time_delta;
+      camera.pos += camera.front() * camera_speed * sdl_context.frame_delta();
     }
     if (input.left) {
       camera.pos += glm::normalize(glm::cross(camera.front(), camera.up())) *
-                    camera_speed * time_delta;
+                    camera_speed * sdl_context.frame_delta();
     }
     if (input.right) {
       camera.pos -= glm::normalize(glm::cross(camera.front(), camera.up())) *
-                    camera_speed * time_delta;
+                    camera_speed * sdl_context.frame_delta();
     }
     camera.UpdateView();
 
@@ -345,27 +336,27 @@ int main() {
     if (CHECK_GL_ERRORS("Drawing cube"))
       return 1;
 
-    glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
-                                  glm::vec3(2.0f, 5.0f, -15.0f),
-                                  glm::vec3(-1.5f, -2.2f, -2.5f),
-                                  glm::vec3(-3.8f, -2.0f, -12.3f),
-                                  glm::vec3(2.4f, -0.4f, -3.5f),
-                                  glm::vec3(-1.7f, 3.0f, -7.5f),
-                                  glm::vec3(1.3f, -2.0f, -2.5f),
-                                  glm::vec3(1.5f, 2.0f, -2.5f),
-                                  glm::vec3(1.5f, 0.2f, -1.5f),
-                                  glm::vec3(-1.3f, 1.0f, -1.5f)};
+    /* glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f), */
+    /*                               glm::vec3(2.0f, 5.0f, -15.0f), */
+    /*                               glm::vec3(-1.5f, -2.2f, -2.5f), */
+    /*                               glm::vec3(-3.8f, -2.0f, -12.3f), */
+    /*                               glm::vec3(2.4f, -0.4f, -3.5f), */
+    /*                               glm::vec3(-1.7f, 3.0f, -7.5f), */
+    /*                               glm::vec3(1.3f, -2.0f, -2.5f), */
+    /*                               glm::vec3(1.5f, 2.0f, -2.5f), */
+    /*                               glm::vec3(1.5f, 0.2f, -1.5f), */
+    /*                               glm::vec3(-1.3f, 1.0f, -1.5f)}; */
 
-    float seconds = sdl_context.GetSeconds();
-    for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
-      glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
-      float angle = seconds * glm::radians(20.0f * i);
-      model =
-          glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
-      shader.SetMat4("model", model);
+    /* float seconds = sdl_context.GetSeconds(); */
+    /* for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) { */
+    /*   glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]); */
+    /*   float angle = seconds * glm::radians(20.0f * i); */
+    /*   model = */
+    /*       glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f)); */
+    /*   shader.SetMat4("model", model); */
 
-      glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
+    /*   glDrawArrays(GL_TRIANGLES, 0, 36); */
+    /* } */
 
 
     // minecraft_cube.SetUniforms(&shader);

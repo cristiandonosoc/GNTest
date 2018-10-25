@@ -47,11 +47,11 @@ class SDLContext {
   const std::vector<char>& utf8_input() const { return utf8_chars_inputted_; }
 
   // Delta of time within the last frame in seconds.
-  double frame_delta() const;
+  float frame_delta() const;
   // A rolling average of many frames.
-  double frame_delta_average() const;
+  float frame_delta_average() const;
   // 1.0 / frame_delta_average()
-  double framerate() const;
+  float framerate() const;
 
  private:
   void CalculateFramerate();

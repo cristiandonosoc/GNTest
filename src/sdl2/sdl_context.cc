@@ -11,7 +11,6 @@
 
 #include "src/sdl2/input.h"
 #include "src/sdl2/def.h"
-#include "src/sdl2/utils.h"
 
 namespace warhol {
 
@@ -27,14 +26,14 @@ struct SDLContextImpl {
 
   // Total time since the start of the game.
   uint64_t total_time = 0;
-  double frame_delta;
+  float frame_delta;
   // The accumulated average.
-  double frame_delta_accum;
-  double frame_delta_average;
-  double framerate;
+  float frame_delta_accum;
+  float frame_delta_average;
+  float framerate;
 
   // TODO(Cristian): When we're interested, start tracking these times.
-  double  frame_times[kFrameTimesCounts];
+  float frame_times[kFrameTimesCounts];
   int frame_times_index = 0;
 };
 
@@ -87,12 +86,11 @@ int SDLContext::height() const {
   return impl_->height;
 }
 
-double
-SDLContext::frame_delta() const { return impl_->frame_delta; }
-double SDLContext::frame_delta_average() const {
+float SDLContext::frame_delta() const { return impl_->frame_delta; }
+float SDLContext::frame_delta_average() const {
   return impl_->frame_delta_average;
 }
-double SDLContext::framerate() const { return impl_->framerate; }
+float SDLContext::framerate() const { return impl_->framerate; }
 
 void
 SDLContext::Clear() {
@@ -176,8 +174,6 @@ void SDLContext::CalculateFramerate() {
 
 void
 SDLContext::HandleWindowEvent(const SDL_WindowEvent& window_event) {
-  /* const char* event_name = SDLWindowEventToString(window_event); */
-
   // Fow now we're interested in window changed.
   if (window_event.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
     impl_->width = window_event.data1;

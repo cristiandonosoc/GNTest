@@ -30,7 +30,7 @@ class SDLContext;
 // so there should never be more than one ImguiContext.
 class ImguiContext {
  public:
-  ImguiContext(SDL_Window*);
+  ImguiContext();
   ~ImguiContext();
 
   bool Init();
@@ -42,7 +42,6 @@ class ImguiContext {
   bool mouse_captured() const;
 
  private:
-  SDL_Window* window_;    // Not owning. Must outlive.
   ImGuiIO* io_;           // Not owning. Must outlive.
 
   // TODO(Cristian): This should be a unique pointer.

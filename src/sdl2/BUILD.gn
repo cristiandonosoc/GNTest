@@ -36,8 +36,8 @@ source_set("sdl2") {
     "input.h",
     "sdl_context.cc",
     "sdl_context.h",
-    "utils.cc",
-    "utils.h",
+    # "utils.cc",
+    # "utils.h",
   ]
   public_configs = [
     ":sdl2_config",

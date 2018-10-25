@@ -11,8 +11,7 @@
 
 namespace warhol {
 
-ImguiContext::ImguiContext(SDL_Window* window)
-    : window_(window) {};
+ImguiContext::ImguiContext() = default;
 
 ImguiContext::~ImguiContext() {
   for (SDL_Cursor* cursor : cursors_)
