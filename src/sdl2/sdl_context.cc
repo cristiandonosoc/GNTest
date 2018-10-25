@@ -186,7 +186,6 @@ SDLContext::HandleWindowEvent(const SDL_WindowEvent& window_event) {
     // Update viewport
     // TODO(Cristian): I shouldn't tie SDL and OpenGL like this.
     glViewport(0, 0, width(), height());
-
   }
 }
 

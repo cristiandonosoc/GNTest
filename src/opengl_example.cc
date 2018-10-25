@@ -40,7 +40,9 @@
  *
  * TODOs:
  *
- * - Handle screen resize correctly.
+ * - Replace glm with my own math library (or find a decent one online). The
+ *   API is too awkward, both header-wise and specially getting the pointers to
+ *   the raw data (glm::value_ptr()... really?).
  * - Stop using Status and start logging directly at the call site.
  *   This is what Status is doing anyway and we might just as well return a
  *   boolean.
@@ -56,6 +58,10 @@
  *   trip, which is gated by OpenGL's buffer swap timing, so we don't know how
  *   much we take to calculate a frame.
  * - Remove all the #include <SDL2/SDL.h> to #include "src/sdl2/def.h"
+ *
+ * WAAAY DOWN THE LINE:
+ * - Abstract the renderer and enable Vulkan (that way we don't depend on the
+ *   crappy OpenGL drivers).
  */
 
 using namespace warhol;
@@ -282,23 +288,36 @@ int main() {
     if (input.keys_up[GET_KEY(Escape)])
       break;
 
+    bool camera_changed = false;
     if (!imgui_context.keyboard_captured()) {
       if (input.up) {
-        camera.pos -= camera.front() * camera_speed * sdl_context.frame_delta();
+        camera.pos += camera.direction() * camera_speed * sdl_context.frame_delta();
       }
       if (input.down) {
-        camera.pos += camera.front() * camera_speed * sdl_context.frame_delta();
+        camera.pos -= camera.direction() * camera_speed * sdl_context.frame_delta();
       }
       if (input.left) {
-        camera.pos += glm::normalize(glm::cross(camera.front(), camera.up())) *
+        camera.pos -= glm::normalize(glm::cross(camera.direction(), camera.up())) *
                       camera_speed * sdl_context.frame_delta();
       }
       if (input.right) {
-        camera.pos -= glm::normalize(glm::cross(camera.front(), camera.up())) *
+        camera.pos += glm::normalize(glm::cross(camera.direction(), camera.up())) *
                       camera_speed * sdl_context.frame_delta();
       }
-      camera.UpdateView();
+      camera_changed = true;
     }
+
+    if (!imgui_context.mouse_captured()) {
+      camera.yaw() += input.mouse_offset.x;
+
+      camera.pitch() -= input.mouse_offset.y;
+      if (camera.pitch() > 89.0f) { camera.pitch() = 89.0f; }
+      if (camera.pitch() < -89.0f) { camera.pitch() = -89.0f; }
+      camera_changed = true;
+    }
+
+    if (camera_changed)
+      camera.UpdateView();
 
     // Draw the triangle.
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
@@ -386,6 +405,13 @@ int main() {
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                   1000.0f / ImGui::GetIO().Framerate,
                   ImGui::GetIO().Framerate);
+
+      float direction[3] = {camera.direction().x,
+                            camera.direction().y,
+                            camera.direction().z};
+      ImGui::InputFloat3("Camera direction", direction);
+      ImGui::InputFloat3("Angles", camera.rotation.data());
+
 
       ImGui::End();
 

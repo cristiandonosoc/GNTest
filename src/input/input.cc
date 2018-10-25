@@ -26,8 +26,9 @@ void InputState::InitFrame(InputState* input) {
   input->left = false;
   input->right = false;
 
-  input->prev_mouse = input->cur_mouse;
-  input->cur_mouse = {};
+  input->prev_mouse = input->mouse;
+  input->mouse = {};
+  input->mouse_offset = {};
 }
 
 }  // namespace warhol

@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 
+#include "src/math/vec.h"
 #include "src/utils/glm.h"
 
 namespace warhol {
@@ -22,7 +23,12 @@ class Camera {
   // TODO(Cristian): Verify if this is the access we want.
   glm::vec3 pos;
   glm::vec3 target;
-  const glm::vec3 front() const { return front_; }
+  Vec3<float> rotation;
+  float& pitch() { return rotation.x; }
+  float& yaw() { return rotation.y; }
+  float& roll() { return rotation.z; }
+
+  const glm::vec3& direction() const { return direction_; }
   const glm::vec3& up() const { return up_; }
 
   void UpdateView();
@@ -44,7 +50,7 @@ class Camera {
 
  private:
   // Updated by UpdateView.
-  glm::vec3 front_;
+  glm::vec3 direction_;
   glm::vec3 up_;
 
   glm::mat4 view_;

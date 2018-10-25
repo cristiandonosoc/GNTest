@@ -5,6 +5,8 @@
 
 #include <stdint.h>
 
+#include "src/math/vec.h"
+
 namespace warhol {
 
 #define GET_KEY(key) ((uint8_t)::warhol::Keys::k##key)
@@ -32,14 +34,15 @@ struct InputState {
   bool right = false;
 
   struct MouseState {
-    int x;   // In pixels.
-    int y;   // In pixels.
+    Vec2<int> pos;
     bool left = false;
     bool middle = false;
     bool right = false;
   };
+
   MouseState prev_mouse;
-  MouseState cur_mouse;
+  MouseState mouse;
+  Vec2<int> mouse_offset;
 
   // API.
   static InputState Create();

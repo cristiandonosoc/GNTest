@@ -19,12 +19,17 @@ Camera::Camera(SDLContext* sdl_context, glm::vec3 pos, glm::vec3 target)
 
 void Camera::UpdateView() {
   // Update up.
-  front_ = glm::normalize(pos - target);
-  glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-  glm::vec3 camera_right = glm::normalize(glm::cross(up, front_));
-  up_= glm::cross(front_, camera_right);
+  /* front_ = glm::normalize(pos - target); */
+  direction_.x = cos(glm::radians(pitch())) * cos(glm::radians(yaw()));
+  direction_.y = sin(glm::radians(pitch()));
+  direction_.z = cos(glm::radians(pitch())) * sin(glm::radians(yaw()));
+  direction_ = glm::normalize(direction_);
 
-  view_ = glm::lookAt(pos, target, up_);
+  glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+  glm::vec3 camera_right = glm::normalize(glm::cross(up, direction_));
+  up_= glm::cross(direction_, camera_right);
+
+  view_ = glm::lookAt(pos, pos + direction_, up_);
 }
 
 void Camera::UpdateProjection() {
