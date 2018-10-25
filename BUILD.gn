@@ -18,3 +18,11 @@ group("default") {
     "//src:opengl_example",
   ]
 }
+
+group("imgui_example") {
+  deps = [
+    "//third_party/imgui/examples:imgui_example",
+  ]
+}
+
+

@@ -45,6 +45,7 @@ source_set("sdl2") {
   deps = [
     "//src/input",
     "//src/graphics/GL",
+    "//src/utils",
   ]
 }
 
