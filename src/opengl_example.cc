@@ -245,6 +245,8 @@ int main() {
 
   float camera_speed = 5.0f;
   Camera camera(&sdl_context, {1.0f, 5.0f, 10.0f});
+  camera.SetTarget({});
+  camera.UpdateView();
 
   // Minecraft Cube ------------------------------------------------------------
 
@@ -290,6 +292,7 @@ int main() {
 
     bool camera_changed = false;
     if (!imgui_context.keyboard_captured()) {
+      auto prev_pos = camera.pos;
       if (input.up) {
         camera.pos += camera.direction() * camera_speed * sdl_context.frame_delta();
       }
@@ -304,20 +307,32 @@ int main() {
         camera.pos += glm::normalize(glm::cross(camera.direction(), camera.up())) *
                       camera_speed * sdl_context.frame_delta();
       }
-      camera_changed = true;
+      camera_changed = prev_pos != camera.pos;
     }
 
     if (!imgui_context.mouse_captured()) {
-      camera.yaw() += input.mouse_offset.x;
+      if (input.mouse_offset != Vec2<int>{0, 0}) {
+        if (input.mouse.right) {
+          camera.yaw() += input.mouse_offset.x;
 
-      camera.pitch() -= input.mouse_offset.y;
-      if (camera.pitch() > 89.0f) { camera.pitch() = 89.0f; }
-      if (camera.pitch() < -89.0f) { camera.pitch() = -89.0f; }
-      camera_changed = true;
+          camera.pitch() -= input.mouse_offset.y;
+          if (camera.pitch() > 89.0f) {
+            camera.pitch() = 89.0f;
+          }
+          if (camera.pitch() < -89.0f) {
+            camera.pitch() = -89.0f;
+          }
+
+          camera.DirectionFromEulerAngles();
+          camera_changed = true;
+        }
+      }
     }
 
-    if (camera_changed)
+    if (camera_changed) {
       camera.UpdateView();
+    }
+
 
     // Draw the triangle.
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);

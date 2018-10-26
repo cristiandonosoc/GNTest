@@ -3,6 +3,7 @@
 
 #include "src/camera.h"
 
+#include "src/math/angles.h"
 #include "src/sdl2/sdl_context.h"
 #include "src/shader.h"
 #include "src/utils/glm_impl.h"
@@ -17,20 +18,31 @@ Camera::Camera(SDLContext* sdl_context, glm::vec3 pos, glm::vec3 target)
   UpdateProjection();
 }
 
-void Camera::UpdateView() {
-  // Update up.
-  /* front_ = glm::normalize(pos - target); */
+void
+Camera::SetTarget(Vec3<float> target) {
+  direction_ = {target.x - pos.x, target.y - pos.y, target.z - pos.z};
+}
+
+void Camera::DirectionFromEulerAngles() {
   direction_.x = cos(glm::radians(pitch())) * cos(glm::radians(yaw()));
   direction_.y = sin(glm::radians(pitch()));
   direction_.z = cos(glm::radians(pitch())) * sin(glm::radians(yaw()));
   direction_ = glm::normalize(direction_);
+}
 
+void Camera::UpdateView() {
+  RecalculateCoordVectors();
+  view_ = glm::lookAt(pos, pos + direction_, up_);
+}
+
+void Camera::RecalculateCoordVectors() {
+  // From the direction we calculate the right and up vectors.
   glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
   glm::vec3 camera_right = glm::normalize(glm::cross(up, direction_));
   up_= glm::cross(direction_, camera_right);
-
-  view_ = glm::lookAt(pos, pos + direction_, up_);
 }
+
+
 
 void Camera::UpdateProjection() {
   proj_ = glm::perspective(

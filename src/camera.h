@@ -18,6 +18,8 @@ class Camera {
   // By default points to origin without rotation.
   Camera(SDLContext*, glm::vec3 pos, glm::vec3 target = {});
 
+  void SetTarget(Vec3<float> target);
+
   // VIEW ----------------------------------------------------------------------
   // IMPORTANT: Whenever you finish changing these, call UpdateView.
   // TODO(Cristian): Verify if this is the access we want.
@@ -28,9 +30,12 @@ class Camera {
   float& yaw() { return rotation.y; }
   float& roll() { return rotation.z; }
 
+  void DirectionFromEulerAngles();
+
   const glm::vec3& direction() const { return direction_; }
   const glm::vec3& up() const { return up_; }
 
+  // Call RecalculateCoordVectors before this.
   void UpdateView();
   void SetView(Shader*) const;
 
@@ -49,6 +54,8 @@ class Camera {
   void SetProjection(Shader*) const;
 
  private:
+  void RecalculateCoordVectors();
+
   // Updated by UpdateView.
   glm::vec3 direction_;
   glm::vec3 up_;
