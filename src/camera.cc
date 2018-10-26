@@ -10,16 +10,15 @@
 
 namespace warhol {
 
-Camera::Camera(SDLContext* sdl_context, glm::vec3 pos, glm::vec3 target)
+Camera::Camera(SDLContext* sdl_context, glm::vec3 pos)
     : pos(std::move(pos)),
-      target(std::move(target)),
+      rotation({}),
       sdl_context_(sdl_context) {
   UpdateView();
   UpdateProjection();
 }
 
-void
-Camera::SetTarget(Vec3<float> target) {
+void Camera::SetTarget(Vec3<float> target) {
   direction_ = {target.x - pos.x, target.y - pos.y, target.z - pos.z};
   direction_ = glm::normalize(direction_);
 }

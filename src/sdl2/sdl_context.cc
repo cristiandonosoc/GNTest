@@ -157,11 +157,11 @@ void SDLContext::CalculateFramerate() {
   uint64_t current_time = SDL_GetPerformanceCounter();
 
   auto total_time = impl_->total_time;
-  impl_->frame_delta = total_time > 0
-                           ? ((double)(current_time - total_time) / frequency)
-                           : (1.0 / 60.0);
+  impl_->frame_delta =
+      (float)(total_time > 0 ? ((double)(current_time - total_time) / frequency)
+                             : (1.0 / 60.0));
   impl_->total_time = current_time;
-  impl_->seconds = (double)impl_->total_time / frequency;
+  impl_->seconds = (float)((double)impl_->total_time / frequency);
 
   // Calculate the rolling average.
   impl_->frame_delta_accum += impl_->frame_delta - impl_->frame_times[impl_->frame_times_index];
@@ -171,9 +171,9 @@ void SDLContext::CalculateFramerate() {
     impl_->frame_delta_average = impl_->frame_delta_accum /
                                  SDLContextImpl::kFrameTimesCounts;
   } else {
-    impl_->frame_delta_average = std::numeric_limits<double>::max();
+    impl_->frame_delta_average = std::numeric_limits<float>::max();
   }
-  impl_->framerate = 1.0 / impl_->frame_delta_average;
+  impl_->framerate = 1.0f / impl_->frame_delta_average;
 }
 
 void

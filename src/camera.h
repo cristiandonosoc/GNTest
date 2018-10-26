@@ -16,7 +16,11 @@ class Shader;
 class Camera {
  public:
   // By default points to origin without rotation.
-  Camera(SDLContext*, glm::vec3 pos, glm::vec3 target = {});
+  Camera(SDLContext*, glm::vec3 pos);
+
+  // Changes the direction to face in to the target.
+  void SetTarget(Vec3<float>);
+
 
   void SetTarget(Vec3<float> target);
 
@@ -24,7 +28,6 @@ class Camera {
   // IMPORTANT: Whenever you finish changing these, call UpdateView.
   // TODO(Cristian): Verify if this is the access we want.
   glm::vec3 pos;
-  glm::vec3 target;
   Vec3<float> rotation;
   float& pitch() { return rotation.x; }
   float& yaw() { return rotation.y; }
