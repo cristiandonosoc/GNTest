@@ -21,13 +21,20 @@ Camera::Camera(SDLContext* sdl_context, glm::vec3 pos, glm::vec3 target)
 void
 Camera::SetTarget(Vec3<float> target) {
   direction_ = {target.x - pos.x, target.y - pos.y, target.z - pos.z};
+  direction_ = glm::normalize(direction_);
 }
 
-void Camera::DirectionFromEulerAngles() {
+void Camera::DirectionFromEuler() {
   direction_.x = cos(glm::radians(pitch())) * cos(glm::radians(yaw()));
   direction_.y = sin(glm::radians(pitch()));
   direction_.z = cos(glm::radians(pitch())) * sin(glm::radians(yaw()));
   direction_ = glm::normalize(direction_);
+}
+
+void Camera::EulerFromDirection() {
+  // Assumes direction is normalized.
+  pitch() = radian2deg(asin(direction_.y));
+  yaw() = radian2deg(atan(direction_.z / direction_.x));
 }
 
 void Camera::UpdateView() {

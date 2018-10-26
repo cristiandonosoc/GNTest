@@ -246,6 +246,7 @@ int main() {
   float camera_speed = 5.0f;
   Camera camera(&sdl_context, {1.0f, 5.0f, 10.0f});
   camera.SetTarget({});
+  camera.EulerFromDirection();
   camera.UpdateView();
 
   // Minecraft Cube ------------------------------------------------------------
@@ -323,7 +324,7 @@ int main() {
             camera.pitch() = -89.0f;
           }
 
-          camera.DirectionFromEulerAngles();
+          camera.DirectionFromEuler();
           camera_changed = true;
         }
       }

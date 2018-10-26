@@ -30,7 +30,8 @@ class Camera {
   float& yaw() { return rotation.y; }
   float& roll() { return rotation.z; }
 
-  void DirectionFromEulerAngles();
+  void DirectionFromEuler();
+  void EulerFromDirection();
 
   const glm::vec3& direction() const { return direction_; }
   const glm::vec3& up() const { return up_; }
