@@ -49,8 +49,8 @@ class TextureAtlas {
  public:
   // Represents the UVs coordinates of a particular entry in the atlas.
   struct UVs {
-    Vec2<float> bottom_left;
-    Vec2<float> top_right;
+    Vec2 bottom_left;
+    Vec2 top_right;
   };
 
   // x and y defines the amount of elements per row and columns.
@@ -67,9 +67,9 @@ class TextureAtlas {
 
  private:
   // Size of a particular texture.
-  Vec2<size_t> TextureSize(size_t index) const;
-  Vec2<float> TextureOffset(size_t index) const;
-  Vec2<size_t> IndexToCoord(size_t index) const;
+  Pair<size_t> TextureSize(size_t index) const;
+  Pair<float> TextureOffset(size_t index) const;
+  Pair<size_t> IndexToCoord(size_t index) const;
 
   Texture tex_;
   size_t x_, y_;

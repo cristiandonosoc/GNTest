@@ -27,20 +27,20 @@ TextureAtlas::UVs TextureAtlas::GetUVs(size_t index) const {
 }
 
 // TODO(donosoc): Unhardcode from the uniform atlas.
-Vec2<size_t> TextureAtlas::TextureSize(size_t) const {
+Pair<size_t> TextureAtlas::TextureSize(size_t) const {
   size_t x = texture().x() / this->x();
   size_t y = texture().y() / this->y();
   return {x, y};
 }
 
-Vec2<float>
+Pair<float>
 TextureAtlas::TextureOffset(size_t index) const {
   auto[sizex, sizey] = TextureSize(index);
   return {(float)sizex / (float)texture().x(),
           (float)sizey / (float)texture().y()};
 }
 
-Vec2<size_t> TextureAtlas::IndexToCoord(size_t index) const {
+Pair<size_t> TextureAtlas::IndexToCoord(size_t index) const {
   assert(index < count());
   return { index % x(), index / y() };
 }

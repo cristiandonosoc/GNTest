@@ -16,28 +16,31 @@ class Shader;
 class Camera {
  public:
   // By default points to origin without rotation.
-  Camera(SDLContext*, glm::vec3 pos);
+  Camera(SDLContext*, Vec3 pos);
 
   // Changes the direction to face in to the target.
-  void SetTarget(Vec3<float>);
-
-
-  void SetTarget(Vec3<float> target);
+  void SetTarget(const Vec3&);
 
   // VIEW ----------------------------------------------------------------------
   // IMPORTANT: Whenever you finish changing these, call UpdateView.
   // TODO(Cristian): Verify if this is the access we want.
-  glm::vec3 pos;
-  Vec3<float> rotation;
-  float& pitch() { return rotation.x; }
-  float& yaw() { return rotation.y; }
-  float& roll() { return rotation.z; }
+  Vec3 pos;
 
-  void DirectionFromEuler();
-  void EulerFromDirection();
+  void SetDirection(const Vec3& new_dir);
 
-  const glm::vec3& direction() const { return direction_; }
-  const glm::vec3& up() const { return up_; }
+  const Vec3& direction() const { return direction_; }
+
+  // If you modify these angles, you should call SetDirectionFromEuler()
+  const Vec3 rotation() const { return rotation_; }
+  float& pitch() { return rotation_.x; }
+  float& yaw() { return rotation_.y; }
+  float& roll() { return rotation_.z; }
+  void SetDirectionFromEuler(float pitch, float yaw);
+  void SetDirectionFromEuler() { SetDirectionFromEuler(pitch(), yaw()); }
+
+
+
+  const Vec3& up() const { return up_; }
 
   // Call RecalculateCoordVectors before this.
   void UpdateView();
@@ -60,9 +63,11 @@ class Camera {
  private:
   void RecalculateCoordVectors();
 
+  Vec3 rotation_;
+
   // Updated by UpdateView.
-  glm::vec3 direction_;
-  glm::vec3 up_;
+  Vec3 direction_;
+  Vec3 up_;
 
   glm::mat4 view_;
   glm::mat4 proj_;

@@ -15,12 +15,12 @@ Vec3 DirectionFromEuler(float pitch, float yaw) {
 }
 
 Vec2 EulerFromDirection(const Vec3& direction) {
+  Vec2 result;
+  result.x = radian2deg(std::asin(direction.y));
+
   // Project onto XZ plane.
   auto d_xz = Vec3{direction.x, 0, direction.z};
-  float r_pitch = std::acos(direction.x / d_xz.mag());
-  Vec2 result;
-  result.x = radian2deg(r_pitch);   // Pitch.
-  result.y = radian2deg(atan(direction.z / direction.x)); // Yaw.
+  result.y = std::acos(direction.x / d_xz.mag());
   return result;
 }
 

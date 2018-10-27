@@ -20,6 +20,7 @@
 #include "src/input/input.h"
 #include "src/graphics/GL/def.h"
 #include "src/graphics/GL/utils.h"
+#include "src/math/math.h"
 #include "src/model/cube.h"
 #include "src/model/plane.h"
 #include "src/sdl2/sdl_context.h"
@@ -241,14 +242,6 @@ int main() {
   LOG(INFO) << "Window size. WIDTH: " << sdl_context.width()
             << ", HEIGHT: " << sdl_context.height();
 
-  // Camera --------------------------------------------------------------------
-
-  float camera_speed = 5.0f;
-  Camera camera(&sdl_context, {1.0f, 5.0f, 10.0f});
-  camera.SetTarget({});
-  camera.EulerFromDirection();
-  camera.UpdateView();
-
   // Minecraft Cube ------------------------------------------------------------
 
   Texture atlas_texture(Assets::TexturePath("atlas.png"));
@@ -276,6 +269,13 @@ int main() {
     exit(1);
   }
 
+  // Camera --------------------------------------------------------------------
+
+  float camera_speed = 5.0f;
+  Camera camera(&sdl_context, {1.0f, 5.0f, 10.0f});
+  camera.SetTarget({});
+  camera.UpdateView();
+
   // Game loop -----------------------------------------------------------------
 
   InputState input = InputState::Create();
@@ -301,18 +301,22 @@ int main() {
         camera.pos -= camera.direction() * camera_speed * sdl_context.frame_delta();
       }
       if (input.left) {
-        camera.pos -= glm::normalize(glm::cross(camera.direction(), camera.up())) *
-                      camera_speed * sdl_context.frame_delta();
+        /* camera.pos -= glm::normalize(glm::cross(camera.direction(), camera.up())) * */
+        /*               camera_speed * sdl_context.frame_delta(); */
+        camera.pos -= camera.direction().cross(camera.up()) * camera_speed *
+                      sdl_context.frame_delta();
       }
       if (input.right) {
-        camera.pos += glm::normalize(glm::cross(camera.direction(), camera.up())) *
-                      camera_speed * sdl_context.frame_delta();
+        /* camera.pos += glm::normalize(glm::cross(camera.direction(), camera.up())) * */
+        /*               camera_speed * sdl_context.frame_delta(); */
+        camera.pos += camera.direction().cross(camera.up()) * camera_speed *
+                      sdl_context.frame_delta();
       }
       camera_changed = prev_pos != camera.pos;
     }
 
     if (!imgui_context.mouse_captured()) {
-      if (input.mouse_offset != Vec2<int>{0, 0}) {
+      if (input.mouse_offset != Pair<int>{0, 0}) {
         if (input.mouse.right) {
           camera.yaw() += input.mouse_offset.x;
 
@@ -324,13 +328,15 @@ int main() {
             camera.pitch() = -89.0f;
           }
 
-          camera.DirectionFromEuler();
+          /* camera.DirectionFromEuler(); */
+          camera.SetDirection(DirectionFromEuler(camera.pitch(), camera.yaw()));
           camera_changed = true;
         }
       }
     }
 
     if (camera_changed) {
+      LOG(DEBUG) << "CAMERA CHANGED";
       camera.UpdateView();
     }
 
@@ -422,12 +428,15 @@ int main() {
                   1000.0f / ImGui::GetIO().Framerate,
                   ImGui::GetIO().Framerate);
 
-      float direction[3] = {camera.direction().x,
-                            camera.direction().y,
-                            camera.direction().z};
-      ImGui::InputFloat3("Camera direction", direction);
-      ImGui::InputFloat3("Angles", camera.rotation.data());
+      ImGui::InputFloat3("Camera direction", (float*)camera.direction().data());
+      ImGui::InputFloat3("Angles", (float*)camera.rotation().data());
+      float p = std::asin(camera.direction().y);
+      float pitch[2] = { p, radian2deg(p), };
+      float y = -std::atan(camera.direction().z / camera.direction().y);
+      float yaw[2] = {y, radian2deg(y)};
 
+      ImGui::InputFloat2("PITCH", pitch);
+      ImGui::InputFloat2("YAW", yaw);
 
       ImGui::End();
 

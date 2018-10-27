@@ -3,52 +3,59 @@
 
 #include "src/camera.h"
 
-#include "src/math/angles.h"
+#include "src/math/math.h"
 #include "src/sdl2/sdl_context.h"
 #include "src/shader.h"
 #include "src/utils/glm_impl.h"
 
 namespace warhol {
 
-Camera::Camera(SDLContext* sdl_context, glm::vec3 pos)
+Camera::Camera(SDLContext* sdl_context, Vec3 pos)
     : pos(std::move(pos)),
-      rotation({}),
+      rotation_({}),
       sdl_context_(sdl_context) {
   UpdateView();
   UpdateProjection();
 }
 
-void Camera::SetTarget(Vec3<float> target) {
+void Camera::SetTarget(const Vec3& target) {
   direction_ = {target.x - pos.x, target.y - pos.y, target.z - pos.z};
-  direction_ = glm::normalize(direction_);
+  direction_ = direction_.normalize();
+  auto [pitch, yaw] = EulerFromDirection(direction_);
+  rotation_.x = pitch;
+  rotation_.y = yaw;
 }
 
-void Camera::DirectionFromEuler() {
-  direction_.x = cos(glm::radians(pitch())) * cos(glm::radians(yaw()));
-  direction_.y = sin(glm::radians(pitch()));
-  direction_.z = cos(glm::radians(pitch())) * sin(glm::radians(yaw()));
-  direction_ = glm::normalize(direction_);
+void Camera::SetDirection(const Vec3& new_dir) {
+  direction_ = new_dir.normalize();
+  auto [pitch, yaw] = EulerFromDirection(direction_);
+  rotation_.x = pitch;
+  rotation_.y = yaw;
 }
 
-void Camera::EulerFromDirection() {
-  // Assumes direction is normalized.
-  pitch() = radian2deg(asin(direction_.y));
-  yaw() = radian2deg(atan(direction_.z / direction_.x));
+void Camera::SetDirectionFromEuler(float npitch, float nyaw) {
+  pitch() = npitch;
+  yaw() = nyaw;
+  direction_ = DirectionFromEuler(npitch, nyaw);
+}
+
+void Camera::RecalculateCoordVectors() {
+  Vec3 up{0.0f, 1.0f, 0.0f};
+  Vec3 right = up.cross(direction_).normalize();
+  up_ = direction_.cross(right);
 }
 
 void Camera::UpdateView() {
   RecalculateCoordVectors();
-  view_ = glm::lookAt(pos, pos + direction_, up_);
+
+  // TODO(Cristian): Move this to our own math framework (or wrap it up).
+  glm::vec3 glm_pos = { pos.x, pos.y, pos.z };
+  glm::vec3 target = {pos.x + direction_.x,
+                      pos.y + direction_.y,
+                      pos.z + direction_.z};
+  glm::vec3 up = {up_.x, up_.y, up_.z};
+  view_ = glm::lookAt(glm_pos, target, up);
 }
-
-void Camera::RecalculateCoordVectors() {
-  // From the direction we calculate the right and up vectors.
-  glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-  glm::vec3 camera_right = glm::normalize(glm::cross(up, direction_));
-  up_= glm::cross(direction_, camera_right);
-}
-
-
 
 void Camera::UpdateProjection() {
   proj_ = glm::perspective(

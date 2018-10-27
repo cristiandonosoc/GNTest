@@ -3,12 +3,17 @@
 
 #pragma once
 
+#ifdef _MSC_VER
+#include <cmath>
+#else
 #include <math.h>
+#endif
 
 namespace warhol {
 
-struct Vec2;
 struct Vec3;
+
+template <typename T> struct Pair;
 
 class Math {
  public:
@@ -29,6 +34,6 @@ inline float inverse_sqrt(float v) {
 Vec3 DirectionFromEuler(float pitch, float yaw);
 
 // x = pitch, y = yaw
-Vec2 EulerFromDirection(const Vec3& direction);
+Pair<float> EulerFromDirection(const Vec3& direction);
 
 }  // namespace warhol

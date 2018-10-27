@@ -34,7 +34,7 @@ struct InputState {
   bool right = false;
 
   struct MouseState {
-    Vec2<int> pos;
+    Pair<int> pos;
     bool left = false;
     bool middle = false;
     bool right = false;
@@ -42,7 +42,7 @@ struct InputState {
 
   MouseState prev_mouse;
   MouseState mouse;
-  Vec2<int> mouse_offset;
+  Pair<int> mouse_offset;
 
   // API.
   static InputState Create();
