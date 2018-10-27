@@ -27,4 +27,7 @@ source_set("imgui") {
   public_configs = [
     ":imgui_config",
   ]
+
+  # We don't care about the warnings of this library.
+  configs -= [ "//build/config/compiler:default_warnings" ]
 }
