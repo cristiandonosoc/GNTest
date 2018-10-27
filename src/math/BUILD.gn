@@ -3,7 +3,8 @@
 
 source_set("math") {
   sources = [
-    "angles.h",
+    "math.cc",
+    "math.h",
     "vec.h",
   ]
 }
