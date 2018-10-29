@@ -104,6 +104,10 @@ ImguiContext::NewFrame(const SDLContext& sdl_context, InputState* input) {
                        : (float)(1.0f / 60.0f);
   time_ = current_time;
 
+  // Restart the keys.
+  for (bool& key_down : io_->KeysDown)
+    key_down = false;
+
   // Update Keyboard.
   // We pass in the keys that are down.
   for (size_t i = 0; i < InputState::kInputSize; i++) {

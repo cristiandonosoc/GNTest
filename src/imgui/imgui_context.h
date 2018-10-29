@@ -40,6 +40,7 @@ class ImguiContext {
   // Do not pass the keyboard/mouse to the underlying application.
   bool keyboard_captured() const;
   bool mouse_captured() const;
+  ImGuiIO& io() { return *io_; }
 
  private:
   ImGuiIO* io_;           // Not owning. Must outlive.
