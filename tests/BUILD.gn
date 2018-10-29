@@ -22,6 +22,7 @@ executable("tests") {
   ]
   deps = [
     ":tests_lib",
+    "//src/utils",
   ]
 
 

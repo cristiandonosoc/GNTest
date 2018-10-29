@@ -35,10 +35,9 @@ class Camera {
   float& pitch() { return rotation_.x; }
   float& yaw() { return rotation_.y; }
   float& roll() { return rotation_.z; }
+  // In radian.
   void SetDirectionFromEuler(float pitch, float yaw);
   void SetDirectionFromEuler() { SetDirectionFromEuler(pitch(), yaw()); }
-
-
 
   const Vec3& up() const { return up_; }
 

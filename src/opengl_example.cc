@@ -286,33 +286,37 @@ int main() {
     if (action == SDLContext::EventAction::kQuit)
       break;
 
-    imgui_context.NewFrame(sdl_context, &input);
+      imgui_context.NewFrame(sdl_context, &input);
 
-    if (input.keys_up[GET_KEY(Escape)])
-      break;
+      if (input.keys_up[GET_KEY(Escape)])
+        break;
 
-    bool camera_changed = false;
-    if (!imgui_context.keyboard_captured()) {
-      auto prev_pos = camera.pos;
-      if (input.up) {
-        camera.pos += camera.direction() * camera_speed * sdl_context.frame_delta();
-      }
-      if (input.down) {
-        camera.pos -= camera.direction() * camera_speed * sdl_context.frame_delta();
-      }
-      if (input.left) {
-        /* camera.pos -= glm::normalize(glm::cross(camera.direction(), camera.up())) * */
-        /*               camera_speed * sdl_context.frame_delta(); */
-        camera.pos -= camera.direction().cross(camera.up()) * camera_speed *
-                      sdl_context.frame_delta();
-      }
-      if (input.right) {
-        /* camera.pos += glm::normalize(glm::cross(camera.direction(), camera.up())) * */
-        /*               camera_speed * sdl_context.frame_delta(); */
-        camera.pos += camera.direction().cross(camera.up()) * camera_speed *
-                      sdl_context.frame_delta();
-      }
-      camera_changed = prev_pos != camera.pos;
+      bool camera_changed = false;
+      if (!imgui_context.keyboard_captured()) {
+        auto prev_pos = camera.pos;
+        if (input.up) {
+          camera.pos +=
+              camera.direction() * camera_speed * sdl_context.frame_delta();
+        }
+        if (input.down) {
+          camera.pos -=
+              camera.direction() * camera_speed * sdl_context.frame_delta();
+        }
+        if (input.left) {
+          /* camera.pos -= glm::normalize(glm::cross(camera.direction(),
+           * camera.up())) * */
+          /*               camera_speed * sdl_context.frame_delta(); */
+          camera.pos -= camera.direction().cross(camera.up()) * camera_speed *
+                        sdl_context.frame_delta();
+        }
+        if (input.right) {
+          /* camera.pos += glm::normalize(glm::cross(camera.direction(),
+           * camera.up())) * */
+          /*               camera_speed * sdl_context.frame_delta(); */
+          camera.pos += camera.direction().cross(camera.up()) * camera_speed *
+                        sdl_context.frame_delta();
+        }
+        camera_changed = prev_pos != camera.pos;
     }
 
     if (!imgui_context.mouse_captured()) {
@@ -429,20 +433,32 @@ int main() {
                   ImGui::GetIO().Framerate);
 
       ImGui::InputFloat3("Camera direction", (float*)camera.direction().data());
-      ImGui::InputFloat3("Angles", (float*)camera.rotation().data());
-      float p = std::asin(camera.direction().y);
-      float pitch[2] = { p, radian2deg(p), };
-      float y = -std::atan(camera.direction().z / camera.direction().y);
-      float yaw[2] = {y, radian2deg(y)};
+      ImGui::InputFloat3("Angles (rad)", (float*)camera.rotation().data());
+      float deg[3] = {rad2deg(camera.rotation().x),
+                      rad2deg(camera.rotation().y),
+                      rad2deg(camera.rotation().z)};
 
-      ImGui::InputFloat2("PITCH", pitch);
-      ImGui::InputFloat2("YAW", yaw);
+       if (ImGui::InputFloat3("Angles (deg)",
+                             deg,
+                             "%.3f",
+                             ImGuiInputTextFlags_EnterReturnsTrue)) {
+        LOG(DEBUG) << "ME";
+        camera.SetDirectionFromEuler(deg2rad(deg[0]), deg2rad(deg[1]));
+        camera.UpdateView();
+      }
+
+      /* float p = std::asin(camera.direction().y); */
+      /* float pitch[2] = { p, rad2deg(p), }; */
+      /* float y = -std::atan(camera.direction().z / camera.direction().y); */
+      /* float yaw[2] = {y, rad2deg(y)}; */
+
+      /* ImGui::InputFloat2("PITCH", pitch); */
+      /* ImGui::InputFloat2("YAW", yaw); */
 
       ImGui::End();
 
     }
     imgui_context.Render();
-
 
     SDL_GL_SwapWindow(sdl_context.get_window());
 

@@ -36,6 +36,7 @@ void Camera::SetDirection(const Vec3& new_dir) {
 void Camera::SetDirectionFromEuler(float npitch, float nyaw) {
   pitch() = npitch;
   yaw() = nyaw;
+  roll() = 0;
   direction_ = DirectionFromEuler(npitch, nyaw);
 }
 
