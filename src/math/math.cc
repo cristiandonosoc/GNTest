@@ -14,13 +14,18 @@ Vec3 DirectionFromEuler(float pitch, float yaw) {
   return direction.normalize();
 }
 
+Vec3 DirectionFromEulerDeg(float pitch, float yaw) {
+  return DirectionFromEuler(deg2rad(pitch), deg2rad(yaw));
+}
+
 Vec2 EulerFromDirection(const Vec3& direction) {
   Vec2 result;
-  result.x = radian2deg(std::asin(direction.y));
+  result.x = rad2deg(std::asin(direction.y));
 
   // Project onto XZ plane.
   auto d_xz = Vec3{direction.x, 0, direction.z};
   result.y = std::acos(direction.x / d_xz.mag());
+  result.y = rad2deg(atan(direction.z / direction.x)); // Yaw.
   return result;
 }
 
