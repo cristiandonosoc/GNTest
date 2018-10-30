@@ -52,18 +52,13 @@ ImguiRenderer::~ImguiRenderer() {
 bool ImguiRenderer::Init(ImGuiIO* io) {
   if (auto [ok, vert_src, frag_src] = ReadShaders("imgui.vert", "imgui.frag");
       ok) {
-    shader_ = Shader(vert_src.data(), frag_src.data());
-    auto status = shader_.Init();
-    if (!status.ok()) {
-      LOG(ERROR) << status.err_msg();
-      return false;
-    }
-  } else {
-    return false;
+    shader_ = Shader::CreateShader(vert_src.data(), frag_src.data());
   }
+  if (!shader_)
+    return false;
 
   LOG(DEBUG) << "Created imgui renderer shader";
-  for (auto [key, attrib] : shader_.attributes()) {
+  for (auto [key, attrib] : shader_->attributes()) {
     LOG(DEBUG) << key << ": " << attrib.location;
   }
 
@@ -200,10 +195,10 @@ ImguiRenderer::Render(ImGuiIO* io, ImDrawData* draw_data) {
       {0.0f, 0.0f, -1.0f, 0.0f},
       {(R + L) / (L - R), (T + B) / (B - T), 0.0f, 1.0f},
   };
-  shader_.Use();
+  shader_->Use();
   /* glUniform1i(g_AttribLocationTex, 0); */
-  shader_.SetInt("tex", 0);
-  auto* u_proj = shader_.GetUniform("u_proj");
+  shader_->SetInt("tex", 0);
+  auto* u_proj = shader_->GetUniform("u_proj");
   assert(u_proj);
   glUniformMatrix4fv(u_proj->location, 1, GL_FALSE, &ortho_projection[0][0]);
 #ifdef GL_SAMPLER_BINDING
@@ -220,7 +215,7 @@ ImguiRenderer::Render(ImGuiIO* io, ImDrawData* draw_data) {
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);
 
   const Attribute* attribute;
-  attribute = shader_.GetAttribute("a_pos");
+  attribute = shader_->GetAttribute("a_pos");
   assert(attribute );
   glVertexAttribPointer(attribute ->location,
                         2,
@@ -230,7 +225,7 @@ ImguiRenderer::Render(ImGuiIO* io, ImDrawData* draw_data) {
                         (GLvoid*)IM_OFFSETOF(ImDrawVert, pos));
   glEnableVertexAttribArray(attribute ->location);
 
-  attribute = shader_.GetAttribute("a_uv");
+  attribute = shader_->GetAttribute("a_uv");
   assert(attribute );
   glVertexAttribPointer(attribute ->location,
                         2,
@@ -240,7 +235,7 @@ ImguiRenderer::Render(ImGuiIO* io, ImDrawData* draw_data) {
                         (GLvoid*)IM_OFFSETOF(ImDrawVert, uv));
   glEnableVertexAttribArray(attribute ->location);
 
-  attribute = shader_.GetAttribute("a_color");
+  attribute = shader_->GetAttribute("a_color");
   assert(attribute );
   glVertexAttribPointer(attribute ->location,
                         4,

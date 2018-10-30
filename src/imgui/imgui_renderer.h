@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include "src/shader.h"
 #include "src/utils/macros.h"
 
@@ -28,10 +30,10 @@ class ImguiRenderer {
  private:
   void CreateFontTexture(ImGuiIO*);
 
-  Shader shader_;
   GLuint vbo_ = 0;
   GLuint ebo_ = 0;
   GLuint font_texture_ = 0;
+  std::optional<Shader> shader_;
   bool init_ = false;
 };
 
