@@ -286,50 +286,53 @@ int main() {
     if (action == SDLContext::EventAction::kQuit)
       break;
 
-      imgui_context.NewFrame(sdl_context, &input);
+    imgui_context.NewFrame(sdl_context, &input);
 
-      if (input.keys_up[GET_KEY(Escape)])
-        break;
+    if (input.keys_up[GET_KEY(Escape)])
+      break;
 
-      bool camera_changed = false;
-      if (!imgui_context.keyboard_captured()) {
-        auto prev_pos = camera.pos;
-        if (input.up) {
-          camera.pos +=
-              camera.direction() * camera_speed * sdl_context.frame_delta();
-        }
-        if (input.down) {
-          camera.pos -=
-              camera.direction() * camera_speed * sdl_context.frame_delta();
-        }
-        if (input.left) {
-          /* camera.pos -= glm::normalize(glm::cross(camera.direction(),
-           * camera.up())) * */
-          /*               camera_speed * sdl_context.frame_delta(); */
-          camera.pos -= camera.direction().cross(camera.up()) * camera_speed *
-                        sdl_context.frame_delta();
-        }
-        if (input.right) {
-          /* camera.pos += glm::normalize(glm::cross(camera.direction(),
-           * camera.up())) * */
-          /*               camera_speed * sdl_context.frame_delta(); */
-          camera.pos += camera.direction().cross(camera.up()) * camera_speed *
-                        sdl_context.frame_delta();
-        }
-        camera_changed = prev_pos != camera.pos;
+    bool camera_changed = false;
+    if (!imgui_context.keyboard_captured()) {
+      auto prev_pos = camera.pos;
+      if (input.up) {
+        camera.pos +=
+            camera.direction() * camera_speed * sdl_context.frame_delta();
+      }
+      if (input.down) {
+        camera.pos -=
+            camera.direction() * camera_speed * sdl_context.frame_delta();
+      }
+      if (input.left) {
+        /* camera.pos -= glm::normalize(glm::cross(camera.direction(),
+         * camera.up())) * */
+        /*               camera_speed * sdl_context.frame_delta(); */
+        camera.pos -= camera.direction().cross(camera.up()) * camera_speed *
+                      sdl_context.frame_delta();
+      }
+      if (input.right) {
+        /* camera.pos += glm::normalize(glm::cross(camera.direction(),
+         * camera.up())) * */
+        /*               camera_speed * sdl_context.frame_delta(); */
+        camera.pos += camera.direction().cross(camera.up()) * camera_speed *
+                      sdl_context.frame_delta();
+      }
+      camera_changed = prev_pos != camera.pos;
     }
+
+    float mouse_sensibility = 0.025f;
+    constexpr float max_yaw = 89.0f;
 
     if (!imgui_context.mouse_captured()) {
       if (input.mouse_offset != Pair<int>{0, 0}) {
         if (input.mouse.right) {
-          camera.yaw() += input.mouse_offset.x;
+          camera.yaw() += input.mouse_offset.x * mouse_sensibility;
 
-          camera.pitch() -= input.mouse_offset.y;
-          if (camera.pitch() > 89.0f) {
-            camera.pitch() = 89.0f;
+          camera.pitch() -= input.mouse_offset.y * mouse_sensibility;
+          if (camera.pitch() > max_yaw) {
+            camera.pitch() = max_yaw;
           }
-          if (camera.pitch() < -89.0f) {
-            camera.pitch() = -89.0f;
+          if (camera.pitch() > 360.0f - max_yaw) {
+            camera.pitch() = 360.0f - max_yaw;
           }
 
           /* camera.DirectionFromEuler(); */
@@ -339,10 +342,8 @@ int main() {
       }
     }
 
-    if (camera_changed) {
-      LOG(DEBUG) << "CAMERA CHANGED";
+    if (camera_changed)
       camera.UpdateView();
-    }
 
 
     // Draw the triangle.

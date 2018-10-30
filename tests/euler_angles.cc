@@ -77,56 +77,108 @@ TEST_CASE("Direction From Euler") {
 }
 
 TEST_CASE("Euler from direction") {
-  SECTION("First quadrant") {
-    {
-      auto [pitch, yaw] = EulerFromDirectionDeg(NormdVec({1.0f, 0.0f, 0.0f}));
-      CHECK(pitch == Approx(0.0f).epsilon(0.001f));
-      CHECK(yaw == Approx(0.0f));
-    }
+  Pair<float> angles;
+  SECTION("On the XZ plane") {
+    angles = EulerFromDirectionDeg(NormdVec({1.0f, 0.0f, 0.0f}));
+    CHECK(angles.x == Approx(0.0f));
+    CHECK(angles.y == Approx(0.0f));
 
-    {
-      auto [pitch, yaw] = EulerFromDirectionDeg(NormdVec({1.0f, 0.0f, 1.0f}));
-      CHECK(pitch == Approx(0.0f));
-      CHECK(yaw == Approx(45.0f));
-    }
+    angles = EulerFromDirectionDeg(NormdVec({1.0f, 0.0f, 1.0f}));
+    CHECK(angles.x == Approx(0.0f));
+    CHECK(angles.y == Approx(45.0f));
 
-    {
-      auto norm = NormdVec({1.0f, 1.0f, 1.0f});
-      LOG(DEBUG) << norm.ToString();
-      auto [pitch, yaw] = EulerFromDirectionDeg(NormdVec({1.0f, 1.0f, 1.0f}));
-      CHECK(pitch == Approx(35.264f));
-      CHECK(yaw == Approx(45.0f));
-    }
+    angles = EulerFromDirectionDeg(NormdVec({0.0f, 0.0f, 1.0f}));
+    CHECK(angles.x == Approx(0.0f));
+    CHECK(angles.y == Approx(90.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({-1.0f, 0.0f, 1.0f}));
+    CHECK(angles.x == Approx(0.0f));
+    CHECK(angles.y == Approx(135.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({-1.0f, 0.0f, 0.0f}));
+    CHECK(angles.x == Approx(0.0f));
+    CHECK(angles.y == Approx(180.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({-1.0f, 0.0f, -1.0f}));
+    CHECK(angles.x == Approx(0.0f));
+    CHECK(angles.y == Approx(225.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({0.0f, 0.0f, -1.0f}));
+    CHECK(angles.x == Approx(0.0f));
+    CHECK(angles.y == Approx(270.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({1.0f, 0.0f, -1.0f}));
+    CHECK(angles.x == Approx(0.0f));
+    CHECK(angles.y == Approx(315.0f));
   }
 
-  SECTION("Second quadrant") {
-    {
-      auto [pitch, yaw] = EulerFromDirectionDeg(NormdVec({-1.0f, 0.0f, 1.0f}));
-      CHECK(pitch == Approx(0.0f));
-      CHECK(yaw == Approx(315.0f));
-    }
+  SECTION("Upper angles") {
+    angles = EulerFromDirectionDeg(NormdVec({1.0f, 1.0f, 0.0f}));
+    CHECK(angles.x == Approx(45.0f));
+    CHECK(angles.y == Approx(0.0f));
 
-    {
-      auto [pitch, yaw] = EulerFromDirectionDeg(NormdVec({-1.0f, 1.0f, 1.0f}));
-      CHECK(pitch == Approx(35.264f));
-      CHECK(yaw == Approx(315.0f));
-    }
+    angles = EulerFromDirectionDeg(NormdVec({1.0f, 1.0f, 1.0f}));
+    CHECK(angles.x == Approx(35.264f));
+    CHECK(angles.y == Approx(45.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({0.0f, 1.0f, 1.0f}));
+    CHECK(angles.x == Approx(45.0f));
+    CHECK(angles.y == Approx(90.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({-1.0f, 1.0f, 1.0f}));
+    CHECK(angles.x == Approx(35.264f));
+    CHECK(angles.y == Approx(135.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({-1.0f, 1.0f, 0.0f}));
+    CHECK(angles.x == Approx(45.0f));
+    CHECK(angles.y == Approx(180.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({-1.0f, 1.0f, -1.0f}));
+    CHECK(angles.x == Approx(35.264f));
+    CHECK(angles.y == Approx(225.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({0.0f, 1.0f, -1.0f}));
+    CHECK(angles.x == Approx(45.0f));
+    CHECK(angles.y == Approx(270.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({1.0f, 1.0f, -1.0f}));
+    CHECK(angles.x == Approx(35.264f));
+    CHECK(angles.y == Approx(315.0f));
   }
 
-  SECTION("Third quadrant") {
-    {
-      auto [pitch, yaw] = EulerFromDirectionDeg(NormdVec({-1.0f, 0.0f, -1.0f}));
-      CHECK(pitch == Approx(0.0f));
-      CHECK(yaw == Approx(225.0f));
-    }
+  SECTION("Lower angles") {
+    angles = EulerFromDirectionDeg(NormdVec({1.0f, -1.0f, 0.0f}));
+    CHECK(angles.x == Approx(315.0f));
+    CHECK(angles.y == Approx(0.0f));
 
-    {
-      auto [pitch, yaw] = EulerFromDirectionDeg(NormdVec({-1.0f, 1.0f, 1.0f}));
-      CHECK(pitch == Approx(35.264f));
-      CHECK(yaw == Approx(225.0f));
-    }
+    angles = EulerFromDirectionDeg(NormdVec({1.0f, -1.0f, 1.0f}));
+    CHECK(angles.x == Approx(324.7356));
+    CHECK(angles.y == Approx(45.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({0.0f, -1.0f, 1.0f}));
+    CHECK(angles.x == Approx(315.0f));
+    CHECK(angles.y == Approx(90.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({-1.0f, -1.0f, 1.0f}));
+    CHECK(angles.x == Approx(324.7356));
+    CHECK(angles.y == Approx(135.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({-1.0f, -1.0f, 0.0f}));
+    CHECK(angles.x == Approx(315.0f));
+    CHECK(angles.y == Approx(180.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({-1.0f, -1.0f, -1.0f}));
+    CHECK(angles.x == Approx(324.7356));
+    CHECK(angles.y == Approx(225.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({0.0f, -1.0f, -1.0f}));
+    CHECK(angles.x == Approx(315.0f));
+    CHECK(angles.y == Approx(270.0f));
+
+    angles = EulerFromDirectionDeg(NormdVec({1.0f, -1.0f, -1.0f}));
+    CHECK(angles.x == Approx(324.7356));
+    CHECK(angles.y == Approx(315.0f));
   }
-
 }
 
 }  // namespace warhol

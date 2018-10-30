@@ -4,7 +4,7 @@ WARHOL_BASE=/mnt/c/Programming/projects/warhol
 make:
 	ninja -C out opengl_example
 
-tests: FORCE
+test: FORCE
 	ninja -C out tests
 	out/tests
 
