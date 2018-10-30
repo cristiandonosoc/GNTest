@@ -9,7 +9,7 @@
 namespace warhol {
 
 void
-HandleKeyUp(const SDL_KeyboardEvent& key_event, InputState* input) {
+HandleKeyUpEvent(const SDL_KeyboardEvent& key_event, InputState* input) {
   switch (key_event.keysym.scancode) {
     case SDL_SCANCODE_ESCAPE: input->keys_up[GET_KEY(Escape)] = true; break;
     default: break;
@@ -104,5 +104,11 @@ void HandleMouse(InputState* input) {
   input->mouse_offset = input->mouse.pos - input->prev_mouse.pos;
 }
 
+void
+HandleMouseWheelEvent(const SDL_MouseWheelEvent& wheel_event,
+                      InputState* input) {
+  input->mouse.wheel.x = wheel_event.x;
+  input->mouse.wheel.y = wheel_event.y;
+}
 
 }  // namespace warhol

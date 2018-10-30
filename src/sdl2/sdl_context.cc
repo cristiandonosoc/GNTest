@@ -126,8 +126,9 @@ SDLContext::NewFrame(InputState* input) {
   while (SDL_PollEvent(&event)) {
     switch (event.type) {
       case SDL_QUIT: return SDLContext::EventAction::kQuit;
-      case SDL_KEYUP: HandleKeyUp(event.key, input); break;
+      case SDL_KEYUP: HandleKeyUpEvent(event.key, input); break;
       case SDL_WINDOWEVENT: HandleWindowEvent(event.window); break;
+      case SDL_MOUSEWHEEL: HandleMouseWheelEvent(event.wheel, input); break;
       case SDL_TEXTINPUT: {
         // event.text.text is a char[32].
         for (char c : event.text.text) {

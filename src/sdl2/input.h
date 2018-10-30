@@ -4,6 +4,7 @@
 #pragma once
 
 struct SDL_KeyboardEvent;
+struct SDL_MouseWheelEvent;
 
 namespace warhol {
 
@@ -11,8 +12,9 @@ namespace warhol {
 
 struct InputState;
 
-void HandleKeyUp(const SDL_KeyboardEvent&, InputState*);
+void HandleKeyUpEvent(const SDL_KeyboardEvent&, InputState*);
 void HandleKeysDown(InputState*);
 void HandleMouse(InputState*);
+void HandleMouseWheelEvent(const SDL_MouseWheelEvent&, InputState*);
 
 }  // namespace

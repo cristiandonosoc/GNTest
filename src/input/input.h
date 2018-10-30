@@ -38,6 +38,9 @@ struct InputState {
     bool left = false;
     bool middle = false;
     bool right = false;
+    // x represents horizontal scrolling.
+    // y represents vertical scrolling.
+    Pair<int> wheel;
   };
 
   MouseState prev_mouse;

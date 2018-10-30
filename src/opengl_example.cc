@@ -340,6 +340,15 @@ int main() {
           camera_changed = true;
         }
       }
+
+      if (input.mouse.wheel.y != 0) {
+        camera.fov -= input.mouse.wheel.y;
+        if (camera.fov < 1.0f)
+          camera.fov = 1.0f;
+        if (camera.fov > 45.0f)
+          camera.fov = 45.0f;
+        camera.UpdateProjection();
+      }
     }
 
     if (camera_changed)
@@ -443,10 +452,11 @@ int main() {
                              deg,
                              "%.3f",
                              ImGuiInputTextFlags_EnterReturnsTrue)) {
-        LOG(DEBUG) << "ME";
         camera.SetDirectionFromEuler(deg2rad(deg[0]), deg2rad(deg[1]));
         camera.UpdateView();
       }
+
+       ImGui::LabelText("FOV", "%.3f", camera.fov);
 
       /* float p = std::asin(camera.direction().y); */
       /* float pitch[2] = { p, rad2deg(p), }; */
