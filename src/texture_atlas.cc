@@ -12,17 +12,17 @@ namespace warhol {
 TextureAtlas::TextureAtlas(Texture atlas, size_t x, size_t y)
     : tex_(std::move(atlas)), x_(x), y_(y) {}
 
-TextureAtlas::UVs TextureAtlas::GetUVs(size_t index) const {
+Pair<Pair<float>> TextureAtlas::GetUVs(size_t index) const {
   assert(index < count());
 
-  UVs uvs = {};
+  Pair<Pair<float>> uvs = {};
   auto [x, y] = IndexToCoord(index);
   auto [offsetx, offsety] = TextureOffset(index);
 
   LOG(DEBUG) << "OFFSETX: " << offsetx << ", OFFSETY: " << offsety;
 
-  uvs.bottom_left = { x * offsetx, y * offsety };
-  uvs.top_right = { (x + 1) * offsetx, (y + 1) * offsety };
+  uvs.min() = { x * offsetx, y * offsety };
+  uvs.max() = { (x + 1) * offsetx, (y + 1) * offsety };
   return uvs;
 }
 

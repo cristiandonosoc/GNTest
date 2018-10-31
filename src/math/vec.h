@@ -16,12 +16,31 @@ struct Pair {
   T x;
   T y;
 
+  T& min() { return x; }
+  T& max() { return y; }
+
   Pair operator+(const Pair rhs) const { return {x + rhs.x, y + rhs.y}; }
   Pair operator-(const Pair rhs) const { return {x - rhs.x, y - rhs.y}; }
 
   std::string ToString() const { return StringPrintf("X: %f, Y: %f", x, y); }
-  bool operator==(const Pair& rhs) { return x == rhs.x && y == rhs.y; }
-  bool operator!=(const Pair& rhs) { return x != rhs.x || y != rhs.y; }
+  bool operator==(const Pair& rhs) const { return x == rhs.x && y == rhs.y; }
+  bool operator!=(const Pair& rhs) const { return x != rhs.x || y != rhs.y; }
+
+  bool operator<(const Pair& rhs) const { return x < rhs.x || y < rhs.y; }
+  bool operator<=(const Pair& rhs) const { return *this < rhs || *this == rhs; }
+
+  bool operator>(const Pair& rhs) const { return x > rhs.x || y > rhs.y; }
+  bool operator>=(const Pair& rhs) const { return *this > rhs || *this == rhs; }
+};
+
+template <typename T>
+struct HashPair {
+  size_t operator()(const Pair<T> p) const {
+    // TODO(Cristian): Do some more decent hash function.
+    size_t result = 2166136261;
+    result = (((result * 16777619) ^ p.x) ^ p.y) << 1;
+    return result;
+  }
 };
 
 template <typename T>

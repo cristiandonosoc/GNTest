@@ -47,16 +47,10 @@ constexpr size_t kCrack9 = INDEX(0, 9);
 
 class TextureAtlas {
  public:
-  // Represents the UVs coordinates of a particular entry in the atlas.
-  struct UVs {
-    Vec2 bottom_left;
-    Vec2 top_right;
-  };
-
   // x and y defines the amount of elements per row and columns.
   TextureAtlas(Texture atlas, size_t x, size_t y);
 
-  UVs GetUVs(size_t index) const;
+  Pair<Pair<float>> GetUVs(size_t index) const;
 
   // Amount of textures in the atlas.
   size_t count() const { return x_ * y_; }

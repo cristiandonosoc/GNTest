@@ -3,8 +3,6 @@
 
 #include "src/model/minecraft_cube.h"
 
-#include <GL/gl3w.h>
-
 #include "src/shader.h"
 #include "src/texture_atlas.h"
 #include "src/utils/glm_impl.h"
@@ -94,8 +92,6 @@ uint32_t indices[] = {
 };
 
 }  // namespace
-
-MinecraftCube::MinecraftCube(TextureAtlas* atlas) : atlas_(atlas) {}
 
 bool MinecraftCube::Init() {
   glGenVertexArrays(1, &vao_);
@@ -189,30 +185,25 @@ void PrintUVs(const std::vector<float>& uvs) {
   LOG(DEBUG) << ss.str();
 }
 
-void MinecraftCube::SetTextures(Shader* shader) const {
-  atlas_->texture().Set(shader, GL_TEXTURE0);
-  atlas_->texture().Set(shader, GL_TEXTURE1);
-}
-
 
 namespace {
 
 void
-ChangeUV(const TextureAtlas& atlas,
-         MinecraftCube::Face face,
+ChangeUV(MinecraftCube::Face face,
+         Pair<Pair<float>> min_max_uvs,
          int vbo,
-         int index,
          std::vector<float>* uvs) {
-  auto uv_coords = atlas.GetUVs(index);
-  uint32_t offset = 2 * 4 * (uint32_t)face - (uint32_t)MinecraftCube::Face::kFront;
-  uvs->at(offset + 0) = uv_coords.bottom_left.x;
-  uvs->at(offset + 1) = uv_coords.bottom_left.y;
-  uvs->at(offset + 2) = uv_coords.top_right.x;
-  uvs->at(offset + 3) = uv_coords.bottom_left.y;
-  uvs->at(offset + 4) = uv_coords.top_right.x;
-  uvs->at(offset + 5) = uv_coords.top_right.y;
-  uvs->at(offset + 6) = uv_coords.bottom_left.x;
-  uvs->at(offset + 7) = uv_coords.top_right.y;
+  /* auto uv_coords = atlas.GetUVs(index); */
+  uint32_t offset =
+      2 * 4 * (uint32_t)face - (uint32_t)MinecraftCube::Face::kFront;
+  uvs->at(offset + 0) = min_max_uvs.x.x;
+  uvs->at(offset + 1) = min_max_uvs.x.y;
+  uvs->at(offset + 2) = min_max_uvs.y.x;
+  uvs->at(offset + 3) = min_max_uvs.x.y;
+  uvs->at(offset + 4) = min_max_uvs.y.x;
+  uvs->at(offset + 5) = min_max_uvs.y.y;
+  uvs->at(offset + 6) = min_max_uvs.x.x;
+  uvs->at(offset + 7) = min_max_uvs.y.y;
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferSubData(GL_ARRAY_BUFFER,
@@ -224,14 +215,19 @@ ChangeUV(const TextureAtlas& atlas,
 
 }  // namespace
 
-
-void MinecraftCube::SetFace(MinecraftCube::Face face, int index1, int index2) {
-  if (index1 >= 0)
-    ChangeUV(*atlas_, face, uv_vbo1_, index1, &uvs1_);
-  if (index2 >= 0)
-    ChangeUV(*atlas_, face, uv_vbo2_, index2, &uvs2_);
+void
+MinecraftCube::SetFace(MinecraftCube::Face face,
+                       int layer,
+                       Pair<Pair<float>> min_max_uvs) {
+  if (layer == 1) {
+    ChangeUV(face, std::move(min_max_uvs), uv_vbo1_, &uvs1_);
+  } else if (layer == 2) {
+    ChangeUV(face, std::move(min_max_uvs), uv_vbo2_, &uvs2_);
+  } else {
+    LOG(ERROR) << "Wrong layer count: " << layer;
+    exit(1);
+  }
 }
-
 
 void MinecraftCube::Render(Shader* shader) {
   glBindVertexArray(vao_);
@@ -239,7 +235,7 @@ void MinecraftCube::Render(Shader* shader) {
   model_ = glm::translate(glm::mat4(1.0f), position_);
   shader->SetMat4("model", model_);
 
-  atlas_->texture().Set(shader, GL_TEXTURE0);
+  /* atlas_->texture().Set(shader, GL_TEXTURE0); */
 
   /* glDrawArrays(GL_TRIANGLES, 0, 36); */
   glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, NULL);

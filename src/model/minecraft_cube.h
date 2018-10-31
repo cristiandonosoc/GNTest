@@ -5,7 +5,9 @@
 
 #include <vector>
 
+#include "src/math/vec.h"
 #include "src/utils/glm.h"
+#include "src/utils/macros.h"
 
 namespace warhol {
 
@@ -23,27 +25,22 @@ class MinecraftCube {
     kBottom,
   };
 
-  MinecraftCube(TextureAtlas*);
+  MinecraftCube() = default;
+  DELETE_COPY_AND_ASSIGN(MinecraftCube);
+  DEFAULT_MOVE_AND_ASSIGN(MinecraftCube);
+
   bool Init();
 
   // Set the textures index for the face. -1 means don't change the texture for
   // this layer.
-  void SetFace(Face, int index1, int index2 = -1);
-
-  // Will load the atlas as the default texture.
-  void SetTextures(Shader*) const;
+  void SetFace(Face, int layer, Pair<Pair<float>> min_max_uvs);
 
   const glm::vec3& position() const { return position_; }
-  void set_position(glm::vec3 pos) {
-    position_ = pos;
-    dirty_ = true;
-  }
+  void set_position(glm::vec3 pos) { position_ = pos; }
 
   void Render(Shader*);
 
  private:
-  TextureAtlas* atlas_;  // Not owning. Must outlive.
-
   glm::vec3 position_;
   glm::mat4 model_ = glm::mat4(1.0f);
 
@@ -55,8 +52,6 @@ class MinecraftCube {
 
   std::vector<float> uvs1_;
   std::vector<float> uvs2_;
-
-  bool dirty_ = true;
 };
 
 }  // namespace warhol
