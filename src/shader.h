@@ -4,7 +4,6 @@
 #pragma once
 
 #include <map>
-#include <optional>
 #include <string>
 
 #include <GL/gl3w.h>
@@ -33,9 +32,6 @@ struct Attribute {
 
 class Shader {
  public:
-  // Shader(...) + Init();
-  static std::optional<Shader> CreateShader(std::string vert_src,
-                                            std::string frag_src);
   Shader();
   Shader(std::string vert_src, std::string frag_src);
   ~Shader();
@@ -43,7 +39,7 @@ class Shader {
   DELETE_COPY_AND_ASSIGN(Shader);
   DEFAULT_MOVE_AND_ASSIGN(Shader);
 
-  bool Init();
+  Status Init();
   bool valid() const { return handle_ != 0; }
 
   void Use();
@@ -67,7 +63,7 @@ class Shader {
   // Clears all the handles that the shader owns.
   void Clear();
   // So that Init can clear resources on failure.
-  bool InternalInit();
+  Status InternalInit();
 
   // Internal function to set up the matrices.
   bool SetMatrix(const std::string&, size_t mat_length, const float* data);

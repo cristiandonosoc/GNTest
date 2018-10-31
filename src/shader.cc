@@ -14,20 +14,12 @@ namespace warhol {
 
 namespace {
 
-bool CompileShader(GLenum kind, const std::string& src, int* handle);
+Status CompileShader(GLenum kind, const std::string& src, int* handle);
 typedef void(*GLMatrixFunction)(GLint, GLsizei, GLboolean, const GLfloat*);
 
 }  // namespace
 
 // Shader Implementation -------------------------------------------------------
-
-
-std::optional<Shader> Shader::CreateShader(std::string vert_src, std::string frag_src) {
-  Shader shader(std::move(vert_src), std::move(frag_src));
-  if (!shader.Init())
-    return std::optional<Shader>();
-  return shader;
-}
 
 Shader::Shader() = default;
 
@@ -36,53 +28,46 @@ Shader::Shader(std::string vert_src, std::string frag_src)
 
 Shader::~Shader() { Clear(); }
 
-bool Shader::Init() {
-  if (!InternalInit()) {
-
+Status Shader::Init() {
+  Status res = InternalInit();
+  if (!res.ok())
     Clear();
-
-    return false;
-  }
-  return true;
+  return res;
 }
 
-bool Shader::InternalInit() {
-  if (vert_src_.empty() || frag_src_.empty()) {
-    LOG(ERROR) << "Shaders sources must be set before calling Init";
-    return false;
-  }
+Status
+Shader::InternalInit() {
+  if (vert_src_.empty() || frag_src_.empty())
+    return STATUS("Shaders sources must be set before calling Init");
 
-  if (!CompileShader(GL_VERTEX_SHADER, vert_src_, &vert_handle_))
-    return false;
-  if (!CompileShader(GL_FRAGMENT_SHADER, frag_src_, &frag_handle_))
-    return false;
+  Status res = CompileShader(GL_VERTEX_SHADER, vert_src_, &vert_handle_);
+  if (!res.ok())
+    return res;
+  res = CompileShader(GL_FRAGMENT_SHADER, frag_src_, &frag_handle_);
+  if (!res.ok())
+    return res;
 
   // Create the shader program.
   handle_ = glCreateProgram();
-  if (!handle_) {
-    LOG(ERROR) << "glCreateProgram: could not allocate a program";
-    return false;
-  }
+  if (!handle_)
+    return STATUS("glCreateProgram: could not allocate a program");
 
   glAttachShader(handle_, vert_handle_);
   glAttachShader(handle_, frag_handle_);
   glLinkProgram(handle_);
-
-
 
   GLint success = 0;
   glGetProgramiv(handle_, GL_LINK_STATUS, &success);
   if (success == GL_FALSE) {
     GLchar log[2048];
     glGetProgramInfoLog(handle_, sizeof(log), 0, log);
-    LOG(ERROR) << "Could not link shader: " << log;
-    return false;
+    return STATUS_VA("Could not link shader: %s", log);
   }
 
   ObtainAttributes();
   ObtainUniforms();
 
-  return true;
+  return Status::Ok();
 }
 
 void Shader::Use() {
@@ -91,31 +76,12 @@ void Shader::Use() {
 }
 
 void Shader::Clear() {
-
-  if (CHECK_GL_ERRORS(PRETTY_FUNCTION))
-    exit(1);
-  if (vert_handle_) {
+  if (vert_handle_)
     glDeleteShader(vert_handle_);
-    vert_handle_ = 0;
-  }
-
-  if (CHECK_GL_ERRORS(PRETTY_FUNCTION))
-    exit(1);
-  if (frag_handle_) {
+  if (frag_handle_)
     glDeleteShader(frag_handle_);
-    frag_handle_ = 0;
-  }
-
-  if (CHECK_GL_ERRORS(PRETTY_FUNCTION))
-    exit(1);
-  if (handle_) {
-    glDeleteProgram(handle_);
-    handle_ = 0;
-  }
-
-  if (CHECK_GL_ERRORS(PRETTY_FUNCTION))
-    exit(1);
-
+  if (handle_)
+    glDeleteShader(handle_);
 }
 
 void Shader::ObtainUniforms() {
@@ -176,9 +142,6 @@ void Shader::ObtainAttributes() {
     attribute.size = GLEnumToSize(type);
     attributes_[attribute.name] = std::move(attribute);
   }
-
-
-
 }
 
 const Uniform* Shader::GetUniform(const std::string& name) const {
@@ -247,13 +210,10 @@ Shader::SetMatrix(const std::string& uniform_name,
 
 namespace {
 
-bool CompileShader(GLenum kind, const std::string& src, int* out) {
+Status CompileShader(GLenum kind, const std::string& src, int* out) {
   int handle = glCreateShader(kind);
-  if (!handle) {
-    LOG(ERROR) << "Could not allocate a shader for kind: "
-               << GLEnumToString(kind);
-    return false;
-  }
+  if (!handle)
+    return STATUS("Could not allocate a shader");
 
   // Compile the shader source.
   const GLchar* gl_src = src.data();
@@ -266,11 +226,11 @@ bool CompileShader(GLenum kind, const std::string& src, int* out) {
     GLchar log[2048];
     glGetShaderInfoLog(handle, sizeof(log), 0, log);
     glDeleteShader(handle);
-    LOG(ERROR) << "Error compiling " << GLEnumToSize(kind)
-               << " shader: " << log;
+    return STATUS_VA(
+        "Error compiling %s shader: %s", GLEnumToString(kind), log);
   }
   *out = handle;
-  return true;
+  return Status::Ok();
 }
 
 }  // namespace

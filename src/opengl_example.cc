@@ -119,43 +119,30 @@ int main() {
             << fragment_shader.data();
 
   // Create a shader.
-  /* Shader shader(vertex_shader.data(), fragment_shader.data()); */
-  /* res = shader.Init(); */
-  /* if (!res.ok()) { */
-  /*   LOG_STATUS(res); */
-  /*   return 1; */
-  /* } */
-
-  auto shader = Shader::CreateShader(vertex_shader.data(), fragment_shader.data());
-  if (!shader)
-    exit(1);
-
-
-  if (CHECK_GL_ERRORS("NORMAL SHADER"))
-    exit(1);
-
-
+  Shader shader(vertex_shader.data(), fragment_shader.data());
+  res = shader.Init();
+  if (!res.ok()) {
+    LOG_STATUS(res);
+    return 1;
+  }
 
   std::vector<char> alpha_test_frag;
   ReadWholeFile(Assets::ShaderPath("alpha_test.frag"), &alpha_test_frag);
-  auto alpha_test_shader = Shader::CreateShader(vertex_shader.data(), alpha_test_frag.data());
-  if (!alpha_test_shader)
-    exit(1);
+  Shader alpha_test_shader(vertex_shader.data(), alpha_test_frag.data());
 
-
-  /* Shader alpha_test_shader(vertex_shader.data(), alpha_test_frag.data()); */
-  /* res = alpha_test_shader.Init(); */
-  /* if (!res.ok()) { */
-  /*   LOG_STATUS(res); */
-  /*   return 1; */
-  /* } */
+  res = alpha_test_shader.Init();
+  if (!res.ok()) {
+    LOG_STATUS(res);
+    return 1;
+  }
 
 
   if (CHECK_GL_ERRORS("Creating shaders"))
     exit(1);
 
-  for (const auto& [key, attrib] : shader->attributes())
+  for (const auto& [key, attrib] : shader.attributes()) {
     LOG(DEBUG) << "Attribute " << key << ": " << attrib.location;
+  }
 
   // Cube "model" --------------------------------------------------------------
 
@@ -176,11 +163,11 @@ int main() {
                GL_STATIC_DRAW);
   // How to interpret the buffer
   GLsizei cube_stride = (GLsizei)(5 * sizeof(float));
-  auto a_pos = shader->GetAttribute("a_pos");
+  auto a_pos = shader.GetAttribute("a_pos");
   glVertexAttribPointer(a_pos->location, 3, GL_FLOAT, GL_FALSE, cube_stride, (void*)0);
   glEnableVertexAttribArray(a_pos->location);
 
-  auto a_tex_coord0 = shader->GetAttribute("a_tex_coord0");
+  auto a_tex_coord0 = shader.GetAttribute("a_tex_coord0");
   glVertexAttribPointer(a_tex_coord0->location,
                         2,
                         GL_FLOAT,
@@ -189,7 +176,7 @@ int main() {
                         (void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(a_tex_coord0->location);
 
-  auto a_tex_coord1 = shader->GetAttribute("a_tex_coord1");
+  auto a_tex_coord1 = shader.GetAttribute("a_tex_coord1");
   glVertexAttribPointer(a_tex_coord1->location,
                         2,
                         GL_FLOAT,
@@ -375,9 +362,9 @@ int main() {
     if (CHECK_GL_ERRORS("Clear"))
       return 1;
 
-    shader->Use();
-    camera.SetProjection(&shader.value());
-    camera.SetView(&shader.value());
+    shader.Use();
+    camera.SetProjection(&shader);
+    camera.SetView(&shader);
 
     if (CHECK_GL_ERRORS("Setting Camera"))
       return 1;
@@ -385,9 +372,9 @@ int main() {
     // Draw the cubes.
     glBindVertexArray(cube_vao);
     // Set the cube textures.
-		wall.Set(&shader.value(), GL_TEXTURE0);
-    face.Set(&shader.value(), GL_TEXTURE1);
-    shader->SetMat4("model", glm::translate(glm::mat4(1.0f), {5.0f, 0.0, 0.0f}));
+		wall.Set(&shader, GL_TEXTURE0);
+    face.Set(&shader, GL_TEXTURE1);
+    shader.SetMat4("model", glm::translate(glm::mat4(1.0f), {5.0f, 0.0, 0.0f}));
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
@@ -410,29 +397,30 @@ int main() {
       float angle = sdl_context.seconds() * glm::radians(20.0f * i);
       model =
           glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
-      shader->SetMat4("model", model);
+      shader.SetMat4("model", model);
 
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
 
 
-    minecraft_cube.SetTextures(&shader.value());
-    minecraft_cube.Render(&shader.value());
+    // minecraft_cube.SetUniforms(&shader);
+    minecraft_cube.SetTextures(&shader);
+    minecraft_cube.Render(&shader);
 
     if (CHECK_GL_ERRORS("Drawing minecraft cube"))
       return 1;
 
     // We only need one texture for the plane.
-    grid.Set(&shader.value(), GL_TEXTURE0);
+    grid.Set(&shader, GL_TEXTURE0);
 
     // Draw the plane.
-    alpha_test_shader->Use();
-    camera.SetProjection(&alpha_test_shader.value());
-    camera.SetView(&alpha_test_shader.value());
+    alpha_test_shader.Use();
+    camera.SetProjection(&alpha_test_shader);
+    camera.SetView(&alpha_test_shader);
 
     glBindVertexArray(plane_vao);
     // The model at the origin.
-    shader->SetMat4("model", glm::mat4(1.0f));
+    shader.SetMat4("model", glm::mat4(1.0f));
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     if (CHECK_GL_ERRORS("Drawing plane"))
