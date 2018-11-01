@@ -3,11 +3,8 @@
 
 #pragma once
 
-#ifdef _MSC_VER
+// For some reason math.h doesn't give us the symbols in some OS (eg. osx).
 #include <cmath>
-#else
-#include <math.h>
-#endif
 
 namespace warhol {
 

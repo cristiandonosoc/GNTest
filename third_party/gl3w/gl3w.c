@@ -833,9 +833,14 @@ static const char *proc_names[] = {
 
 union GL3WProcs gl3wProcs;
 
+#include <stdio.h>
+
 static void load_procs(GL3WGetProcAddressProc proc)
 {
 	size_t i;
-	for (i = 0; i < ARRAY_SIZE(proc_names); i++)
+	for (i = 0; i < ARRAY_SIZE(proc_names); i++) {
 		gl3wProcs.ptr[i] = proc(proc_names[i]);
+    /* printf("LOADED %s: %p\n", proc_names[i], gl3wProcs.ptr[i]); */
+  }
+
 }

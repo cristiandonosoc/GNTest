@@ -74,13 +74,19 @@
 using namespace warhol;
 
 int main() {
+  gl3wInit();
+
+  printf("%s\n", glGetString(GL_VERSION));
+  exit(0);
+
+
+
   SDLContext sdl_context;
   Status res = sdl_context.Init();
   if (!res.ok()) {
     LOG_STATUS(res) << res;
     return 1;
   }
-  gl3wInit();
 
   // Test current executable path.
   LOG(DEBUG) << "Current executable: "

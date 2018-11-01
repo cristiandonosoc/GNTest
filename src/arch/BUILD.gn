@@ -9,6 +9,8 @@ source_set("arch_provider") {
     sources = [ "windows_arch_provider.cc" ]
   } else if (is_linux) {
     sources = [ "linux_arch_provider.cc" ]
+  } else if (is_osx) {
+    sources = [ "osx_arch_provider.cc" ]
   } else {
     assert(false, "Unhandled arch: $target_os")
   }
