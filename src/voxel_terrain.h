@@ -6,11 +6,10 @@
 #include <unordered_map>
 
 #include "src/math/vec.h"
-/* #include "src/model/minecraft_cube.h" */
+#include "src/model/minecraft_cube.h"
 
 namespace warhol {
 
-class MinecraftCube;
 class Shader;
 class TextureAtlas;
 
@@ -25,7 +24,7 @@ class VoxelTerrain {
   // Will load the atlas as the current texture.
   void SetTextures(Shader* shader) const;
 
-  void Render();
+  void Render(Shader*);
 
   bool Init();
 

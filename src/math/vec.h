@@ -22,7 +22,7 @@ struct Pair {
   Pair operator+(const Pair rhs) const { return {x + rhs.x, y + rhs.y}; }
   Pair operator-(const Pair rhs) const { return {x - rhs.x, y - rhs.y}; }
 
-  std::string ToString() const { return StringPrintf("X: %f, Y: %f", x, y); }
+  std::string ToString() const { return StringPrintf("X: %f, Y: %f", (float)x, (float)y); }
   bool operator==(const Pair& rhs) const { return x == rhs.x && y == rhs.y; }
   bool operator!=(const Pair& rhs) const { return x != rhs.x || y != rhs.y; }
 

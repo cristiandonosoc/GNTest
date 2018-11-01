@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "src/math/vec.h"
+#include "src/utils/clear_on_move.h"
 #include "src/utils/glm.h"
 #include "src/utils/macros.h"
 
@@ -26,6 +27,7 @@ class MinecraftCube {
   };
 
   MinecraftCube() = default;
+  ~MinecraftCube();
   DELETE_COPY_AND_ASSIGN(MinecraftCube);
   DEFAULT_MOVE_AND_ASSIGN(MinecraftCube);
 
@@ -44,11 +46,11 @@ class MinecraftCube {
   glm::vec3 position_;
   glm::mat4 model_ = glm::mat4(1.0f);
 
-  uint32_t vao_;
-  uint32_t vertex_vbo_;
-  uint32_t uv_vbo1_;
-  uint32_t uv_vbo2_;
-  uint32_t ebo_;
+  ClearOnMove<uint32_t> vao_;
+  ClearOnMove<uint32_t> vertex_vbo_;
+  ClearOnMove<uint32_t> uv_vbo1_;
+  ClearOnMove<uint32_t> uv_vbo2_;
+  ClearOnMove<uint32_t> ebo_;
 
   std::vector<float> uvs1_;
   std::vector<float> uvs2_;

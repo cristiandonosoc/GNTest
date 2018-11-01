@@ -93,9 +93,34 @@ uint32_t indices[] = {
 
 }  // namespace
 
+
+MinecraftCube::~MinecraftCube() {
+  if (vao_.value) {
+    glDeleteVertexArrays(1, &vao_.value);
+    vao_.clear();
+  }
+  if (vertex_vbo_.value) {
+    glDeleteBuffers(1, &vertex_vbo_.value);
+    vao_.clear();
+  }
+  if (uv_vbo1_.value) {
+    glDeleteBuffers(1, &uv_vbo1_.value);
+    uv_vbo1_.clear();
+  }
+  if (uv_vbo2_.value) {
+    glDeleteBuffers(1, &uv_vbo2_.value);
+    uv_vbo1_.clear();
+  }
+  if (ebo_.value) {
+    glDeleteBuffers(1, &ebo_.value);
+    ebo_.clear();
+  }
+}
+
+
 bool MinecraftCube::Init() {
-  glGenVertexArrays(1, &vao_);
-  glBindVertexArray(vao_);
+  glGenVertexArrays(1, &vao_.value);
+  glBindVertexArray(vao_.value);
 
   uint32_t buffers[4];
   glGenBuffers(ARRAY_SIZE(buffers), buffers);
@@ -115,7 +140,7 @@ bool MinecraftCube::Init() {
   }
 
   // Vertices.
-  glBindBuffer(GL_ARRAY_BUFFER, vertex_vbo_);
+  glBindBuffer(GL_ARRAY_BUFFER, vertex_vbo_.value);
   glBufferData(GL_ARRAY_BUFFER,
                sizeof(indexed_vertices),
                indexed_vertices,
@@ -128,7 +153,7 @@ bool MinecraftCube::Init() {
     exit(1);
 
   // UV
-  glBindBuffer(GL_ARRAY_BUFFER, uv_vbo1_);
+  glBindBuffer(GL_ARRAY_BUFFER, uv_vbo1_.value);
   glBufferData(GL_ARRAY_BUFFER,
                sizeof(float) * uvs1_.size(),
                uvs1_.data(),
@@ -140,7 +165,7 @@ bool MinecraftCube::Init() {
     exit(1);
 
   // UV2
-  glBindBuffer(GL_ARRAY_BUFFER, uv_vbo2_);
+  glBindBuffer(GL_ARRAY_BUFFER, uv_vbo2_.value);
   glBufferData(GL_ARRAY_BUFFER,
                sizeof(float) * uvs2_.size(),
                uvs2_.data(),
@@ -152,7 +177,7 @@ bool MinecraftCube::Init() {
     exit(1);
 
   // Indices
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_.value);
   glBufferData(
       GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
@@ -188,6 +213,8 @@ void PrintUVs(const std::vector<float>& uvs) {
 
 namespace {
 
+
+
 void
 ChangeUV(MinecraftCube::Face face,
          Pair<Pair<float>> min_max_uvs,
@@ -219,10 +246,10 @@ void
 MinecraftCube::SetFace(MinecraftCube::Face face,
                        int layer,
                        Pair<Pair<float>> min_max_uvs) {
-  if (layer == 1) {
-    ChangeUV(face, std::move(min_max_uvs), uv_vbo1_, &uvs1_);
-  } else if (layer == 2) {
-    ChangeUV(face, std::move(min_max_uvs), uv_vbo2_, &uvs2_);
+  if (layer == 0) {
+    ChangeUV(face, std::move(min_max_uvs), uv_vbo1_.value, &uvs1_);
+  } else if (layer == 1) {
+    ChangeUV(face, std::move(min_max_uvs), uv_vbo2_.value, &uvs2_);
   } else {
     LOG(ERROR) << "Wrong layer count: " << layer;
     exit(1);
@@ -230,7 +257,7 @@ MinecraftCube::SetFace(MinecraftCube::Face face,
 }
 
 void MinecraftCube::Render(Shader* shader) {
-  glBindVertexArray(vao_);
+  glBindVertexArray(vao_.value);
   // TODO(donosoc): Do this only when needed.
   model_ = glm::translate(glm::mat4(1.0f), position_);
   shader->SetMat4("model", model_);

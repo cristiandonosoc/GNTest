@@ -31,16 +31,16 @@
 #include "src/utils/macros.h"
 #include "src/utils/file.h"
 #include "src/utils/log.h"
-
 #include "src/utils/glm_impl.h"
-
-#include "src/model/minecraft_cube.h"
+#include "src/voxel_terrain.h"
 
 /**
  * Simple OpenGL experiments to understand how to build a renderer.
  *
  * TODOs:
  *
+ * - Create imgui_def.h and pass it through the context too.
+ * - Fix shader move (doesn't invalidate ints).
  * - Replace glm with my own math library (or find a decent one online). The
  *   API is too awkward, both header-wise and specially getting the pointers to
  *   the raw data (glm::value_ptr()... really?).
@@ -117,6 +117,16 @@ int main() {
   }
   LOG(INFO) << "Correctly read fragment shader: " << std::endl
             << fragment_shader.data();
+
+  // ImGUI ---------------------------------------------------------------------
+
+  ImguiContext imgui_context;
+  if (!imgui_context.Init()) {
+    LOG(ERROR) << "Could not initialize ImguiContext";
+    exit(1);
+  }
+
+  // Shaders -------------------------------------------------------------------
 
   // Create a shader.
   Shader shader(vertex_shader.data(), fragment_shader.data());
@@ -247,27 +257,25 @@ int main() {
   Texture atlas_texture(Assets::TexturePath("atlas.png"));
   TextureAtlas atlas(std::move(atlas_texture), 16, 16);
 
-  /* // The minecraft cube handles the VAO, VBO */
-  MinecraftCube minecraft_cube(&atlas);
-  minecraft_cube.Init();
-  minecraft_cube.set_position({1.0f, 1.0f, 1.0f});
-  minecraft_cube.SetFace(MinecraftCube::Face::kBack, kGrassDirt, kTransparent);
-  minecraft_cube.SetFace(MinecraftCube::Face::kFront, kGrassDirt, kTransparent);
-  minecraft_cube.SetFace(MinecraftCube::Face::kLeft, kGrassDirt, kCrack4);
-  minecraft_cube.SetFace(MinecraftCube::Face::kRight, kGrassDirt, kTransparent);
-  minecraft_cube.SetFace(MinecraftCube::Face::kTop, kGrass, kCrack9);
-  minecraft_cube.SetFace(MinecraftCube::Face::kBottom, kDirt, kTransparent);
+  /* /1* // The minecraft cube handles the VAO, VBO *1/ */
+  /* MinecraftCube minecraft_cube(&atlas); */
+  /* minecraft_cube.Init(); */
+  /* minecraft_cube.set_position({1.0f, 1.0f, 1.0f}); */
+  /* minecraft_cube.SetFace(MinecraftCube::Face::kBack, kGrassDirt, kTransparent); */
+  /* minecraft_cube.SetFace(MinecraftCube::Face::kFront, kGrassDirt, kTransparent); */
+  /* minecraft_cube.SetFace(MinecraftCube::Face::kLeft, kGrassDirt, kCrack4); */
+  /* minecraft_cube.SetFace(MinecraftCube::Face::kRight, kGrassDirt, kTransparent); */
+  /* minecraft_cube.SetFace(MinecraftCube::Face::kTop, kGrass, kCrack9); */
+  /* minecraft_cube.SetFace(MinecraftCube::Face::kBottom, kDirt, kTransparent); */
 
-  if (CHECK_GL_ERRORS("Creating minecraft cube"))
-    return 1;
-
-  // ImGUI ---------------------------------------------------------------------
-
-  ImguiContext imgui_context;
-  if (!imgui_context.Init()) {
-    LOG(ERROR) << "Could not initialize ImguiContext";
+  VoxelTerrain terrain(&atlas);
+  if (!terrain.Init()) {
+    LOG(ERROR) << "Could not initialize voxel terrain";
     exit(1);
   }
+
+  if (CHECK_GL_ERRORS("Creating voxel terrain"))
+    return 1;
 
   // Camera --------------------------------------------------------------------
 
@@ -402,10 +410,11 @@ int main() {
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
 
+    terrain.Render(&shader);
 
-    // minecraft_cube.SetUniforms(&shader);
-    minecraft_cube.SetTextures(&shader);
-    minecraft_cube.Render(&shader);
+    /* // minecraft_cube.SetUniforms(&shader); */
+    /* minecraft_cube.SetTextures(&shader); */
+    /* minecraft_cube.Render(&shader); */
 
     if (CHECK_GL_ERRORS("Drawing minecraft cube"))
       return 1;

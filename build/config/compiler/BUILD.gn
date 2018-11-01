@@ -3,6 +3,9 @@
 
 if (compiler == "msvc") {
   config("default_warnings") {
+    defines = [
+      "NOMINMAX",
+    ]
     cflags = [
       "/W4",
       "/WX",

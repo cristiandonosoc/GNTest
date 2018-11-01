@@ -19,8 +19,6 @@ Pair<Pair<float>> TextureAtlas::GetUVs(size_t index) const {
   auto [x, y] = IndexToCoord(index);
   auto [offsetx, offsety] = TextureOffset(index);
 
-  LOG(DEBUG) << "OFFSETX: " << offsetx << ", OFFSETY: " << offsety;
-
   uvs.min() = { x * offsetx, y * offsety };
   uvs.max() = { (x + 1) * offsetx, (y + 1) * offsety };
   return uvs;
