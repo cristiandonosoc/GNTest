@@ -39,6 +39,7 @@
  *
  * TODOs:
  *
+ * - Change model/minecraft_cube into voxel.
  * - Create imgui_def.h and pass it through the context too.
  * - Fix shader move (doesn't invalidate ints).
  * - Replace glm with my own math library (or find a decent one online). The
@@ -59,6 +60,9 @@
  *   trip, which is gated by OpenGL's buffer swap timing, so we don't know how
  *   much we take to calculate a frame.
  * - Remove all the #include <SDL2/SDL.h> to #include "src/sdl2/def.h"
+ * - Make voxel chunks render their own vertices instead of a lot of cubes.
+ * - Make a scene graph.
+ * - Separate VoxelChunk into its own file.
  *
  * WAAAY DOWN THE LINE:
  * - Abstract the renderer and enable Vulkan (that way we don't depend on the

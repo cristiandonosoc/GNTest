@@ -19,10 +19,9 @@ struct Pair {
   T& min() { return x; }
   T& max() { return y; }
 
-  Pair operator+(const Pair rhs) const { return {x + rhs.x, y + rhs.y}; }
-  Pair operator-(const Pair rhs) const { return {x - rhs.x, y - rhs.y}; }
+  Pair operator+(const Pair& rhs) const { return {x + rhs.x, y + rhs.y}; }
+  Pair operator-(const Pair& rhs) const { return {x - rhs.x, y - rhs.y}; }
 
-  std::string ToString() const { return StringPrintf("X: %f, Y: %f", (float)x, (float)y); }
   bool operator==(const Pair& rhs) const { return x == rhs.x && y == rhs.y; }
   bool operator!=(const Pair& rhs) const { return x != rhs.x || y != rhs.y; }
 
@@ -31,11 +30,15 @@ struct Pair {
 
   bool operator>(const Pair& rhs) const { return x > rhs.x || y > rhs.y; }
   bool operator>=(const Pair& rhs) const { return *this > rhs || *this == rhs; }
+
+  std::string ToString() const {
+    return StringPrintf("X: %f, Y: %f", (float)x, (float)y);
+  }
 };
 
 template <typename T>
 struct HashPair {
-  size_t operator()(const Pair<T> p) const {
+  size_t operator()(const Pair<T>& p) const {
     // TODO(Cristian): Do some more decent hash function.
     size_t result = 2166136261;
     result = (((result * 16777619) ^ p.x) ^ p.y) << 1;
@@ -48,6 +51,49 @@ struct Pair3 {
   T x;
   T y;
   T z;
+
+  Pair3 operator+(const Pair3& rhs) const {
+    return {x + rhs.x, y + rhs.y, z + rhs.z};
+  }
+  Pair3 operator-(const Pair3& rhs) const {
+    return {x - rhs.x, y - rhs.y, z - rhs.z};
+  }
+
+  bool operator==(const Pair3& rhs) const {
+    return x == rhs.x && y == rhs.y && z == rhs.z;
+  }
+  bool operator!=(const Pair3& rhs) const {
+    return x != rhs.x || y != rhs.y || z != rhs.z;
+  }
+
+  bool operator<(const Pair3& rhs) const {
+    return x < rhs.x || y < rhs.y || z < rhs.z;
+  }
+  bool operator<=(const Pair3& rhs) const {
+    return *this < rhs || *this == rhs;
+  }
+
+  bool operator>(const Pair3& rhs) const {
+    return x > rhs.x || y > rhs.y || z > rhs.z;
+  }
+  bool operator>=(const Pair3& rhs) const {
+    return *this > rhs || *this == rhs;
+  }
+
+  std::string ToString() const {
+    return StringPrintf("X: %f, Y: %f, Z: %f", (float)x, (float)y, (float)z);
+  }
+};
+
+
+template <typename T>
+struct HashPair3 {
+  size_t operator()(const Pair3<T>& p) const {
+    // TODO(Cristian): Do some more decent hash function.
+    size_t result = 2166136261;
+    result = ((((result * 16777619) ^ p.x) ^ p.y) << 1) ^ p.z << 1;
+    return result;
+  }
 };
 
 // Mathematical vectors --------------------------------------------------------
@@ -130,8 +176,5 @@ struct Vec3 {
     return StringPrintf("X: %f, Y: %f, Z: %f", x, y, z);
   }
 };
-
-
-
 
 }  // namespace warhol

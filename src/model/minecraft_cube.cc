@@ -93,7 +93,7 @@ uint32_t indices[] = {
 
 }  // namespace
 
-
+MinecraftCube::MinecraftCube() = default;
 MinecraftCube::~MinecraftCube() {
   if (vao_.value) {
     glDeleteVertexArrays(1, &vao_.value);
@@ -190,6 +190,8 @@ bool MinecraftCube::Init() {
 
   if (CHECK_GL_ERRORS("Unbinding"))
     exit(1);
+
+  initialized_ = true;
   return true;
 }
 
@@ -210,10 +212,7 @@ void PrintUVs(const std::vector<float>& uvs) {
   LOG(DEBUG) << ss.str();
 }
 
-
 namespace {
-
-
 
 void
 ChangeUV(MinecraftCube::Face face,
@@ -257,16 +256,12 @@ MinecraftCube::SetFace(MinecraftCube::Face face,
 }
 
 void MinecraftCube::Render(Shader* shader) {
+  assert(initialized_);
   glBindVertexArray(vao_.value);
   // TODO(donosoc): Do this only when needed.
   model_ = glm::translate(glm::mat4(1.0f), position_);
   shader->SetMat4("model", model_);
-
-  /* atlas_->texture().Set(shader, GL_TEXTURE0); */
-
-  /* glDrawArrays(GL_TRIANGLES, 0, 36); */
   glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, NULL);
-
 }
 
 }  // namespace warhol

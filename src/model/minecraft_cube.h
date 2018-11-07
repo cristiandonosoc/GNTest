@@ -26,7 +26,7 @@ class MinecraftCube {
     kBottom,
   };
 
-  MinecraftCube() = default;
+  MinecraftCube();
   ~MinecraftCube();
   DELETE_COPY_AND_ASSIGN(MinecraftCube);
   DEFAULT_MOVE_AND_ASSIGN(MinecraftCube);
@@ -43,6 +43,8 @@ class MinecraftCube {
   void Render(Shader*);
 
  private:
+  // TODO(Cristian): Voxels should not care about where they are. They only
+  //                 know about their vertices.
   glm::vec3 position_;
   glm::mat4 model_ = glm::mat4(1.0f);
 
@@ -54,6 +56,7 @@ class MinecraftCube {
 
   std::vector<float> uvs1_;
   std::vector<float> uvs2_;
+  bool initialized_ = false;
 };
 
 }  // namespace warhol
