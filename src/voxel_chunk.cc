@@ -1,7 +1,7 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include "src/model/minecraft_cube.h"
+#include "src/voxel_chunk.h"
 
 #include "src/shader.h"
 #include "src/texture_atlas.h"
@@ -93,8 +93,8 @@ uint32_t indices[] = {
 
 }  // namespace
 
-MinecraftCube::MinecraftCube() = default;
-MinecraftCube::~MinecraftCube() {
+Voxel::Voxel() = default;
+Voxel::~Voxel() {
   if (vao_.value) {
     glDeleteVertexArrays(1, &vao_.value);
     vao_.clear();
@@ -118,7 +118,7 @@ MinecraftCube::~MinecraftCube() {
 }
 
 
-bool MinecraftCube::Init() {
+bool Voxel::Init() {
   glGenVertexArrays(1, &vao_.value);
   glBindVertexArray(vao_.value);
 
@@ -215,13 +215,13 @@ void PrintUVs(const std::vector<float>& uvs) {
 namespace {
 
 void
-ChangeUV(MinecraftCube::Face face,
+ChangeUV(Voxel::Face face,
          Pair<Pair<float>> min_max_uvs,
          int vbo,
          std::vector<float>* uvs) {
   /* auto uv_coords = atlas.GetUVs(index); */
   uint32_t offset =
-      2 * 4 * (uint32_t)face - (uint32_t)MinecraftCube::Face::kFront;
+      2 * 4 * (uint32_t)face - (uint32_t)Voxel::Face::kFront;
   uvs->at(offset + 0) = min_max_uvs.x.x;
   uvs->at(offset + 1) = min_max_uvs.x.y;
   uvs->at(offset + 2) = min_max_uvs.y.x;
@@ -242,7 +242,7 @@ ChangeUV(MinecraftCube::Face face,
 }  // namespace
 
 void
-MinecraftCube::SetFace(MinecraftCube::Face face,
+Voxel::SetFace(Voxel::Face face,
                        int layer,
                        Pair<Pair<float>> min_max_uvs) {
   if (layer == 0) {
@@ -255,7 +255,7 @@ MinecraftCube::SetFace(MinecraftCube::Face face,
   }
 }
 
-void MinecraftCube::Render(Shader* shader) {
+void Voxel::Render(Shader* shader) {
   assert(initialized_);
   glBindVertexArray(vao_.value);
   // TODO(donosoc): Do this only when needed.

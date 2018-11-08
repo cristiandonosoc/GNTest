@@ -12,8 +12,8 @@ namespace {
 
 void
 ChangeUV(const TextureAtlas& atlas,
-         MinecraftCube* cube,
-         MinecraftCube::Face face,
+         Voxel* cube,
+         Voxel::Face face,
          int texture_index,
          int layer) {
   auto uv_coords = atlas.GetUVs(texture_index);
@@ -21,8 +21,8 @@ ChangeUV(const TextureAtlas& atlas,
 }
 
 void SetCubeFace(const TextureAtlas& atlas,
-                 MinecraftCube* cube,
-                 MinecraftCube::Face face,
+                 Voxel* cube,
+                 Voxel::Face face,
                  int texture_index1, int texture_index2) {
   ChangeUV(atlas, cube, face, texture_index1, 0);
   ChangeUV(atlas, cube, face, texture_index2, 1);
@@ -35,7 +35,7 @@ void SetCubeFace(const TextureAtlas& atlas,
 VoxelChunk::VoxelChunk() = default;
 VoxelChunk::VoxelChunk(TextureAtlas* atlas) : atlas_(atlas) {}
 
-MinecraftCube& VoxelChunk::GetVoxel(size_t x, size_t y, size_t z) {
+Voxel& VoxelChunk::GetVoxel(size_t x, size_t y, size_t z) {
   assert(x < kVoxelChunkSize && y < kVoxelChunkSize && z < kVoxelChunkSize);
   size_t z_offset = z * kVoxelChunkSize * kVoxelChunkSize;
   size_t y_offset = y * kVoxelChunkSize;
@@ -46,24 +46,24 @@ bool VoxelChunk::Init() {
   for (size_t x = 0; x < kVoxelChunkSize; x++) {
     for (size_t y = 0; y < kVoxelChunkSize; y++) {
       for (size_t z = 0; z < kVoxelChunkSize; z++) {
-        MinecraftCube& voxel = GetVoxel(x, y, z);
+        Voxel& voxel = GetVoxel(x, y, z);
         if (!voxel.Init())
           return false;
 
         // TODO(Cristian): Offset this by the chunk position offset.
         // TODO(Cristian): Later do a scene graph.
         voxel.set_position({x, y, z});
-        SetCubeFace(*atlas_, &voxel, MinecraftCube::Face::kBack,
+        SetCubeFace(*atlas_, &voxel, Voxel::Face::kBack,
                     kGrassDirt, kTransparent);
-        SetCubeFace(*atlas_, &voxel, MinecraftCube::Face::kFront,
+        SetCubeFace(*atlas_, &voxel, Voxel::Face::kFront,
                     kGrassDirt, kTransparent);
-        SetCubeFace(*atlas_, &voxel, MinecraftCube::Face::kLeft,
+        SetCubeFace(*atlas_, &voxel, Voxel::Face::kLeft,
                     kGrassDirt, kCrack4);
-        SetCubeFace(*atlas_, &voxel, MinecraftCube::Face::kRight,
+        SetCubeFace(*atlas_, &voxel, Voxel::Face::kRight,
                     kGrassDirt, kTransparent);
-        SetCubeFace(*atlas_, &voxel, MinecraftCube::Face::kTop,
+        SetCubeFace(*atlas_, &voxel, Voxel::Face::kTop,
                     kGrass, kCrack9);
-        SetCubeFace(*atlas_, &voxel, MinecraftCube::Face::kBottom,
+        SetCubeFace(*atlas_, &voxel, Voxel::Face::kBottom,
                     kDirt, kTransparent);
       }
     }
@@ -72,7 +72,7 @@ bool VoxelChunk::Init() {
 }
 
 void VoxelChunk::Render(Shader* shader) {
-  for (MinecraftCube& voxel : voxels_)
+  for (Voxel& voxel : voxels_)
     voxel.Render(shader);
 }
 

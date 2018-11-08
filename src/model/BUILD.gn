@@ -5,8 +5,6 @@ source_set("model") {
   sources = [
     "cube.cc",
     "cube.h",
-    "minecraft_cube.cc",
-    "minecraft_cube.h",
     "plane.cc",
     "plane.h",
   ]

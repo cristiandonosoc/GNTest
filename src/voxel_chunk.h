@@ -15,7 +15,7 @@ namespace warhol {
 class Shader;
 class TextureAtlas;
 
-class MinecraftCube {
+class Voxel {
  public:
   enum class Face {
     kFront,
@@ -26,10 +26,10 @@ class MinecraftCube {
     kBottom,
   };
 
-  MinecraftCube();
-  ~MinecraftCube();
-  DELETE_COPY_AND_ASSIGN(MinecraftCube);
-  DEFAULT_MOVE_AND_ASSIGN(MinecraftCube);
+  Voxel();
+  ~Voxel();
+  DELETE_COPY_AND_ASSIGN(Voxel);
+  DEFAULT_MOVE_AND_ASSIGN(Voxel);
 
   bool Init();
 
@@ -58,5 +58,32 @@ class MinecraftCube {
   std::vector<float> uvs2_;
   bool initialized_ = false;
 };
+
+// How many voxels a voxel chunk is. Voxel chunks are assumed to be a cube.
+constexpr size_t kVoxelChunkSize = 4;
+constexpr size_t kVoxelChunkVoxelCount = kVoxelChunkSize *
+                                         kVoxelChunkSize *
+                                         kVoxelChunkSize;
+
+// Represents a group of voxels in which the world is divided.
+class VoxelChunk {
+ public:
+  VoxelChunk();
+  VoxelChunk(TextureAtlas*);
+  bool Init();
+  void Render(Shader*);
+
+  // TODO(Cristian): Return a reference to the actual array?
+  Voxel* voxels() { return voxels_; }
+  size_t voxel_count() const { return ARRAY_SIZE(voxels_); }
+
+  Voxel& GetVoxel(size_t x, size_t y, size_t z);
+
+ private:
+  Voxel voxels_[kVoxelChunkVoxelCount];
+  TextureAtlas* atlas_;   // Not owning. Must outlive.
+};
+
+
 
 }  // namespace warhol

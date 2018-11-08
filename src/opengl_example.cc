@@ -39,7 +39,6 @@
  *
  * TODOs:
  *
- * - Change model/minecraft_cube into voxel.
  * - Create imgui_def.h and pass it through the context too.
  * - Fix shader move (doesn't invalidate ints).
  * - Replace glm with my own math library (or find a decent one online). The
