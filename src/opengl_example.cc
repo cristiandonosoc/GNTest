@@ -54,7 +54,6 @@
  * - Move EventAction outside of SDL, as we could use it with another window
  *   library and it should just work (tm).
  * - Handle mouse buttons similar as keyboard (ask for down and up).
- * - Use the `typedef union foo foo` to forward declare SDL elements.
  * - Calculate a start->end frame timing. Right now we measure complete round
  *   trip, which is gated by OpenGL's buffer swap timing, so we don't know how
  *   much we take to calculate a frame.
@@ -260,17 +259,6 @@ int main() {
   Texture atlas_texture(Assets::TexturePath("atlas.png"));
   TextureAtlas atlas(std::move(atlas_texture), 16, 16);
 
-  /* /1* // The minecraft cube handles the VAO, VBO *1/ */
-  /* MinecraftCube minecraft_cube(&atlas); */
-  /* minecraft_cube.Init(); */
-  /* minecraft_cube.set_position({1.0f, 1.0f, 1.0f}); */
-  /* minecraft_cube.SetFace(MinecraftCube::Face::kBack, kGrassDirt, kTransparent); */
-  /* minecraft_cube.SetFace(MinecraftCube::Face::kFront, kGrassDirt, kTransparent); */
-  /* minecraft_cube.SetFace(MinecraftCube::Face::kLeft, kGrassDirt, kCrack4); */
-  /* minecraft_cube.SetFace(MinecraftCube::Face::kRight, kGrassDirt, kTransparent); */
-  /* minecraft_cube.SetFace(MinecraftCube::Face::kTop, kGrass, kCrack9); */
-  /* minecraft_cube.SetFace(MinecraftCube::Face::kBottom, kDirt, kTransparent); */
-
   VoxelTerrain terrain(&atlas);
   if (!terrain.Init()) {
     LOG(ERROR) << "Could not initialize voxel terrain";
@@ -314,23 +302,17 @@ int main() {
             camera.direction() * camera_speed * sdl_context.frame_delta();
       }
       if (input.left) {
-        /* camera.pos -= glm::normalize(glm::cross(camera.direction(),
-         * camera.up())) * */
-        /*               camera_speed * sdl_context.frame_delta(); */
         camera.pos -= camera.direction().cross(camera.up()) * camera_speed *
                       sdl_context.frame_delta();
       }
       if (input.right) {
-        /* camera.pos += glm::normalize(glm::cross(camera.direction(),
-         * camera.up())) * */
-        /*               camera_speed * sdl_context.frame_delta(); */
         camera.pos += camera.direction().cross(camera.up()) * camera_speed *
                       sdl_context.frame_delta();
       }
       camera_changed = prev_pos != camera.pos;
     }
 
-    float mouse_sensibility = 0.025f;
+    float mouse_sensibility = 0.007f;
     constexpr float max_yaw = 89.0f;
 
     if (!imgui_context.mouse_captured()) {
@@ -365,6 +347,7 @@ int main() {
     if (camera_changed)
       camera.UpdateView();
 
+    /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
 
     // Draw the triangle.
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
@@ -415,10 +398,6 @@ int main() {
 
     terrain.Render(&shader);
 
-    /* // minecraft_cube.SetUniforms(&shader); */
-    /* minecraft_cube.SetTextures(&shader); */
-    /* minecraft_cube.Render(&shader); */
-
     if (CHECK_GL_ERRORS("Drawing minecraft cube"))
       return 1;
 
@@ -437,9 +416,6 @@ int main() {
 
     if (CHECK_GL_ERRORS("Drawing plane"))
       return 1;
-
-		/* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
-    /* glDrawArrays(GL_TRIANGLES, 0, 36); */
 
     // ImGUI
     ImGui::ShowDemoWindow(nullptr);
@@ -469,23 +445,13 @@ int main() {
       }
 
        ImGui::LabelText("FOV", "%.3f", camera.fov);
-
-      /* float p = std::asin(camera.direction().y); */
-      /* float pitch[2] = { p, rad2deg(p), }; */
-      /* float y = -std::atan(camera.direction().z / camera.direction().y); */
-      /* float yaw[2] = {y, rad2deg(y)}; */
-
-      /* ImGui::InputFloat2("PITCH", pitch); */
-      /* ImGui::InputFloat2("YAW", yaw); */
+       ImGui::LabelText("Seconds", "%.3f", sdl_context.seconds());
 
       ImGui::End();
-
     }
     imgui_context.Render();
 
     SDL_GL_SwapWindow(sdl_context.get_window());
-
-    /* SDL_Delay(1); */
   }
 
   sdl_context.Clear();

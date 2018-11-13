@@ -8,7 +8,6 @@
 #include <limits>
 
 #include "src/graphics/GL/def.h"
-
 #include "src/sdl2/input.h"
 #include "src/sdl2/def.h"
 
@@ -153,16 +152,19 @@ SDLContext::NewFrame(InputState* input) {
 #endif
 
 void SDLContext::CalculateFramerate() {
+  static uint64_t initial_time = SDL_GetPerformanceCounter();
+
   // Get the current time.
   uint64_t frequency = SDL_GetPerformanceFrequency();
-  uint64_t current_time = SDL_GetPerformanceCounter();
+  uint64_t current_time = SDL_GetPerformanceCounter() - initial_time;
 
   auto total_time = impl_->total_time;
   impl_->frame_delta =
       (float)(total_time > 0 ? ((double)(current_time - total_time) / frequency)
                              : (1.0 / 60.0));
+
   impl_->total_time = current_time;
-  impl_->seconds = (float)((double)impl_->total_time / frequency);
+  impl_->seconds = (float)((float)impl_->total_time / (float)frequency);
 
   // Calculate the rolling average.
   impl_->frame_delta_accum += impl_->frame_delta - impl_->frame_times[impl_->frame_times_index];
