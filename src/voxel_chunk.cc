@@ -3,10 +3,14 @@
 
 #include "src/voxel_chunk.h"
 
+#include <bitset>
+
+
+#include "src/graphics/GL/utils.h"
 #include "src/shader.h"
 #include "src/texture_atlas.h"
+#include "src/utils/coords.h"
 #include "src/utils/glm_impl.h"
-#include "src/graphics/GL/utils.h"
 
 namespace warhol {
 
@@ -239,7 +243,43 @@ ChangeUV(Voxel::Face face,
   glBindBuffer(GL_ARRAY_BUFFER, NULL);
 }
 
+#if 0
+
+// TODO(Cristian): Extend this to separate dimensions.
+void GreedyMesh(size_t side) {
+
+  for (size_t dim = 0; dim < 3; dim++) {
+    size_t dim_up = (dim + 1) % 3;
+    size_t dim_down = (dim + 2) % 3;
+
+    Pair3<size_t> x = {};
+    Pair3<size_t> quad = {};
+    quad[dim] = 1;
+    std::bitset<kVoxelChunkSize * kVoxelChunkSize> mask;
+
+    for (x[dim] = -1; x[dim] < side;) {
+      // Compute mask. //TODO(Cristian): What does this mask mean?
+      size_t n = 0;
+      for (x[dim_down] = 0; x[dim_down] < side; x[dim_down]++) {
+        for (x[dim_up] = 0; x [dim_up] < side; x[dim_up]++) {
+
+        }
+      }
+
+
+    }
+  }
+
+
+}
+
+
+#endif
+
 }  // namespace
+
+
+
 
 void
 Voxel::SetFace(Voxel::Face face,

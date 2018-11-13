@@ -65,6 +65,18 @@ constexpr size_t kVoxelChunkVoxelCount = kVoxelChunkSize *
                                          kVoxelChunkSize *
                                          kVoxelChunkSize;
 
+struct VoxelElement {
+  enum class Type : uint8_t {
+    kDirt,
+    kTopGrass,
+
+    kLast
+  };
+
+  Type type;
+
+};
+
 // Represents a group of voxels in which the world is divided.
 class VoxelChunk {
  public:
@@ -72,6 +84,9 @@ class VoxelChunk {
   VoxelChunk(TextureAtlas*);
   bool Init();
   void Render(Shader*);
+  // From the given voxel elements, a new mesh can be calculated that minimizes
+  // the amount of vertices needed.
+  void CalculateMesh();
 
   // TODO(Cristian): Return a reference to the actual array?
   Voxel* voxels() { return voxels_; }
@@ -80,6 +95,8 @@ class VoxelChunk {
   Voxel& GetVoxel(size_t x, size_t y, size_t z);
 
  private:
+  VoxelElement elements_[kVoxelChunkVoxelCount];
+
   Voxel voxels_[kVoxelChunkVoxelCount];
   TextureAtlas* atlas_;   // Not owning. Must outlive.
 };

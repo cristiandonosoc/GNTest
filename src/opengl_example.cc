@@ -39,6 +39,10 @@
  *
  * TODOs:
  *
+ * - Move math into utils. (The dependencies are not good between these).
+ * - Don't hardcode VoxelChunks to cubes.
+ * - Change VoxelChunk to use VoxelElement instead of Voxel (VoxelElement
+ *   becomes Voxel).
  * - Create imgui_def.h and pass it through the context too.
  * - Fix shader move (doesn't invalidate ints).
  * - Replace glm with my own math library (or find a decent one online). The
@@ -347,7 +351,7 @@ int main() {
     if (camera_changed)
       camera.UpdateView();
 
-    /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // Draw the triangle.
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);

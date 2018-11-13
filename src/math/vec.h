@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <assert.h>
+
 #include "src/math/math.h"
 #include "src/utils/string.h"
 
@@ -51,6 +53,11 @@ struct Pair3 {
   T x;
   T y;
   T z;
+
+  T& operator[](size_t index) {
+    assert(index < 3);
+    return *((T*)this) + index;
+  }
 
   Pair3 operator+(const Pair3& rhs) const {
     return {x + rhs.x, y + rhs.y, z + rhs.z};
