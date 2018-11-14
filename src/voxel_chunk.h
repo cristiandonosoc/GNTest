@@ -67,6 +67,7 @@ constexpr size_t kVoxelChunkVoxelCount = kVoxelChunkSize *
 
 struct VoxelElement {
   enum class Type : uint8_t {
+    kNone = 0,
     kDirt,
     kTopGrass,
 
@@ -75,6 +76,7 @@ struct VoxelElement {
 
   Type type;
 
+  explicit operator bool() const { return (uint8_t)type == 0; }
 };
 
 // Represents a group of voxels in which the world is divided.
@@ -87,6 +89,10 @@ class VoxelChunk {
   // From the given voxel elements, a new mesh can be calculated that minimizes
   // the amount of vertices needed.
   void CalculateMesh();
+
+  std::vector<std::vector<Quad3<size_t>>> GreedyMesh();
+
+  VoxelElement& GetVoxelElement(size_t x, size_t y, size_t z);
 
   // TODO(Cristian): Return a reference to the actual array?
   Voxel* voxels() { return voxels_; }

@@ -28,6 +28,8 @@ class VoxelTerrain {
 
   bool Init();
 
+  VoxelChunkHash& voxel_chunks() { return voxel_chunks_; }
+
  private:
   VoxelChunkHash voxel_chunks_;
 

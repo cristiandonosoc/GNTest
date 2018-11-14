@@ -180,7 +180,8 @@ int main() {
   // How to interpret the buffer
   GLsizei cube_stride = (GLsizei)(5 * sizeof(float));
   auto a_pos = shader.GetAttribute("a_pos");
-  glVertexAttribPointer(a_pos->location, 3, GL_FLOAT, GL_FALSE, cube_stride, (void*)0);
+  glVertexAttribPointer(
+      a_pos->location, 3, GL_FLOAT, GL_FALSE, cube_stride, (void*)0);
   glEnableVertexAttribArray(a_pos->location);
 
   auto a_tex_coord0 = shader.GetAttribute("a_tex_coord0");
@@ -258,7 +259,7 @@ int main() {
   LOG(INFO) << "Window size. WIDTH: " << sdl_context.width()
             << ", HEIGHT: " << sdl_context.height();
 
-  // Minecraft Cube ------------------------------------------------------------
+  // Voxel Terrain -------------------------------------------------------------
 
   Texture atlas_texture(Assets::TexturePath("atlas.png"));
   TextureAtlas atlas(std::move(atlas_texture), 16, 16);
@@ -271,6 +272,24 @@ int main() {
 
   if (CHECK_GL_ERRORS("Creating voxel terrain"))
     return 1;
+
+  // We print the greedy mesh.
+  auto it = terrain.voxel_chunks().begin();
+  if (it == terrain.voxel_chunks().end()) {
+    LOG(ERROR) << "Did not find a valid voxel chunk.";
+    return 1;
+  }
+
+  auto quads = it->second.GreedyMesh();
+  LOG(DEBUG) << "Printing Greedy Mesh";
+  size_t z = 0;
+  for (auto& z_quads : quads) {
+    LOG(DEBUG) << "Z: " << z;
+    for (auto& quad : z_quads) {
+      LOG(DEBUG) << "  " << quad.ToString();
+    }
+    z++;
+  }
 
   // Camera --------------------------------------------------------------------
 

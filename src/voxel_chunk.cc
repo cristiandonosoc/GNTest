@@ -216,6 +216,11 @@ void PrintUVs(const std::vector<float>& uvs) {
   LOG(DEBUG) << ss.str();
 }
 
+VoxelElement& VoxelChunk::GetVoxelElement(size_t x, size_t y, size_t z) {
+  size_t index = Coord3ToArrayIndex(kVoxelChunkSize, x, y, z);
+  return elements_[index];
+}
+
 namespace {
 
 void
@@ -243,43 +248,83 @@ ChangeUV(Voxel::Face face,
   glBindBuffer(GL_ARRAY_BUFFER, NULL);
 }
 
-#if 0
-
-// TODO(Cristian): Extend this to separate dimensions.
-void GreedyMesh(size_t side) {
-
-  for (size_t dim = 0; dim < 3; dim++) {
-    size_t dim_up = (dim + 1) % 3;
-    size_t dim_down = (dim + 2) % 3;
-
-    Pair3<size_t> x = {};
-    Pair3<size_t> quad = {};
-    quad[dim] = 1;
-    std::bitset<kVoxelChunkSize * kVoxelChunkSize> mask;
-
-    for (x[dim] = -1; x[dim] < side;) {
-      // Compute mask. //TODO(Cristian): What does this mask mean?
-      size_t n = 0;
-      for (x[dim_down] = 0; x[dim_down] < side; x[dim_down]++) {
-        for (x[dim_up] = 0; x [dim_up] < side; x[dim_up]++) {
-
-        }
-      }
-
-
-    }
-  }
-
-
-}
-
-
-#endif
-
 }  // namespace
 
+std::vector<std::vector<Quad3<size_t>>>
+VoxelChunk::GreedyMesh() {
+  // We iterate over z and creating the greatest chunks we can.
+  std::vector<std::vector<Quad3<size_t>>> quads3d;
+  constexpr size_t side = kVoxelChunkSize;
+  for (size_t z = 0; z < side; z++) {
 
+    // Look over which voxels are there.
+    std::bitset<side * side> mask;
+    for (size_t y = 0; y < side; y++) {
+      for (size_t x = 0; x < side; x++) {
+        size_t index = Coord3ToArrayIndex(side, x, y, z);
+        mask[index] = (bool)elements_[index];
+      }
+    }
 
+    // Now that we have a mask, we can start greedily meshing.
+    // TODO(Cristian): Can we update the mask on the fly and not dot 2 passes?
+    std::vector<Quad3<size_t>> quads;
+    for (size_t y = 0; y < side; y++) {
+      for (size_t x = 0; x < side; x++) {
+        size_t index = Coord3ToArrayIndex(side, x, y, z);
+        // We found a quad, we see how big of a grouping we can do.
+        if (mask[index]) {
+          Quad3<size_t> quad = {};
+          quad.min = {x, y, z};
+          quad.max = {x, y, z};
+          // We look over the X-axis to see how big this chunk is.
+          for (size_t ix = x + 1; ix < side; ix++) {
+            size_t new_index = Coord3ToArrayIndex(side, ix, y, z);
+            if (!mask[new_index])
+              break;
+            quad.max.x = ix;
+            mask[new_index] = false;
+          }
+
+          // We go over Y row for row to see if this chunk extends
+          bool found = true;
+          for (size_t iy = y + 1; iy < side; iy++) {
+            // If any in this row doesn't match, this quad is not extensible.
+            for (size_t ix = x; ix <= quad.max.x; ix++) {
+              size_t new_index = Coord3ToArrayIndex(side, ix, iy, z);
+              if (!mask[new_index]) {
+                found = false;
+                break;
+              }
+            }
+
+            // We check if the row did extend the piece.
+            // If not, we could not extend and don't mark anything.
+            if (!found)
+              break;
+
+            // We were able to extend the chunk, so we mark it as not available
+            // anymore.
+            quad.max.y = iy;
+            for (size_t ix = x; ix <= quad.max.x; ix++) {
+              size_t new_index = Coord3ToArrayIndex(side, ix, iy, z);
+              mask[new_index] = false;
+            }
+          }
+
+          // Now we have the quad as big as we could extend it, first X-wise and
+          // then Y-wise, so we add it to the arrays.
+          quads.push_back(std::move(quad));
+        }
+      }
+    }
+
+    // We finished with this layer.
+    quads3d.push_back(std::move(quads));
+  }
+
+  return quads3d;
+}
 
 void
 Voxel::SetFace(Voxel::Face face,

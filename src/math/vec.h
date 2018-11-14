@@ -92,6 +92,16 @@ struct Pair3 {
   }
 };
 
+template<typename T>
+struct Quad3 {
+  Pair3<T> min;
+  Pair3<T> max;
+
+  std::string ToString() const {
+    return StringPrintf("MIN: [%s], MAX: [%s]", min.ToString().data(),
+                                                max.ToString().data());
+  }
+};
 
 template <typename T>
 struct HashPair3 {
