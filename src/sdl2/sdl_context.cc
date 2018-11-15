@@ -7,7 +7,7 @@
 
 #include <limits>
 
-#include "src/graphics/GL/def.h"
+/* #include "src/graphics/GL/def.h" */
 #include "src/sdl2/input.h"
 #include "src/sdl2/def.h"
 
@@ -65,15 +65,19 @@ SDLContext::Init() {
     return Status("Error creating window: %s", SDL_GetError());
 
   // Setup an OpenGL context.
+  LOG(DEBUG) << "Going to create GL context";
   impl_->gl_context = SDL_GL_CreateContext(impl_->window);
   if (!impl_->gl_context)
     return Status("Error creating OpenGL context: %s", SDL_GetError());
+
+  LOG(DEBUG) << "Created GL context";
+
+  return Status::Ok();
 
   SDL_GL_SetSwapInterval(1);  // Enable v-sync.
 
   SDL_GetWindowSize(impl_->window, &impl_->width, &impl_->height);
 
-  return Status::Ok();
 }
 
 int SDLContext::width() const {
@@ -188,7 +192,7 @@ SDLContext::HandleWindowEvent(const SDL_WindowEvent& window_event) {
 
     // Update viewport
     // TODO(Cristian): I shouldn't tie SDL and OpenGL like this.
-    glViewport(0, 0, width(), height());
+    /* glViewport(0, 0, width(), height()); */
   }
 }
 

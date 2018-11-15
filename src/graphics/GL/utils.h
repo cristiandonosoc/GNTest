@@ -9,8 +9,6 @@
 
 #include "src/graphics/GL/def.h"
 
-#include <GL/gl3w.h>
-
 namespace warhol {
 
 const char* GLEnumToString(GLenum);

@@ -74,11 +74,6 @@
 using namespace warhol;
 
 int main() {
-  gl3wInit();
-
-  printf("%s\n", glGetString(GL_VERSION));
-  exit(0);
-
 
 
   SDLContext sdl_context;
@@ -87,6 +82,17 @@ int main() {
     LOG_STATUS(res) << res;
     return 1;
   }
+
+  LOG(INFO) << "Successful SDL init";
+
+  GL::Init();
+
+  printf("%s\n", glGetString(GL_VERSION));
+  exit(0);
+
+
+
+  return 0;
 
   // Test current executable path.
   LOG(DEBUG) << "Current executable: "
