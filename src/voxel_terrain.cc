@@ -9,72 +9,7 @@
 namespace warhol {
 
 namespace {
-
-void
-ChangeUV(const TextureAtlas& atlas,
-         Voxel* cube,
-         Voxel::Face face,
-         int texture_index,
-         int layer) {
-  auto uv_coords = atlas.GetUVs(texture_index);
-  cube->SetFace(face, layer, uv_coords);
-}
-
-void SetCubeFace(const TextureAtlas& atlas,
-                 Voxel* cube,
-                 Voxel::Face face,
-                 int texture_index1, int texture_index2) {
-  ChangeUV(atlas, cube, face, texture_index1, 0);
-  ChangeUV(atlas, cube, face, texture_index2, 1);
-}
-
 }  // namespace
-
-// VoxelChunk ------------------------------------------------------------------
-
-VoxelChunk::VoxelChunk() = default;
-VoxelChunk::VoxelChunk(TextureAtlas* atlas) : atlas_(atlas) {}
-
-Voxel& VoxelChunk::GetVoxel(size_t x, size_t y, size_t z) {
-  assert(x < kVoxelChunkSize && y < kVoxelChunkSize && z < kVoxelChunkSize);
-  size_t z_offset = z * kVoxelChunkSize * kVoxelChunkSize;
-  size_t y_offset = y * kVoxelChunkSize;
-  return voxels_[z_offset + y_offset + x];
-}
-
-bool VoxelChunk::Init() {
-  for (size_t x = 0; x < kVoxelChunkSize; x++) {
-    for (size_t y = 0; y < kVoxelChunkSize; y++) {
-      for (size_t z = 0; z < kVoxelChunkSize; z++) {
-        Voxel& voxel = GetVoxel(x, y, z);
-        if (!voxel.Init())
-          return false;
-
-        // TODO(Cristian): Offset this by the chunk position offset.
-        // TODO(Cristian): Later do a scene graph.
-        voxel.set_position({x, y, z});
-        SetCubeFace(*atlas_, &voxel, Voxel::Face::kBack,
-                    kGrassDirt, kTransparent);
-        SetCubeFace(*atlas_, &voxel, Voxel::Face::kFront,
-                    kGrassDirt, kTransparent);
-        SetCubeFace(*atlas_, &voxel, Voxel::Face::kLeft,
-                    kGrassDirt, kCrack4);
-        SetCubeFace(*atlas_, &voxel, Voxel::Face::kRight,
-                    kGrassDirt, kTransparent);
-        SetCubeFace(*atlas_, &voxel, Voxel::Face::kTop,
-                    kGrass, kCrack9);
-        SetCubeFace(*atlas_, &voxel, Voxel::Face::kBottom,
-                    kDirt, kTransparent);
-      }
-    }
-  }
-  return true;
-}
-
-void VoxelChunk::Render(Shader* shader) {
-  for (Voxel& voxel : voxels_)
-    voxel.Render(shader);
-}
 
 // VoxelTerrain ----------------------------------------------------------------
 
@@ -87,6 +22,10 @@ bool VoxelTerrain::Init() {
   if (!chunk.Init())
     return false;
   voxel_chunks_[std::move(coord)] = std::move(chunk);
+
+  VoxelChunk chunk2(atlas_);
+  chunk2.InitializedGreedy();
+  voxel_chunks_[{1, 0, 0}] = std::move(chunk2);
   return true;
 }
 

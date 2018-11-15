@@ -74,9 +74,9 @@ struct VoxelElement {
     kLast
   };
 
-  Type type;
+  Type type = Type::kDirt;
 
-  explicit operator bool() const { return (uint8_t)type == 0; }
+  explicit operator bool() const { return (uint8_t)type != 0; }
 };
 
 // Represents a group of voxels in which the world is divided.
@@ -84,7 +84,10 @@ class VoxelChunk {
  public:
   VoxelChunk();
   VoxelChunk(TextureAtlas*);
+
   bool Init();
+  bool InitializedGreedy();
+
   void Render(Shader*);
   // From the given voxel elements, a new mesh can be calculated that minimizes
   // the amount of vertices needed.
@@ -105,6 +108,15 @@ class VoxelChunk {
 
   Voxel voxels_[kVoxelChunkVoxelCount];
   TextureAtlas* atlas_;   // Not owning. Must outlive.
+
+  bool greedy = false;
+
+  std::vector<std::vector<Quad3<size_t>>> quads_;
+
+
+  ClearOnMove<uint32_t> vao_;
+  ClearOnMove<uint32_t> vbo_;
+  ClearOnMove<uint32_t> ebo_;
 };
 
 
