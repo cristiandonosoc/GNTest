@@ -45,6 +45,8 @@
  *   becomes Voxel).
  * - Create imgui_def.h and pass it through the context too.
  * - Fix shader move (doesn't invalidate ints).
+ * - Create char constants for shader uniforms and attributes.
+ * - Find out about sRGB OpenGL extensions (Handmade Hero).
  * - Replace glm with my own math library (or find a decent one online). The
  *   API is too awkward, both header-wise and specially getting the pointers to
  *   the raw data (glm::value_ptr()... really?).
