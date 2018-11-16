@@ -86,14 +86,14 @@ class VoxelChunk {
   VoxelChunk(TextureAtlas*);
 
   bool Init();
-  bool InitializedGreedy();
+  bool InitialiazeGreedy();
 
   void Render(Shader*);
   // From the given voxel elements, a new mesh can be calculated that minimizes
   // the amount of vertices needed.
   void CalculateMesh();
 
-  std::vector<std::vector<Quad3<size_t>>> GreedyMesh();
+  std::vector<std::vector<Quad3<int>>> GreedyMesh();
 
   VoxelElement& GetVoxelElement(size_t x, size_t y, size_t z);
 
@@ -111,7 +111,7 @@ class VoxelChunk {
 
   bool greedy = false;
 
-  std::vector<std::vector<Quad3<size_t>>> quads_;
+  std::vector<std::vector<Quad3<int>>> quads_;
 
 
   ClearOnMove<uint32_t> vao_;

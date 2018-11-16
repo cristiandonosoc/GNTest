@@ -415,7 +415,7 @@ int main() {
           glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
       shader.SetMat4("model", model);
 
-      glDrawArrays(GL_TRIANGLES, 0, 36);
+      /* glDrawArrays(GL_TRIANGLES, 0, 36); */
     }
 
     terrain.Render(&shader);

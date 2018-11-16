@@ -208,22 +208,23 @@ EmplaceBackCoord(std::vector<float>* mesh, float x, float y, float z) {
 
 struct MeshWithIndices {
   std::vector<float> vertices;
-  std::vector<uint32_t> indicies;
+  std::vector<uint32_t> indices;
 };
 
 MeshWithIndices
-CalculateMeshFromQuads(Pair3<size_t> o, const Quad3<size_t>& quad) {
+CalculateMeshFromQuads(Pair3<int> o, const Quad3<int>& quad) {
   std::vector<float> mesh;
   mesh.reserve(3 * 4 * 4);
 
   Vec3 min{(float)quad.min.x, (float)quad.min.y, (float)quad.min.z};
   Vec3 max{(float)quad.max.x, (float)quad.max.y, (float)quad.max.z};
 
-  max.z += 0.75f;
-
+  // TODO(Cristian): Find out which offsets have to be increased for the quads.
+  /* max.z += 1.0f; */
+  /* max.z += 1.0f; */
+  /* max.y += 1.0f; */
 
   // Indexed
-
   EmplaceBackCoord(&mesh, o.x + min.x, o.y + min.y, o.z + min.z);
   EmplaceBackCoord(&mesh, o.x + min.x, o.y + min.y, o.z + max.z);
   EmplaceBackCoord(&mesh, o.x + min.x, o.y + max.y, o.z + min.z);
@@ -245,20 +246,18 @@ CalculateMeshFromQuads(Pair3<size_t> o, const Quad3<size_t>& quad) {
   EmplaceBackCoord(&mesh, o.x + min.x, o.y + max.y, o.z + min.z);
 
   std::vector<uint32_t> indices = {
-      0, 1, 2,  2,  3,  0, 4,  5,  6,  6,  7,  4,
-      8, 9, 10, 10, 11, 8, 12, 13, 14, 14, 15, 12,
-      /* 16, 17, 18, 18, 19, 16, */
-      /* 20, 21, 22, 22, 23, 20, */
+      0, 1, 2,  2,  1,  3,
+      4,  5,  6,  6,  5,  7,
+      8, 9, 10, 10, 9, 11,
+      12, 13, 14, 14, 13, 15,
   };
 
   // TODO(Cristian): botton and top faces.
   return { std::move(mesh), std::move(indices) };
 }
 
-bool VoxelChunk::InitializedGreedy() {
-
-  elements_[2].type = VoxelElement::Type::kNone;
-
+bool VoxelChunk::InitialiazeGreedy() {
+  /* elements_[2].type = VoxelElement::Type::kNone; */
 
   glGenVertexArrays(1, &vao_.value);
   glBindVertexArray(vao_.value);
@@ -390,54 +389,55 @@ ChangeUV(Voxel::Face face,
 
 }  // namespace
 
-std::vector<std::vector<Quad3<size_t>>>
+std::vector<std::vector<Quad3<int>>>
 VoxelChunk::GreedyMesh() {
   // We iterate over z and creating the greatest chunks we can.
-  std::vector<std::vector<Quad3<size_t>>> quads3d;
-  constexpr size_t side = kVoxelChunkSize;
-  for (size_t z = 0; z < side; z++) {
+  std::vector<std::vector<Quad3<int>>> quads3d;
+  constexpr int side = kVoxelChunkSize;
 
-    // Look over which voxels are there.
-    std::bitset<side * side> mask;
-    for (size_t y = 0; y < side; y++) {
-      for (size_t x = 0; x < side; x++) {
-        size_t index = Coord3ToArrayIndex(side, x, y, z);
+
+  // Look over which voxels are there and create one big mask 3D matrix.
+  std::bitset<side * side * side> mask;
+  for (int y = 0; y < side; y++) {
+    for (int z = 0; z < side; z++) {
+      for (int x = 0; x < side; x++) {
+        int index = Coord3ToArrayIndex(side, x, y, z);
         mask[index] = (bool)elements_[index];
-        LOG(DEBUG) << "Set mask at [" << Pair3<size_t>{x, y, z}.ToString() << "] to: " << mask[index];
       }
     }
+  }
 
-
-    LOG(DEBUG) << "------------------------------\n\n";
-
-
-    LOG(DEBUG) <<  "Checking layer z: " << z;
-
-
+  // Iterate from bottom to top (in our view, that's the Y axis).
+  for (int y = 0; y < side; y++) {
+    LOG(DEBUG) << "------------------------------";
+    LOG(DEBUG) <<  "Checking Y layer " << y;
 
     // Now that we have a mask, we can start greedily meshing.
     // TODO(Cristian): Can we update the mask on the fly and not dot 2 passes?
-    std::vector<Quad3<size_t>> quads;
-    for (size_t y = 0; y < side; y++) {
-      for (size_t x = 0; x < side; x++) {
+    std::vector<Quad3<int>> quads;
+    for (int z = 0; z < side; z++) {
+      for (int x = 0; x < side; x++) {
 
         const char* indent = "  ";
-        size_t index = Coord3ToArrayIndex(side, x, y, z);
+        int index = Coord3ToArrayIndex(side, x, y, z);
         // We found a quad, we see how big of a grouping we can do.
         if (mask[index]) {
-          Quad3<size_t> quad = {};
+          Quad3<int> quad = {};
           quad.min = {x, y, z};
           quad.max = {x, y, z};
 
           LOG(DEBUG) << indent << "Found free block at " << quad.min.ToString();
           indent = "    ";
 
+          LOG(DEBUG) << "Looking for X extension";
+          indent = "      ";
 
           // We look over the X-axis to see how big this chunk is.
-          for (size_t ix = x + 1; ix < side; ix++) {
-            size_t new_index = Coord3ToArrayIndex(side, ix, y, z);
+          for (int ix = x + 1; ix < side; ix++) {
+            int new_index = Coord3ToArrayIndex(side, ix, y, z);
             if (!mask[new_index]) {
-              LOG(DEBUG) << indent << "Did not find free X at: " << Pair3<size_t>{ix, y, z}.ToString();
+              LOG(DEBUG) << indent << "Did not find free X at: "
+                         << Pair3<int>{ix, y, z}.ToString();
               break;
             }
 
@@ -447,40 +447,104 @@ VoxelChunk::GreedyMesh() {
 
           LOG(DEBUG) << indent << "Extended X to: " << quad.max.ToString();
 
-          // We go over Y row for row to see if this chunk extends
-          bool found = true;
-          for (size_t iy = y + 1; iy < side; iy++) {
+          indent = "    ";
+          LOG(DEBUG) << indent << "Looking for Z extension";
+          indent = "      ";
+
+          // We go over Z row for row to see if this chunk extends
+          bool found_z_extension = true;
+          for (int iz = z + 1; iz < side; iz++) {
             // If any in this row doesn't match, this quad is not extensible.
-            for (size_t ix = x; ix <= quad.max.x; ix++) {
-              size_t new_index = Coord3ToArrayIndex(side, ix, iy, z);
+            for (int ix = x; ix <= quad.max.x; ix++) {
+              int new_index = Coord3ToArrayIndex(side, ix, y, iz);
               if (!mask[new_index]) {
-                found = false;
+                found_z_extension = false;
                 break;
               }
             }
 
             // We check if the row did extend the piece.
             // If not, we could not extend and don't mark anything.
-            if (!found) {
-              LOG(DEBUG) << indent << "Did not find a Y extension";
+            if (!found_z_extension) {
+              LOG(DEBUG) << indent << "Did not find a Z extension";
               break;
             }
 
-
             // We were able to extend the chunk, so we mark it as not available
             // anymore.
-            quad.max.y = iy;
+            quad.max.z = iz;
 
-            LOG(DEBUG) << indent << "Found and Y extension to: " << quad.max.ToString();
+            LOG(DEBUG) << indent
+                       << "Found and Z extension to: " << quad.max.ToString();
 
-            for (size_t ix = x; ix <= quad.max.x; ix++) {
-              size_t new_index = Coord3ToArrayIndex(side, ix, iy, z);
+            for (int ix = x; ix <= quad.max.x; ix++) {
+              int new_index = Coord3ToArrayIndex(side, ix, y, iz);
               mask[new_index] = false;
             }
           }
 
+
+          if (found_z_extension) {
+            LOG(DEBUG) << indent << "Extended Z to: " << quad.max.ToString();
+          }
+
+
+          indent = "    ";
+          LOG(DEBUG) << indent << "Looking for Y extension";
+          indent = "      ";
+
+
+
+          // Now we see if we can make it grow upwards.
+          bool found_y_extension = true;
+          for (int iy = y + 1; iy < side; iy++) {
+            for (int iz = quad.min.z; iz <= quad.max.z; iz++) {
+              for (int ix = quad.min.x; ix <= quad.max.x; ix++) {
+                // We see if in this current x row we could extend all the way.
+                int new_index = Coord3ToArrayIndex(side, ix, iy, iz);
+                if (!mask[new_index]) {
+                  LOG(DEBUG)
+                      << indent
+                      << "FAILED AT: " << Pair3<int>{ix, iy, iz}.ToString()
+                      << " (INDEX: " << new_index
+                      << ") (MASK: " << mask[new_index] << ")";
+                  found_y_extension = false;
+                  break;
+                }
+              }
+
+              // We iterated over the current X row for this Z value and we
+              // couldn't find the extension.
+              if (!found_y_extension)
+                break;
+            }
+
+            // At this point, we iterated over the whole "plane" at this Y level
+            // and if we didn't find an extension, simply ignore it.
+            if (!found_y_extension) {
+              LOG(DEBUG) << indent << "Did not find Y extension";
+              break;
+            }
+
+            LOG(DEBUG) << indent << "Found Y extension from " << y << " to " << iy;
+
+            // We found an extension upwards! We need to also mark whole plane
+            // as found (a lot of iteration :| ).
+            quad.max.y = iy;
+            for (int iz = quad.min.z; iz <= quad.max.z; iz++) {
+              for (int ix = quad.min.x; ix <= quad.max.x; ix++) {
+                int new_index = Coord3ToArrayIndex(side, ix, iy, iz);
+                mask[new_index] = false;
+              }
+            }
+          }
+
+          if (found_y_extension) {
+            LOG(DEBUG) << indent << "Extended Y to: " << quad.max.ToString();
+          }
+
           // Now we have the quad as big as we could extend it, first X-wise and
-          // then Y-wise, so we add it to the arrays.
+          // then Z-wise, so we add it to the arrays.
           quads.push_back(std::move(quad));
         }
       }
@@ -508,8 +572,6 @@ ChangeUV(const TextureAtlas& atlas,
   cube->SetFace(face, layer, uv_coords);
 }
 
-
-
 void SetCubeFace(const TextureAtlas& atlas,
                  Voxel* cube,
                  Voxel::Face face,
@@ -517,8 +579,6 @@ void SetCubeFace(const TextureAtlas& atlas,
   ChangeUV(atlas, cube, face, texture_index1, 0);
   ChangeUV(atlas, cube, face, texture_index2, 1);
 }
-
-
 
 VoxelChunk::VoxelChunk() = default;
 VoxelChunk::VoxelChunk(TextureAtlas* atlas) : atlas_(atlas) {}
@@ -562,22 +622,28 @@ bool VoxelChunk::Init() {
 void
 VoxelChunk::Render(Shader* shader) {
   if (!greedy) {
+    return;
     for (Voxel& voxel : voxels_) voxel.Render(shader);
   } else {
-
     glBindVertexArray(vao_.value);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_.value);
 
     // TODO(donosoc): Do this only when needed.
-    shader->SetMat4("model", glm::mat4(1.0f));
+    shader->SetMat4(Shader::Attributes::kModel, glm::mat4(1.0f));
 
     for (auto& z_quads : quads_) {
-      for (Quad3<size_t>& quad : z_quads) {
-        auto meshi = CalculateMeshFromQuads({5, 0, 5}, quad);
+      for (Quad3<int>& quad : z_quads) {
+        auto meshi = CalculateMeshFromQuads({0, 0, 0}, quad);
 
+        glBindBuffer(GL_ARRAY_BUFFER, vbo_.value);
         glBufferData(GL_ARRAY_BUFFER,
                      sizeof(float) * meshi.vertices.size(),
                      meshi.vertices.data(),
+                     GL_DYNAMIC_DRAW);
+
+        glBindBuffer(GL_ARRAY_BUFFER, ebo_.value);
+        glBufferData(GL_ARRAY_BUFFER,
+                     sizeof(float) * meshi.indices.size(),
+                     meshi.indices.data(),
                      GL_DYNAMIC_DRAW);
 
         glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, NULL);

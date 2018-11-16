@@ -24,8 +24,8 @@ bool VoxelTerrain::Init() {
   voxel_chunks_[std::move(coord)] = std::move(chunk);
 
   VoxelChunk chunk2(atlas_);
-  chunk2.InitializedGreedy();
-  voxel_chunks_[{1, 0, 0}] = std::move(chunk2);
+  chunk2.InitialiazeGreedy();
+  voxel_chunks_[{1, 0, 1}] = std::move(chunk2);
   return true;
 }
 
