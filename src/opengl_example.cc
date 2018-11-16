@@ -50,9 +50,6 @@
  * - Replace glm with my own math library (or find a decent one online). The
  *   API is too awkward, both header-wise and specially getting the pointers to
  *   the raw data (glm::value_ptr()... really?).
- * - Stop using Status and start logging directly at the call site.
- *   This is what Status is doing anyway and we might just as well return a
- *   boolean.
  * - Have the shader receive the camera and set the projection/view matrices
  *   and not the other way around as it is now.
  * - Find out a way to better handle assets instead of just having them
@@ -76,25 +73,12 @@
 using namespace warhol;
 
 int main() {
-
-
   SDLContext sdl_context;
-  Status res = sdl_context.Init();
-  if (!res.ok()) {
-    LOG_STATUS(res) << res;
+  if (!sdl_context.Init())
     return 1;
-  }
-
-  LOG(INFO) << "Successful SDL init";
 
   GL::Init();
-
-  printf("%s\n", glGetString(GL_VERSION));
-  exit(0);
-
-
-
-  return 0;
+  SDL_GL_SetSwapInterval(1);  // Enable v-sync.
 
   // Test current executable path.
   LOG(DEBUG) << "Current executable: "
@@ -122,6 +106,7 @@ int main() {
   glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &vert_attribs);
   LOG(DEBUG) << "Max Vertex Attributes: " << vert_attribs;
 
+  Status res;
   std::vector<char> vertex_shader;
   res = ReadWholeFile(Assets::ShaderPath("simple.vert"), &vertex_shader);
   if (!res.ok()) {

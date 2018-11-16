@@ -32,6 +32,10 @@ struct Attribute {
 
 class Shader {
  public:
+  struct Attributes {
+    static const char* kModel;
+  };
+
   Shader();
   Shader(std::string vert_src, std::string frag_src);
   ~Shader();

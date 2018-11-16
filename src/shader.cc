@@ -10,6 +10,9 @@
 
 namespace warhol {
 
+const char* Shader::Attributes::kModel = "model";
+
+
 // Helpers Declarations --------------------------------------------------------
 
 namespace {

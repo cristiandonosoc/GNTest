@@ -8,7 +8,6 @@
 
 #include "src/input/input.h"
 #include "src/utils/macros.h"
-#include "src/utils/status.h"
 
 // TODO(Cristian): See if we can forward declare SDL_GLContext and thus avoid
 //                 the whole SDLContextImpl.
@@ -32,7 +31,7 @@ class SDLContext {
 
   // If init is not success, the instance should not be used and should be
   // destroyed.
-  Status Init();
+  bool Init();
   void Clear();
   // TODO(Cristian): Perhaps later we're going to need an array of actions.
   //                 EventAction should also be separated from SDL.

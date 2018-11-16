@@ -7,9 +7,9 @@
 
 #include <limits>
 
-/* #include "src/graphics/GL/def.h" */
 #include "src/sdl2/input.h"
 #include "src/sdl2/def.h"
+#include "src/utils/log.h"
 
 namespace warhol {
 
@@ -45,13 +45,14 @@ SDLContext::~SDLContext() {
   Clear();
 }
 
-Status
-SDLContext::Init() {
+bool SDLContext::Init() {
   assert(impl_ == nullptr);
   impl_ = std::make_unique<SDLContextImpl>();
 
-  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
-    return Status("Error loading SDL: %s\n", SDL_GetError());
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
+    LOG(ERROR) << "Error loading SDL: " << SDL_GetError();
+    return false;
+  }
 
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
@@ -61,23 +62,23 @@ SDLContext::Init() {
                             1280,
                             720,
                             SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-  if (!impl_->window)
-    return Status("Error creating window: %s", SDL_GetError());
+  if (!impl_->window) {
+    LOG(ERROR) << "Error creating window: " << SDL_GetError();
+    return false;
+  }
 
   // Setup an OpenGL context.
   LOG(DEBUG) << "Going to create GL context";
   impl_->gl_context = SDL_GL_CreateContext(impl_->window);
-  if (!impl_->gl_context)
-    return Status("Error creating OpenGL context: %s", SDL_GetError());
-
-  LOG(DEBUG) << "Created GL context";
-
-  return Status::Ok();
-
-  SDL_GL_SetSwapInterval(1);  // Enable v-sync.
+  if (!impl_->gl_context) {
+    LOG(ERROR) << "Error creating OpenGL context: " << SDL_GetError();
+    return false;
+  }
 
   SDL_GetWindowSize(impl_->window, &impl_->width, &impl_->height);
 
+  LOG(DEBUG) << "Created GL context";
+  return true;
 }
 
 int SDLContext::width() const {
