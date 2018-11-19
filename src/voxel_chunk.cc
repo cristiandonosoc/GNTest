@@ -206,58 +206,92 @@ EmplaceBackCoord(std::vector<float>* mesh, float x, float y, float z) {
   mesh->emplace_back((float)z);
 }
 
+inline void
+EmplaceBackUV(std::vector<float>* mesh, float u, float v) {
+  mesh->emplace_back(u);
+  mesh->emplace_back(v);
+}
+
 struct MeshWithIndices {
   std::vector<float> vertices;
   std::vector<uint32_t> indices;
 };
 
 MeshWithIndices
-CalculateMeshFromQuads(Pair3<int> o, const Quad3<int>& quad) {
+CalculateMeshFromQuads(const TextureAtlas& atlas,
+                       Pair3<int> o,
+                       const VoxelTypedChunk& typed_quad) {
   std::vector<float> mesh;
-  mesh.reserve(3 * 4 * 4);
+  constexpr size_t faces_count = 4;
+  mesh.reserve(3 * 4 * faces_count + 2 * 4 * faces_count);
 
-  Vec3 min{(float)quad.min.x, (float)quad.min.y, (float)quad.min.z};
-  Vec3 max{(float)quad.max.x, (float)quad.max.y, (float)quad.max.z};
+  Vec3 min{(float)typed_quad.quad.min.x,
+           (float)typed_quad.quad.min.y,
+           (float)typed_quad.quad.min.z};
+  Vec3 max{(float)typed_quad.quad.max.x,
+           (float)typed_quad.quad.max.y,
+           (float)typed_quad.quad.max.z};
 
-  // TODO(Cristian): Find out which offsets have to be increased for the quads.
-  /* max.z += 1.0f; */
-  /* max.z += 1.0f; */
-  /* max.y += 1.0f; */
+
+  max += {1.0f, 1.0f, 1.0f};
+  LOG(DEBUG) << "MAX: " << max.ToString();
+
+  auto uvs = atlas.GetUVs(static_cast<uint8_t>(typed_quad.type));
 
   // Indexed
+  // X constant.
   EmplaceBackCoord(&mesh, o.x + min.x, o.y + min.y, o.z + min.z);
+  EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y);
   EmplaceBackCoord(&mesh, o.x + min.x, o.y + min.y, o.z + max.z);
+  EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y + max.z);
   EmplaceBackCoord(&mesh, o.x + min.x, o.y + max.y, o.z + min.z);
+  EmplaceBackUV(&mesh, uvs.max().x + max.y, uvs.min().y);
   EmplaceBackCoord(&mesh, o.x + min.x, o.y + max.y, o.z + max.z);
+  EmplaceBackUV(&mesh, uvs.max().x + max.y, uvs.max().y + max.z);
 
+  // Z constant.
   EmplaceBackCoord(&mesh, o.x + min.x, o.y + min.y, o.z + max.z);
+  EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y);
   EmplaceBackCoord(&mesh, o.x + max.x, o.y + min.y, o.z + max.z);
+  EmplaceBackUV(&mesh, uvs.max().x + max.x, uvs.min().y);
   EmplaceBackCoord(&mesh, o.x + min.x, o.y + max.y, o.z + max.z);
+  EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y + max.y);
   EmplaceBackCoord(&mesh, o.x + max.x, o.y + max.y, o.z + max.z);
+  EmplaceBackUV(&mesh, uvs.max().x, uvs.max().y);
 
+  // X constant.
   EmplaceBackCoord(&mesh, o.x + max.x, o.y + min.y, o.z + max.z);
+  EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y);
   EmplaceBackCoord(&mesh, o.x + max.x, o.y + min.y, o.z + min.z);
+  EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y);
   EmplaceBackCoord(&mesh, o.x + max.x, o.y + max.y, o.z + max.z);
+  EmplaceBackUV(&mesh, uvs.max().x, uvs.max().y);
   EmplaceBackCoord(&mesh, o.x + max.x, o.y + max.y, o.z + min.z);
+  EmplaceBackUV(&mesh, uvs.max().x, uvs.min().y);
 
+  // Y constant.
   EmplaceBackCoord(&mesh, o.x + max.x, o.y + min.y, o.z + min.z);
+  EmplaceBackUV(&mesh, uvs.max().x, uvs.min().y);
   EmplaceBackCoord(&mesh, o.x + min.x, o.y + min.y, o.z + min.z);
+  EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y);
   EmplaceBackCoord(&mesh, o.x + max.x, o.y + max.y, o.z + min.z);
+  EmplaceBackUV(&mesh, uvs.max().x, uvs.max().y);
   EmplaceBackCoord(&mesh, o.x + min.x, o.y + max.y, o.z + min.z);
+  EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y);
 
   std::vector<uint32_t> indices = {
-      0, 1, 2,  2,  1,  3,
-      4,  5,  6,  6,  5,  7,
-      8, 9, 10, 10, 9, 11,
+       0,  1,  2,  2,  1,  3,
+       4,  5,  6,  6,  5,  7,
+       8,  9, 10, 10,  9, 11,
       12, 13, 14, 14, 13, 15,
+      // TODO(Cristian): botton and top faces.
   };
 
-  // TODO(Cristian): botton and top faces.
   return { std::move(mesh), std::move(indices) };
 }
 
 bool VoxelChunk::InitialiazeGreedy() {
-  /* elements_[2].type = VoxelElement::Type::kNone; */
+  elements_[2].type = VoxelElement::Type::kNone;
 
   glGenVertexArrays(1, &vao_.value);
   glBindVertexArray(vao_.value);
@@ -279,7 +313,6 @@ bool VoxelChunk::InitialiazeGreedy() {
   /*   uvs2_.emplace_back(indexed_uvs[i]); */
   /* } */
 
-
   // Vertices.
   glBindBuffer(GL_ARRAY_BUFFER, vbo_.value);
   /* glBufferData(GL_ARRAY_BUFFER, */
@@ -287,20 +320,21 @@ bool VoxelChunk::InitialiazeGreedy() {
   /*              indexed_vertices, */
   /*              GL_STATIC_DRAW); */
   // How to interpret the buffer.
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
 
   if (CHECK_GL_ERRORS("Buffering vertices"))
     exit(1);
 
-  /* // UV */
+  // UV
   /* glBindBuffer(GL_ARRAY_BUFFER, uv_vbo1_.value); */
   /* glBufferData(GL_ARRAY_BUFFER, */
   /*              sizeof(float) * uvs1_.size(), */
   /*              uvs1_.data(), */
   /*              GL_DYNAMIC_DRAW); */
-  /* glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0); */
-  /* glEnableVertexAttribArray(1); */
+  glVertexAttribPointer(
+      1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
 
   /* if (CHECK_GL_ERRORS("Buffering UV1")) */
   /*   exit(1); */
@@ -389,10 +423,13 @@ ChangeUV(Voxel::Face face,
 
 }  // namespace
 
-std::vector<std::vector<Quad3<int>>>
+
+
+// TODO(Cristian): Do internal faces culling.
+std::vector<std::vector<VoxelTypedChunk>>
 VoxelChunk::GreedyMesh() {
   // We iterate over z and creating the greatest chunks we can.
-  std::vector<std::vector<Quad3<int>>> quads3d;
+  std::vector<std::vector<VoxelTypedChunk>> quads3d;
   constexpr int side = kVoxelChunkSize;
 
 
@@ -414,7 +451,7 @@ VoxelChunk::GreedyMesh() {
 
     // Now that we have a mask, we can start greedily meshing.
     // TODO(Cristian): Can we update the mask on the fly and not dot 2 passes?
-    std::vector<Quad3<int>> quads;
+    std::vector<VoxelTypedChunk> quads;
     for (int z = 0; z < side; z++) {
       for (int x = 0; x < side; x++) {
 
@@ -422,11 +459,13 @@ VoxelChunk::GreedyMesh() {
         int index = Coord3ToArrayIndex(side, x, y, z);
         // We found a quad, we see how big of a grouping we can do.
         if (mask[index]) {
-          Quad3<int> quad = {};
-          quad.min = {x, y, z};
-          quad.max = {x, y, z};
+          VoxelTypedChunk typed_quad = {};
+          typed_quad.type = VoxelElement::Type::kDirt;
+          typed_quad.quad.min = {x, y, z};
+          typed_quad.quad.max = {x, y, z};
 
-          LOG(DEBUG) << indent << "Found free block at " << quad.min.ToString();
+          LOG(DEBUG) << indent << "Found free block at "
+                     << typed_quad.quad.min.ToString();
           indent = "    ";
 
           LOG(DEBUG) << "Looking for X extension";
@@ -441,11 +480,12 @@ VoxelChunk::GreedyMesh() {
               break;
             }
 
-            quad.max.x = ix;
+            typed_quad.quad.max.x = ix;
             mask[new_index] = false;
           }
 
-          LOG(DEBUG) << indent << "Extended X to: " << quad.max.ToString();
+          LOG(DEBUG) << indent
+                     << "Extended X to: " << typed_quad.quad.max.ToString();
 
           indent = "    ";
           LOG(DEBUG) << indent << "Looking for Z extension";
@@ -455,7 +495,7 @@ VoxelChunk::GreedyMesh() {
           bool found_z_extension = true;
           for (int iz = z + 1; iz < side; iz++) {
             // If any in this row doesn't match, this quad is not extensible.
-            for (int ix = x; ix <= quad.max.x; ix++) {
+            for (int ix = x; ix <= typed_quad.quad.max.x; ix++) {
               int new_index = Coord3ToArrayIndex(side, ix, y, iz);
               if (!mask[new_index]) {
                 found_z_extension = false;
@@ -472,34 +512,33 @@ VoxelChunk::GreedyMesh() {
 
             // We were able to extend the chunk, so we mark it as not available
             // anymore.
-            quad.max.z = iz;
+            typed_quad.quad.max.z = iz;
 
-            LOG(DEBUG) << indent
-                       << "Found and Z extension to: " << quad.max.ToString();
+            LOG(DEBUG) << indent << "Found and Z extension to: "
+                       << typed_quad.quad.max.ToString();
 
-            for (int ix = x; ix <= quad.max.x; ix++) {
+            for (int ix = x; ix <= typed_quad.quad.max.x; ix++) {
               int new_index = Coord3ToArrayIndex(side, ix, y, iz);
               mask[new_index] = false;
             }
           }
 
-
           if (found_z_extension) {
-            LOG(DEBUG) << indent << "Extended Z to: " << quad.max.ToString();
+            LOG(DEBUG) << indent
+                       << "Extended Z to: " << typed_quad.quad.max.ToString();
           }
-
 
           indent = "    ";
           LOG(DEBUG) << indent << "Looking for Y extension";
           indent = "      ";
 
-
-
           // Now we see if we can make it grow upwards.
           bool found_y_extension = true;
           for (int iy = y + 1; iy < side; iy++) {
-            for (int iz = quad.min.z; iz <= quad.max.z; iz++) {
-              for (int ix = quad.min.x; ix <= quad.max.x; ix++) {
+            for (int iz = typed_quad.quad.min.z; iz <= typed_quad.quad.max.z;
+                 iz++) {
+              for (int ix = typed_quad.quad.min.x; ix <= typed_quad.quad.max.x;
+                   ix++) {
                 // We see if in this current x row we could extend all the way.
                 int new_index = Coord3ToArrayIndex(side, ix, iy, iz);
                 if (!mask[new_index]) {
@@ -530,9 +569,11 @@ VoxelChunk::GreedyMesh() {
 
             // We found an extension upwards! We need to also mark whole plane
             // as found (a lot of iteration :| ).
-            quad.max.y = iy;
-            for (int iz = quad.min.z; iz <= quad.max.z; iz++) {
-              for (int ix = quad.min.x; ix <= quad.max.x; ix++) {
+            typed_quad.quad.max.y = iy;
+            for (int iz = typed_quad.quad.min.z; iz <= typed_quad.quad.max.z;
+                 iz++) {
+              for (int ix = typed_quad.quad.min.x; ix <= typed_quad.quad.max.x;
+                   ix++) {
                 int new_index = Coord3ToArrayIndex(side, ix, iy, iz);
                 mask[new_index] = false;
               }
@@ -540,12 +581,13 @@ VoxelChunk::GreedyMesh() {
           }
 
           if (found_y_extension) {
-            LOG(DEBUG) << indent << "Extended Y to: " << quad.max.ToString();
+            LOG(DEBUG) << indent
+                       << "Extended Y to: " << typed_quad.quad.max.ToString();
           }
 
           // Now we have the quad as big as we could extend it, first X-wise and
           // then Z-wise, so we add it to the arrays.
-          quads.push_back(std::move(quad));
+          quads.push_back(std::move(typed_quad));
         }
       }
     }
@@ -602,17 +644,17 @@ bool VoxelChunk::Init() {
         // TODO(Cristian): Later do a scene graph.
         voxel.set_position({x, y, z});
         SetCubeFace(*atlas_, &voxel, Voxel::Face::kBack,
-                    kGrassDirt, kTransparent);
+                    VoxelType::kGrassDirt, VoxelType::kTransparent);
         SetCubeFace(*atlas_, &voxel, Voxel::Face::kFront,
-                    kGrassDirt, kTransparent);
+                    VoxelType::kGrassDirt, VoxelType::kTransparent);
         SetCubeFace(*atlas_, &voxel, Voxel::Face::kLeft,
-                    kGrassDirt, kCrack4);
+                    VoxelType::kGrassDirt, VoxelType::kCrack4);
         SetCubeFace(*atlas_, &voxel, Voxel::Face::kRight,
-                    kGrassDirt, kTransparent);
+                    VoxelType::kGrassDirt, VoxelType::kTransparent);
         SetCubeFace(*atlas_, &voxel, Voxel::Face::kTop,
-                    kGrass, kCrack9);
+                    VoxelType::kGrass, VoxelType::kCrack9);
         SetCubeFace(*atlas_, &voxel, Voxel::Face::kBottom,
-                    kDirt, kTransparent);
+                    VoxelType::kDirt, VoxelType::kTransparent);
       }
     }
   }
@@ -631,8 +673,8 @@ VoxelChunk::Render(Shader* shader) {
     shader->SetMat4(Shader::Attributes::kModel, glm::mat4(1.0f));
 
     for (auto& z_quads : quads_) {
-      for (Quad3<int>& quad : z_quads) {
-        auto meshi = CalculateMeshFromQuads({0, 0, 0}, quad);
+      for (VoxelTypedChunk& typed_quad : z_quads) {
+        auto meshi = CalculateMeshFromQuads(*atlas_, {0, 0, 0}, typed_quad);
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo_.value);
         glBufferData(GL_ARRAY_BUFFER,

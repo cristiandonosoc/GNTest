@@ -31,7 +31,7 @@ bool VoxelTerrain::Init() {
 
 void VoxelTerrain::SetTextures(Shader* shader) const {
   atlas_->texture().Set(shader, GL_TEXTURE0);
-  atlas_->texture().Set(shader, GL_TEXTURE1);
+  /* atlas_->texture().Set(shader, GL_TEXTURE1); */
 }
 
 void VoxelTerrain::Render(Shader* shader) {

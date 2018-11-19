@@ -39,6 +39,7 @@
  *
  * TODOs:
  *
+ * - Use UBO (Uniform Buffer Objects) to bind common uniforms around.
  * - Move math into utils. (The dependencies are not good between these).
  * - Don't hardcode VoxelChunks to cubes.
  * - Change VoxelChunk to use VoxelElement instead of Voxel (VoxelElement
@@ -102,6 +103,16 @@ int main() {
   if (CHECK_GL_ERRORS("GL enables"))
     exit(1);
 
+  // ImGUI ---------------------------------------------------------------------
+
+  ImguiContext imgui_context;
+  if (!imgui_context.Init()) {
+    LOG(ERROR) << "Could not initialize ImguiContext";
+    exit(1);
+  }
+
+  // Shader Sources ------------------------------------------------------------
+
   int vert_attribs;
   glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &vert_attribs);
   LOG(DEBUG) << "Max Vertex Attributes: " << vert_attribs;
@@ -120,20 +131,17 @@ int main() {
     LOG_STATUS(res);
     return 1;
   }
-  LOG(INFO) << "Correctly read fragment shader: " << std::endl
-            << fragment_shader.data();
 
-  // ImGUI ---------------------------------------------------------------------
-
-  ImguiContext imgui_context;
-  if (!imgui_context.Init()) {
-    LOG(ERROR) << "Could not initialize ImguiContext";
-    exit(1);
+  std::vector<char> voxel_frag_src;
+  res = ReadWholeFile(Assets::ShaderPath("voxel.frag"), &voxel_frag_src);
+  if (!res.ok()) {
+    LOG_STATUS(res);
+    return 1;
   }
 
   // Shaders -------------------------------------------------------------------
 
-  // Create a shader.
+  // Simple shader.
   Shader shader(vertex_shader.data(), fragment_shader.data());
   res = shader.Init();
   if (!res.ok()) {
@@ -141,6 +149,7 @@ int main() {
     return 1;
   }
 
+  // Alpha test shader.
   std::vector<char> alpha_test_frag;
   ReadWholeFile(Assets::ShaderPath("alpha_test.frag"), &alpha_test_frag);
   Shader alpha_test_shader(vertex_shader.data(), alpha_test_frag.data());
@@ -151,6 +160,13 @@ int main() {
     return 1;
   }
 
+  // Voxel shader.
+  Shader voxel_shader(vertex_shader.data(), voxel_frag_src.data());
+  res = voxel_shader.Init();
+  if (!res.ok()) {
+    LOG_STATUS(res);
+    return 1;
+  }
 
   if (CHECK_GL_ERRORS("Creating shaders"))
     exit(1);
@@ -284,8 +300,8 @@ int main() {
   size_t z = 0;
   for (auto& z_quads : quads) {
     LOG(DEBUG) << "Z: " << z;
-    for (auto& quad : z_quads) {
-      LOG(DEBUG) << "  " << quad.ToString();
+    for (auto& typed_quad : z_quads) {
+      LOG(DEBUG) << "  " << typed_quad.quad.ToString();
     }
     z++;
   }
@@ -300,6 +316,11 @@ int main() {
   // Game loop -----------------------------------------------------------------
 
   InputState input = InputState::Create();
+
+  struct UIState {
+    bool polygon_mode = false;
+  };
+  UIState ui_state = {};
 
   bool running = true;
   while (running) {
@@ -369,7 +390,12 @@ int main() {
     if (camera_changed)
       camera.UpdateView();
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    if (!ui_state.polygon_mode) {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    } else {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
 
     // Draw the triangle.
     glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
@@ -418,8 +444,6 @@ int main() {
       /* glDrawArrays(GL_TRIANGLES, 0, 36); */
     }
 
-    terrain.Render(&shader);
-
     if (CHECK_GL_ERRORS("Drawing minecraft cube"))
       return 1;
 
@@ -435,6 +459,12 @@ int main() {
     // The model at the origin.
     shader.SetMat4("model", glm::mat4(1.0f));
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+
+    voxel_shader.Use();
+    camera.SetProjection(&voxel_shader);
+    camera.SetView(&voxel_shader);
+    terrain.Render(&voxel_shader);
 
     if (CHECK_GL_ERRORS("Drawing plane"))
       return 1;
@@ -466,8 +496,11 @@ int main() {
         camera.UpdateView();
       }
 
-       ImGui::LabelText("FOV", "%.3f", camera.fov);
-       ImGui::LabelText("Seconds", "%.3f", sdl_context.seconds());
+      ImGui::LabelText("FOV", "%.3f", camera.fov);
+      ImGui::LabelText("Seconds", "%.3f", sdl_context.seconds());
+
+      ImGui::Separator();
+      ImGui::Checkbox("Polygon mode", &ui_state.polygon_mode);
 
       ImGui::End();
     }

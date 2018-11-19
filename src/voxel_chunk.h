@@ -7,13 +7,13 @@
 
 #include "src/math/vec.h"
 #include "src/utils/clear_on_move.h"
+#include "src/texture_atlas.h"
 #include "src/utils/glm.h"
 #include "src/utils/macros.h"
 
 namespace warhol {
 
 class Shader;
-class TextureAtlas;
 
 class Voxel {
  public:
@@ -68,8 +68,8 @@ constexpr size_t kVoxelChunkVoxelCount = kVoxelChunkSize *
 struct VoxelElement {
   enum class Type : uint8_t {
     kNone = 0,
-    kDirt,
-    kTopGrass,
+    kDirt = VoxelType::kDirt,
+    kTopGrass = VoxelType::kGrass,
 
     kLast
   };
@@ -77,6 +77,11 @@ struct VoxelElement {
   Type type = Type::kDirt;
 
   explicit operator bool() const { return (uint8_t)type != 0; }
+};
+
+struct VoxelTypedChunk {
+  Quad3<int> quad;
+  VoxelElement::Type type = VoxelElement::Type::kNone;
 };
 
 // Represents a group of voxels in which the world is divided.
@@ -93,7 +98,7 @@ class VoxelChunk {
   // the amount of vertices needed.
   void CalculateMesh();
 
-  std::vector<std::vector<Quad3<int>>> GreedyMesh();
+  std::vector<std::vector<VoxelTypedChunk>> GreedyMesh();
 
   VoxelElement& GetVoxelElement(size_t x, size_t y, size_t z);
 
@@ -111,7 +116,7 @@ class VoxelChunk {
 
   bool greedy = false;
 
-  std::vector<std::vector<Quad3<int>>> quads_;
+  std::vector<std::vector<VoxelTypedChunk>> quads_;
 
 
   ClearOnMove<uint32_t> vao_;
