@@ -39,6 +39,7 @@
  *
  * TODOs:
  *
+ * - Add a decent API for profiling timing (Watch how Casey does it).
  * - Use UBO (Uniform Buffer Objects) to bind common uniforms around.
  * - Move math into utils. (The dependencies are not good between these).
  * - Don't hardcode VoxelChunks to cubes.

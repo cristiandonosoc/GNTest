@@ -79,7 +79,8 @@ struct VoxelElement {
   explicit operator bool() const { return (uint8_t)type != 0; }
 };
 
-struct VoxelTypedChunk {
+// Represents a face within the cube.
+struct VoxelTypeQuad {
   Quad3<int> quad;
   VoxelElement::Type type = VoxelElement::Type::kNone;
 };
@@ -98,9 +99,10 @@ class VoxelChunk {
   // the amount of vertices needed.
   void CalculateMesh();
 
-  std::vector<std::vector<VoxelTypedChunk>> GreedyMesh();
+  std::vector<std::vector<VoxelTypeQuad>> GreedyMesh();
 
-  VoxelElement& GetVoxelElement(size_t x, size_t y, size_t z);
+  VoxelElement& operator[](int index);
+  VoxelElement& GetVoxelElement(int x, int y, int z);
 
   // TODO(Cristian): Return a reference to the actual array?
   Voxel* voxels() { return voxels_; }
@@ -116,7 +118,7 @@ class VoxelChunk {
 
   bool greedy = false;
 
-  std::vector<std::vector<VoxelTypedChunk>> quads_;
+  std::vector<std::vector<VoxelTypeQuad>> quads_;
 
 
   ClearOnMove<uint32_t> vao_;

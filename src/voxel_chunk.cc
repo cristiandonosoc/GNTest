@@ -220,7 +220,7 @@ struct MeshWithIndices {
 MeshWithIndices
 CalculateMeshFromQuads(const TextureAtlas& atlas,
                        Pair3<int> o,
-                       const VoxelTypedChunk& typed_quad) {
+                       const VoxelTypeQuad& typed_quad) {
   std::vector<float> mesh;
   constexpr size_t faces_count = 4;
   mesh.reserve(3 * 4 * faces_count + 2 * 4 * faces_count);
@@ -234,7 +234,6 @@ CalculateMeshFromQuads(const TextureAtlas& atlas,
 
 
   max += {1.0f, 1.0f, 1.0f};
-  LOG(DEBUG) << "MAX: " << max.ToString();
 
   auto uvs = atlas.GetUVs(static_cast<uint8_t>(typed_quad.type));
 
@@ -291,7 +290,8 @@ CalculateMeshFromQuads(const TextureAtlas& atlas,
 }
 
 bool VoxelChunk::InitialiazeGreedy() {
-  elements_[2].type = VoxelElement::Type::kNone;
+  size_t index = Coord3ToArrayIndex(kVoxelChunkSize, 1, 1, 0);
+  elements_[index].type = VoxelElement::Type::kNone;
 
   glGenVertexArrays(1, &vao_.value);
   glBindVertexArray(vao_.value);
@@ -389,10 +389,26 @@ void PrintUVs(const std::vector<float>& uvs) {
   LOG(DEBUG) << ss.str();
 }
 
-VoxelElement& VoxelChunk::GetVoxelElement(size_t x, size_t y, size_t z) {
-  size_t index = Coord3ToArrayIndex(kVoxelChunkSize, x, y, z);
+static VoxelElement invalid_element = {
+  .type = VoxelElement::Type::kNone
+};
+
+VoxelElement& VoxelChunk::operator[](int index) {
+  if (index < 0 || (size_t)index >= ARRAY_SIZE(elements_))
+    return invalid_element;
   return elements_[index];
 }
+
+VoxelElement& VoxelChunk::GetVoxelElement(int x, int y, int z) {
+  if (x < 0 || y < 0 || z < 0)
+    return invalid_element;
+  size_t index = Coord3ToArrayIndex(kVoxelChunkSize, x, y, z);
+  if (index >= ARRAY_SIZE(elements_))
+    return invalid_element;
+  return elements_[index];
+}
+
+
 
 namespace {
 
@@ -425,11 +441,16 @@ ChangeUV(Voxel::Face face,
 
 
 
+#include "src/sdl2/def.h"
+
+
 // TODO(Cristian): Do internal faces culling.
-std::vector<std::vector<VoxelTypedChunk>>
+std::vector<std::vector<VoxelTypeQuad>>
 VoxelChunk::GreedyMesh() {
+  uint64_t before = SDL_GetPerformanceCounter();
+
   // We iterate over z and creating the greatest chunks we can.
-  std::vector<std::vector<VoxelTypedChunk>> quads3d;
+  std::vector<std::vector<VoxelTypeQuad>> quads3d;
   constexpr int side = kVoxelChunkSize;
 
 
@@ -451,7 +472,9 @@ VoxelChunk::GreedyMesh() {
 
     // Now that we have a mask, we can start greedily meshing.
     // TODO(Cristian): Can we update the mask on the fly and not dot 2 passes?
-    std::vector<VoxelTypedChunk> quads;
+    std::vector<VoxelTypeQuad> quads;
+
+    std::vector<VoxelTypeQuad> faces;
     for (int z = 0; z < side; z++) {
       for (int x = 0; x < side; x++) {
 
@@ -459,13 +482,11 @@ VoxelChunk::GreedyMesh() {
         int index = Coord3ToArrayIndex(side, x, y, z);
         // We found a quad, we see how big of a grouping we can do.
         if (mask[index]) {
-          VoxelTypedChunk typed_quad = {};
-          typed_quad.type = VoxelElement::Type::kDirt;
-          typed_quad.quad.min = {x, y, z};
-          typed_quad.quad.max = {x, y, z};
+          Quad3<int> quad = {};
+          quad.min = {x, y, z};
+          quad.max = {x, y, z};
 
-          LOG(DEBUG) << indent << "Found free block at "
-                     << typed_quad.quad.min.ToString();
+          LOG(DEBUG) << indent << "Found free block at " << quad.min.ToString();
           indent = "    ";
 
           LOG(DEBUG) << "Looking for X extension";
@@ -480,12 +501,12 @@ VoxelChunk::GreedyMesh() {
               break;
             }
 
-            typed_quad.quad.max.x = ix;
+            quad.max.x = ix;
             mask[new_index] = false;
           }
 
           LOG(DEBUG) << indent
-                     << "Extended X to: " << typed_quad.quad.max.ToString();
+                     << "Extended X to: " << quad.max.ToString();
 
           indent = "    ";
           LOG(DEBUG) << indent << "Looking for Z extension";
@@ -495,7 +516,7 @@ VoxelChunk::GreedyMesh() {
           bool found_z_extension = true;
           for (int iz = z + 1; iz < side; iz++) {
             // If any in this row doesn't match, this quad is not extensible.
-            for (int ix = x; ix <= typed_quad.quad.max.x; ix++) {
+            for (int ix = x; ix <= quad.max.x; ix++) {
               int new_index = Coord3ToArrayIndex(side, ix, y, iz);
               if (!mask[new_index]) {
                 found_z_extension = false;
@@ -512,12 +533,12 @@ VoxelChunk::GreedyMesh() {
 
             // We were able to extend the chunk, so we mark it as not available
             // anymore.
-            typed_quad.quad.max.z = iz;
+            quad.max.z = iz;
 
-            LOG(DEBUG) << indent << "Found and Z extension to: "
-                       << typed_quad.quad.max.ToString();
+            LOG(DEBUG) << indent
+                       << "Found and Z extension to: " << quad.max.ToString();
 
-            for (int ix = x; ix <= typed_quad.quad.max.x; ix++) {
+            for (int ix = x; ix <= quad.max.x; ix++) {
               int new_index = Coord3ToArrayIndex(side, ix, y, iz);
               mask[new_index] = false;
             }
@@ -525,7 +546,7 @@ VoxelChunk::GreedyMesh() {
 
           if (found_z_extension) {
             LOG(DEBUG) << indent
-                       << "Extended Z to: " << typed_quad.quad.max.ToString();
+                       << "Extended Z to: " << quad.max.ToString();
           }
 
           indent = "    ";
@@ -535,10 +556,8 @@ VoxelChunk::GreedyMesh() {
           // Now we see if we can make it grow upwards.
           bool found_y_extension = true;
           for (int iy = y + 1; iy < side; iy++) {
-            for (int iz = typed_quad.quad.min.z; iz <= typed_quad.quad.max.z;
-                 iz++) {
-              for (int ix = typed_quad.quad.min.x; ix <= typed_quad.quad.max.x;
-                   ix++) {
+            for (int iz = quad.min.z; iz <= quad.max.z; iz++) {
+              for (int ix = quad.min.x; ix <= quad.max.x; ix++) {
                 // We see if in this current x row we could extend all the way.
                 int new_index = Coord3ToArrayIndex(side, ix, iy, iz);
                 if (!mask[new_index]) {
@@ -569,11 +588,9 @@ VoxelChunk::GreedyMesh() {
 
             // We found an extension upwards! We need to also mark whole plane
             // as found (a lot of iteration :| ).
-            typed_quad.quad.max.y = iy;
-            for (int iz = typed_quad.quad.min.z; iz <= typed_quad.quad.max.z;
-                 iz++) {
-              for (int ix = typed_quad.quad.min.x; ix <= typed_quad.quad.max.x;
-                   ix++) {
+            quad.max.y = iy;
+            for (int iz = quad.min.z; iz <= quad.max.z; iz++) {
+              for (int ix = quad.min.x; ix <= quad.max.x; ix++) {
                 int new_index = Coord3ToArrayIndex(side, ix, iy, iz);
                 mask[new_index] = false;
               }
@@ -581,12 +598,81 @@ VoxelChunk::GreedyMesh() {
           }
 
           if (found_y_extension) {
-            LOG(DEBUG) << indent
-                       << "Extended Y to: " << typed_quad.quad.max.ToString();
+            LOG(DEBUG) << indent << "Extended Y to: " << quad.max.ToString();
           }
+
+          // Now that we have the quad as big as it gets, we need to know how
+          // much of the face is visible. We do this by repeating the greedy
+          // algorithm, but per face.
+          // X min-max
+          std::bitset<side * side> x_min;
+          /* std::bitset<side * side> x_max; */
+          std::vector<VoxelTypeQuad> faces;
+          for (int y = quad.min.y; y <= quad.max.y; y++) {
+            for (int z = quad.min.y; z <= quad.max.z; z++) {
+              size_t coord = Coord2ToArrayIndex(side, z, y);
+              if (!x_min[coord])
+                continue;
+              x_min[coord] = true;
+
+              // We check if the voxel below exists. If it does, then this
+              // face is not visible.
+              if (GetVoxelElement(quad.min.x - 1, y, z))
+                continue;
+
+              // This face is visible.
+              VoxelTypeQuad face;
+              face.type = VoxelElement::Type::kDirt;
+              face.quad.min = {quad.min.x, y, z};
+              face.quad.max = {quad.min.x, y, z};
+
+              // We look how bit we can make this grow z-wise.
+              for (int iz = z + 1; iz < quad.max.z; iz++) {
+                size_t new_index = Coord2ToArrayIndex(side, iz, y);
+                if (x_min[new_index])
+                  break;
+                x_min[coord] = true;
+                if (GetVoxelElement(quad.min.x - 1, y, iz))
+                  break;
+
+                // We can grow the face.
+                face.quad.max.z = iz;
+              }
+
+              // We see how much we can grow the face y-wise
+              bool found_y_extension = true;
+              for (int iy = y + 1; iy <= quad.max.y; iy++) {
+                for (int iz = z + 1; iz <= quad.max.z; iz++) {
+                  // We check if the current face is visible all the way.
+                  size_t new_index = Coord2ToArrayIndex(side, iz, iy);
+                  if (mask[new_index]) {
+                    found_y_extension = false;
+                    break;
+                  }
+                  mask[new_index] = true;
+                  if (GetVoxelElement(quad.min.x - 1, iy, iz)) {
+                    found_y_extension = false;
+                    break;
+                  }
+                }
+
+                if (!found_y_extension)
+                  break;
+                face.quad.max.y = iy;
+              }
+
+              // Now we have grown the face as bit as it gets.
+              faces.push_back(std::move(face));
+            }
+          }
+
+          // TODO(Cristian): Add the faces to the overall outside here.
 
           // Now we have the quad as big as we could extend it, first X-wise and
           // then Z-wise, so we add it to the arrays.
+          VoxelTypeQuad typed_quad;
+          typed_quad.type = VoxelElement::Type::kDirt;
+          typed_quad.quad = std::move(quad);
           quads.push_back(std::move(typed_quad));
         }
       }
@@ -597,6 +683,12 @@ VoxelChunk::GreedyMesh() {
   }
 
   LOG(DEBUG) << "----------------------\n\n\n";
+
+  uint64_t after = SDL_GetPerformanceCounter();
+  uint64_t frequency = SDL_GetPerformanceFrequency();
+  uint64_t delta = after - before;
+  float time = (float)((double)delta / frequency);
+  LOG(DEBUG) << "Meshing timing: " << time * 1000.0f << " ms.";
 
   return quads3d;
 }
@@ -673,7 +765,7 @@ VoxelChunk::Render(Shader* shader) {
     shader->SetMat4(Shader::Attributes::kModel, glm::mat4(1.0f));
 
     for (auto& z_quads : quads_) {
-      for (VoxelTypedChunk& typed_quad : z_quads) {
+      for (VoxelTypeQuad& typed_quad : z_quads) {
         auto meshi = CalculateMeshFromQuads(*atlas_, {0, 0, 0}, typed_quad);
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo_.value);
