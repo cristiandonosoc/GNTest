@@ -39,6 +39,8 @@
  *
  * TODOs:
  *
+ * - Used static indices to attributes (Not we have Shader::Attributes::kModel
+ *   as a name, but it should also have the attribute number).
  * - Add a decent API for profiling timing (Watch how Casey does it).
  * - Use UBO (Uniform Buffer Objects) to bind common uniforms around.
  * - Move math into utils. (The dependencies are not good between these).

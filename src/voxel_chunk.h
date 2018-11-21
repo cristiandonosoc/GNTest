@@ -66,23 +66,23 @@ constexpr size_t kVoxelChunkVoxelCount = kVoxelChunkSize *
                                          kVoxelChunkSize;
 
 struct VoxelElement {
-  enum class Type : uint8_t {
-    kNone = 0,
-    kDirt = VoxelType::kDirt,
-    kTopGrass = VoxelType::kGrass,
+  VoxelType type = VoxelType::kNone;
 
-    kLast
-  };
-
-  Type type = Type::kDirt;
-
-  explicit operator bool() const { return (uint8_t)type != 0; }
+  explicit operator bool() const { return type != VoxelType::kNone; }
 };
 
 // Represents a face within the cube.
-struct VoxelTypeQuad {
+struct ExpandedVoxel {
   Quad3<int> quad;
-  VoxelElement::Type type = VoxelElement::Type::kNone;
+  VoxelType type = VoxelType::kDirt;
+};
+
+struct TypedFace {
+  static constexpr int kVertCount = 4 * 3;
+  static constexpr int kUVCount = 4 * 2;
+  float verts[kVertCount];
+  float uvs[kUVCount];
+  // TODO(Cristian): Normals.
 };
 
 // Represents a group of voxels in which the world is divided.
@@ -95,11 +95,14 @@ class VoxelChunk {
   bool InitialiazeGreedy();
 
   void Render(Shader*);
+
+  void CalculateGreedyMesh();
+
+
+
   // From the given voxel elements, a new mesh can be calculated that minimizes
   // the amount of vertices needed.
   void CalculateMesh();
-
-  std::vector<std::vector<VoxelTypeQuad>> GreedyMesh();
 
   VoxelElement& operator[](int index);
   VoxelElement& GetVoxelElement(int x, int y, int z);
@@ -111,6 +114,16 @@ class VoxelChunk {
   Voxel& GetVoxel(size_t x, size_t y, size_t z);
 
  private:
+  std::vector<TypedFace> CalculateFaces();
+
+  std::vector<ExpandedVoxel> ExpandVoxels();
+  std::vector<TypedFace>
+  CalculateFacesX(VoxelType, int z, int z_to_check, Quad3<int>);
+  std::vector<TypedFace>
+  CalculateFacesY(VoxelType, int z, int z_to_check, Quad3<int>);
+  std::vector<TypedFace>
+  CalculateFacesZ(VoxelType, int z, int z_to_check, Quad3<int>);
+
   VoxelElement elements_[kVoxelChunkVoxelCount];
 
   Voxel voxels_[kVoxelChunkVoxelCount];
@@ -118,7 +131,7 @@ class VoxelChunk {
 
   bool greedy = false;
 
-  std::vector<std::vector<VoxelTypeQuad>> quads_;
+  /* std::vector<std::vector<VoxelTypeQuad>> quads_; */
 
 
   ClearOnMove<uint32_t> vao_;

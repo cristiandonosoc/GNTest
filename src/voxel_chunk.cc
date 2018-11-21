@@ -214,77 +214,97 @@ EmplaceBackUV(std::vector<float>* mesh, float u, float v) {
 
 struct MeshWithIndices {
   std::vector<float> vertices;
+  std::vector<float> uvs;
   std::vector<uint32_t> indices;
 };
 
 MeshWithIndices
-CalculateMeshFromQuads(const TextureAtlas& atlas,
-                       Pair3<int> o,
-                       const VoxelTypeQuad& typed_quad) {
-  std::vector<float> mesh;
-  constexpr size_t faces_count = 4;
-  mesh.reserve(3 * 4 * faces_count + 2 * 4 * faces_count);
+CalculateMeshFromFace(const TextureAtlas& atlas, const VoxelTypeQuad& face) {
+  MeshWithIndices mesh;
+  /* constexpr size_t faces_count = 4; */
+  /* mesh.reserve(3 * 4 * faces_count + 2 * 4 * faces_count); */
 
-  Vec3 min{(float)typed_quad.quad.min.x,
-           (float)typed_quad.quad.min.y,
-           (float)typed_quad.quad.min.z};
-  Vec3 max{(float)typed_quad.quad.max.x,
-           (float)typed_quad.quad.max.y,
-           (float)typed_quad.quad.max.z};
-
+  auto& face_min = face.quad.min;
+  auto& face_max = face.quad.max;
+  Vec3 min{(float)face_min.x, (float)face_min.y, (float)face_min.z};
+  Vec3 max{(float)face_max.x, (float)face_max.y, (float)face_max.z};
 
   max += {1.0f, 1.0f, 1.0f};
 
-  auto uvs = atlas.GetUVs(static_cast<uint8_t>(typed_quad.type));
+  auto uvs = atlas.GetUVs(static_cast<uint8_t>(face.type));
 
-  // Indexed
-  // X constant.
-  EmplaceBackCoord(&mesh, o.x + min.x, o.y + min.y, o.z + min.z);
-  EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y);
-  EmplaceBackCoord(&mesh, o.x + min.x, o.y + min.y, o.z + max.z);
-  EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y + max.z);
-  EmplaceBackCoord(&mesh, o.x + min.x, o.y + max.y, o.z + min.z);
-  EmplaceBackUV(&mesh, uvs.max().x + max.y, uvs.min().y);
-  EmplaceBackCoord(&mesh, o.x + min.x, o.y + max.y, o.z + max.z);
-  EmplaceBackUV(&mesh, uvs.max().x + max.y, uvs.max().y + max.z);
+  EmplaceBackCoord(&mesh.vertices, min.x, min.y, min.z);
+  EmplaceBackCoord(&mesh.vertices, min.x, min.y, max.z);
+  EmplaceBackCoord(&mesh.vertices, max.x, max.y, max.z);
+  EmplaceBackCoord(&mesh.vertices, min.x, max.y, max.z);
 
-  // Z constant.
-  EmplaceBackCoord(&mesh, o.x + min.x, o.y + min.y, o.z + max.z);
-  EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y);
-  EmplaceBackCoord(&mesh, o.x + max.x, o.y + min.y, o.z + max.z);
-  EmplaceBackUV(&mesh, uvs.max().x + max.x, uvs.min().y);
-  EmplaceBackCoord(&mesh, o.x + min.x, o.y + max.y, o.z + max.z);
-  EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y + max.y);
-  EmplaceBackCoord(&mesh, o.x + max.x, o.y + max.y, o.z + max.z);
-  EmplaceBackUV(&mesh, uvs.max().x, uvs.max().y);
+  EmplaceBackUV(&mesh.uvs, uvs.min().x, uvs.min().y);
+  EmplaceBackUV(&mesh.uvs, uvs.min().x, uvs.max().y);
+  EmplaceBackUV(&mesh.uvs, uvs.max().x, uvs.min().y);
+  EmplaceBackUV(&mesh.uvs, uvs.max().x, uvs.max().y);
 
-  // X constant.
-  EmplaceBackCoord(&mesh, o.x + max.x, o.y + min.y, o.z + max.z);
-  EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y);
-  EmplaceBackCoord(&mesh, o.x + max.x, o.y + min.y, o.z + min.z);
-  EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y);
-  EmplaceBackCoord(&mesh, o.x + max.x, o.y + max.y, o.z + max.z);
-  EmplaceBackUV(&mesh, uvs.max().x, uvs.max().y);
-  EmplaceBackCoord(&mesh, o.x + max.x, o.y + max.y, o.z + min.z);
-  EmplaceBackUV(&mesh, uvs.max().x, uvs.min().y);
+  /* EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y); */
+  /* EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y + max.z); */
+  /* EmplaceBackUV(&mesh, uvs.max().x + max.y, uvs.min().y); */
+  /* EmplaceBackUV(&mesh, uvs.max().x + max.y, uvs.max().y + max.z); */
 
-  // Y constant.
-  EmplaceBackCoord(&mesh, o.x + max.x, o.y + min.y, o.z + min.z);
-  EmplaceBackUV(&mesh, uvs.max().x, uvs.min().y);
-  EmplaceBackCoord(&mesh, o.x + min.x, o.y + min.y, o.z + min.z);
-  EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y);
-  EmplaceBackCoord(&mesh, o.x + max.x, o.y + max.y, o.z + min.z);
-  EmplaceBackUV(&mesh, uvs.max().x, uvs.max().y);
-  EmplaceBackCoord(&mesh, o.x + min.x, o.y + max.y, o.z + min.z);
-  EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y);
 
-  std::vector<uint32_t> indices = {
-       0,  1,  2,  2,  1,  3,
-       4,  5,  6,  6,  5,  7,
-       8,  9, 10, 10,  9, 11,
-      12, 13, 14, 14, 13, 15,
-      // TODO(Cristian): botton and top faces.
-  };
+
+  return mesh;
+
+  /* // Indexed */
+  /* // X constant. */
+  /* EmplaceBackCoord(&mesh, min.x, min.y, min.z); */
+  /* EmplaceBackCoord(&mesh, min.x, min.y, max.z); */
+  /* EmplaceBackCoord(&mesh, min.x, max.y, min.z); */
+  /* EmplaceBackCoord(&mesh, min.x, max.y, max.z); */
+  /* // Z constant. */
+  /* EmplaceBackCoord(&mesh, min.x, min.y, max.z); */
+  /* EmplaceBackCoord(&mesh, max.x, min.y, max.z); */
+  /* EmplaceBackCoord(&mesh, min.x, max.y, max.z); */
+  /* EmplaceBackCoord(&mesh, max.x, max.y, max.z); */
+
+  /* // X constant. */
+  /* EmplaceBackCoord(&mesh, max.x, min.y, max.z); */
+  /* EmplaceBackCoord(&mesh, max.x, min.y, min.z); */
+  /* EmplaceBackCoord(&mesh, max.x, max.y, max.z); */
+  /* EmplaceBackCoord(&mesh, max.x, max.y, min.z); */
+
+  /* // Y constant. */
+  /* EmplaceBackCoord(&mesh, max.x, min.y, min.z); */
+  /* EmplaceBackCoord(&mesh, min.x, min.y, min.z); */
+  /* EmplaceBackCoord(&mesh, max.x, max.y, min.z); */
+  /* EmplaceBackCoord(&mesh, min.x, max.y, min.z); */
+
+  /* EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y); */
+  /* EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y + max.z); */
+  /* EmplaceBackUV(&mesh, uvs.max().x + max.y, uvs.min().y); */
+  /* EmplaceBackUV(&mesh, uvs.max().x + max.y, uvs.max().y + max.z); */
+
+  /* EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y); */
+  /* EmplaceBackUV(&mesh, uvs.max().x + max.x, uvs.min().y); */
+  /* EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y + max.y); */
+  /* EmplaceBackUV(&mesh, uvs.max().x, uvs.max().y); */
+
+  /* EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y); */
+  /* EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y); */
+  /* EmplaceBackUV(&mesh, uvs.max().x, uvs.max().y); */
+  /* EmplaceBackUV(&mesh, uvs.max().x, uvs.min().y); */
+
+  /* EmplaceBackUV(&mesh, uvs.max().x, uvs.min().y); */
+  /* EmplaceBackUV(&mesh, uvs.min().x, uvs.min().y); */
+  /* EmplaceBackUV(&mesh, uvs.max().x, uvs.max().y); */
+  /* EmplaceBackUV(&mesh, uvs.min().x, uvs.max().y); */
+
+
+
+  /* std::vector<uint32_t> indices = { */
+  /*      0,  1,  2,  2,  1,  3, */
+  /*      4,  5,  6,  6,  5,  7, */
+  /*      8,  9, 10, 10,  9, 11, */
+  /*     12, 13, 14, 14, 13, 15, */
+  /*     // TODO(Cristian): botton and top faces. */
+  /* }; */
 
   return { std::move(mesh), std::move(indices) };
 }
@@ -443,16 +463,29 @@ ChangeUV(Voxel::Face face,
 
 #include "src/sdl2/def.h"
 
-
-// TODO(Cristian): Do internal faces culling.
-std::vector<std::vector<VoxelTypeQuad>>
-VoxelChunk::GreedyMesh() {
-  uint64_t before = SDL_GetPerformanceCounter();
-
+std::vector<TypedFace> VoxelChunk::CalculateFaces() {
   // We iterate over z and creating the greatest chunks we can.
-  std::vector<std::vector<VoxelTypeQuad>> quads3d;
-  constexpr int side = kVoxelChunkSize;
+  std::vector<ExpandedVoxel> expanded_voxels = ExpandVoxels();
 
+  // Get the faces from the expanded voxels.
+  std::vector<TypedFace> faces;
+
+  for (auto& expanded_voxel : expanded_voxels) {
+    // X faces.
+    auto& quad = expanded_voxel.quad;
+    auto x_faces_down =
+        CalculateFacesX(expanded_voxel.type, quad.min.x - 1, quad.min.x, quad);
+    faces.insert(faces.end(), x_faces_down.begin(), x_faces_down.end());
+    auto x_faces_up =
+        CalculateFacesX(expanded_voxel.type, quad.max.x + 1, quad.max.x, quad);
+    faces.insert(faces.end(), x_faces_up.begin(), x_faces_up.end());
+  }
+
+  return faces;
+}
+
+std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
+  constexpr int side = kVoxelChunkSize;
 
   // Look over which voxels are there and create one big mask 3D matrix.
   std::bitset<side * side * side> mask;
@@ -465,6 +498,8 @@ VoxelChunk::GreedyMesh() {
     }
   }
 
+  std::vector<ExpandedVoxel> expanded_voxels;
+
   // Iterate from bottom to top (in our view, that's the Y axis).
   for (int y = 0; y < side; y++) {
     LOG(DEBUG) << "------------------------------";
@@ -472,9 +507,8 @@ VoxelChunk::GreedyMesh() {
 
     // Now that we have a mask, we can start greedily meshing.
     // TODO(Cristian): Can we update the mask on the fly and not dot 2 passes?
-    std::vector<VoxelTypeQuad> quads;
 
-    std::vector<VoxelTypeQuad> faces;
+    /* std::vector<VoxelTypeQuad> faces; */
     for (int z = 0; z < side; z++) {
       for (int x = 0; x < side; x++) {
 
@@ -584,7 +618,8 @@ VoxelChunk::GreedyMesh() {
               break;
             }
 
-            LOG(DEBUG) << indent << "Found Y extension from " << y << " to " << iy;
+            LOG(DEBUG) << indent << "Found Y extension from " << y << " to "
+                       << iy;
 
             // We found an extension upwards! We need to also mark whole plane
             // as found (a lot of iteration :| ).
@@ -601,96 +636,106 @@ VoxelChunk::GreedyMesh() {
             LOG(DEBUG) << indent << "Extended Y to: " << quad.max.ToString();
           }
 
+
+          ExpandedVoxel expanded_voxel;
+          expanded_voxel.quad = std::move(quad);
+          expanded_voxel.type = VoxelType::kDirt;
+          expanded_voxels.push_back(std::move(expanded_voxel));
+
+#if 0
           // Now that we have the quad as big as it gets, we need to know how
           // much of the face is visible. We do this by repeating the greedy
           // algorithm, but per face.
-          // X min-max
-          std::bitset<side * side> x_min;
-          /* std::bitset<side * side> x_max; */
-          std::vector<VoxelTypeQuad> faces;
-          for (int y = quad.min.y; y <= quad.max.y; y++) {
-            for (int z = quad.min.y; z <= quad.max.z; z++) {
-              size_t coord = Coord2ToArrayIndex(side, z, y);
-              if (!x_min[coord])
-                continue;
-              x_min[coord] = true;
+          std::vector<Quad3<int>> faces;
 
-              // We check if the voxel below exists. If it does, then this
-              // face is not visible.
-              if (GetVoxelElement(quad.min.x - 1, y, z))
-                continue;
-
-              // This face is visible.
-              VoxelTypeQuad face;
-              face.type = VoxelElement::Type::kDirt;
-              face.quad.min = {quad.min.x, y, z};
-              face.quad.max = {quad.min.x, y, z};
-
-              // We look how bit we can make this grow z-wise.
-              for (int iz = z + 1; iz < quad.max.z; iz++) {
-                size_t new_index = Coord2ToArrayIndex(side, iz, y);
-                if (x_min[new_index])
-                  break;
-                x_min[coord] = true;
-                if (GetVoxelElement(quad.min.x - 1, y, iz))
-                  break;
-
-                // We can grow the face.
-                face.quad.max.z = iz;
-              }
-
-              // We see how much we can grow the face y-wise
-              bool found_y_extension = true;
-              for (int iy = y + 1; iy <= quad.max.y; iy++) {
-                for (int iz = z + 1; iz <= quad.max.z; iz++) {
-                  // We check if the current face is visible all the way.
-                  size_t new_index = Coord2ToArrayIndex(side, iz, iy);
-                  if (mask[new_index]) {
-                    found_y_extension = false;
-                    break;
-                  }
-                  mask[new_index] = true;
-                  if (GetVoxelElement(quad.min.x - 1, iy, iz)) {
-                    found_y_extension = false;
-                    break;
-                  }
-                }
-
-                if (!found_y_extension)
-                  break;
-                face.quad.max.y = iy;
-              }
-
-              // Now we have grown the face as bit as it gets.
-              faces.push_back(std::move(face));
-            }
-          }
-
-          // TODO(Cristian): Add the faces to the overall outside here.
+          // X faces.
+          auto x_faces_down = CalculateFacesX(quad.min.x - 1, quad.min.x, quad);
+          faces.insert(faces.end(), x_faces_down.begin(), x_faces_down.end());
+          auto x_faces_up = CalculateFacesX(quad.max.x + 1, quad.max.x, quad);
+          faces.insert(faces.end(), x_faces_up.begin(), x_faces_up.end());
 
           // Now we have the quad as big as we could extend it, first X-wise and
           // then Z-wise, so we add it to the arrays.
-          VoxelTypeQuad typed_quad;
-          typed_quad.type = VoxelElement::Type::kDirt;
-          typed_quad.quad = std::move(quad);
-          quads.push_back(std::move(typed_quad));
+
+          for (auto& face : faces) {
+            VoxelTypeQuad typed_quad;
+            typed_quad.type = VoxelElement::Type::kDirt;
+            typed_quad.quad = std::move(face);
+            quads.push_back(std::move(typed_quad));
+          }
         }
+#endif
       }
     }
-
-    // We finished with this layer.
-    quads3d.push_back(std::move(quads));
   }
 
-  LOG(DEBUG) << "----------------------\n\n\n";
+  return expanded_voxels;
+}
 
-  uint64_t after = SDL_GetPerformanceCounter();
-  uint64_t frequency = SDL_GetPerformanceFrequency();
-  uint64_t delta = after - before;
-  float time = (float)((double)delta / frequency);
-  LOG(DEBUG) << "Meshing timing: " << time * 1000.0f << " ms.";
+std::vector<Quad3<int>>
+VoxelChunk::CalculateFacesX(int x, int x_to_check, Quad3<int> quad) {
+  std::vector<Quad3<int>> faces;
+  constexpr int side = kVoxelChunkSize;
 
-  return quads3d;
+  std::bitset<side * side> slots;
+  for (int y = quad.min.y; y <= quad.max.y; y++) {
+    for (int z = quad.min.y; z <= quad.max.z; z++) {
+      size_t index = Coord2ToArrayIndex(side, z, y);
+      if (slots[index])
+        continue;
+      slots[index] = true;
+
+      // We check if the voxel below exists. If it does, then this
+      // face is not visible.
+      if (GetVoxelElement(x_to_check, y, z))
+        continue;
+
+      // This face is visible.
+      Quad3<int> face;
+      face.min = {x, y, z};
+      face.max = {x, y, z};
+
+      // We look how bit we can make this grow z-wise.
+      for (int iz = z + 1; iz < quad.max.z; iz++) {
+        size_t new_index = Coord2ToArrayIndex(side, iz, y);
+        if (slots[new_index])
+          break;
+        slots[new_index] = true;
+        if (GetVoxelElement(x_to_check, y, iz))
+          break;
+
+        // We can grow the face.
+        face.max.z = iz;
+      }
+
+      // We see how much we can grow the face y-wise
+      bool found_y_extension = true;
+      for (int iy = y + 1; iy <= quad.max.y; iy++) {
+        for (int iz = z + 1; iz <= quad.max.z; iz++) {
+          // We check if the current face is visible all the way.
+          size_t new_index = Coord2ToArrayIndex(side, iz, iy);
+          if (slots[new_index]) {
+            found_y_extension = false;
+            break;
+          }
+          slots[new_index] = true;
+          if (GetVoxelElement(x_to_check, iy, iz)) {
+            found_y_extension = false;
+            break;
+          }
+        }
+
+        if (!found_y_extension)
+          break;
+        face.max.y = iy;
+      }
+
+      // Now we have grown the face as bit as it gets.
+      faces.push_back(std::move(face));
+    }
+  }
+
+  return faces;
 }
 
 // VoxelChunk ------------------------------------------------------------------
@@ -753,6 +798,72 @@ bool VoxelChunk::Init() {
   return true;
 }
 
+void VoxelChunk::CalculateGreedyMesh() {
+  uint64_t before = SDL_GetPerformanceCounter();
+
+  // Get the calculated faces.
+  std::vector<TypedFace> faces = CalculateFaces();
+
+  // Put them into separate buckets so we can but them separatedly into the
+  // OpenGL buffers.
+  std::vector<float> vbo_data;
+  vbo_data.reserve(TypedFace::kVertCount * faces.size() +
+                   TypedFace::kUVCount * faces.size());
+
+  // We put the vertex data first, then the uv
+  for (auto& face : faces) {
+    vbo_data.emplace_back(vbo_data.end(), face.verts,
+                                          face.verts + TypedFace::kVertCount);
+  }
+  for (auto& face : faces) {
+    vbo_data.emplace_back(vbo_data.end(), face.uvs,
+                                          face.uvs + TypedFace::kUVCount);
+  }
+
+  // Send the data over to the GPU.
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_.value);
+  glBufferData(GL_ARRAY_BUFFER,
+               sizeof(vbo_data), vbo_data.data(),
+               GL_STATIC_DRAW);
+  // Vertices start at the beginning of the buffer.
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  // UVs start right after.
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+                        2 * sizeof(float),
+                        (void*)(TypedFace::kVertCount * faces.size()));
+
+
+  // Calculate the indices
+  size_t indices_count = TypedFace::kVertCount * faces.size() / 4;
+  std::vector<float> indices;
+  indices.reserve(indices_count);
+  for (size_t base = 0;
+       base < indices_count;
+       base += 4) {
+    indices.emplace_back(base + 0);
+    indices.emplace_back(base + 1);
+    indices.emplace_back(base + 2);
+    indices.emplace_back(base + 2);
+    indices.emplace_back(base + 1);
+    indices.emplace_back(base + 3);
+  }
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_.value);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+               sizeof(indices), indices.data(), GL_STATIC_DRAW);
+
+  if (CHECK_GL_ERRORS("Greedy mesh sending over to the GPU"))
+    exit(1);
+
+  uint64_t after = SDL_GetPerformanceCounter();
+  uint64_t frequency = SDL_GetPerformanceFrequency();
+  uint64_t delta = after - before;
+  float time = (float)((double)delta / frequency);
+  LOG(DEBUG) << "----------------------\n\n\n";
+  LOG(DEBUG) << "Meshing timing: " << time * 1000.0f << " ms.";
+
+}
+
 void
 VoxelChunk::Render(Shader* shader) {
   if (!greedy) {
@@ -764,9 +875,25 @@ VoxelChunk::Render(Shader* shader) {
     // TODO(donosoc): Do this only when needed.
     shader->SetMat4(Shader::Attributes::kModel, glm::mat4(1.0f));
 
+    std::vector<float> vertices;
+    std::vector<float> uvs;
+    for (auto& quad : quads_) {
+      auto meshi = CalculateMeshFromFace(*atlas_, quad);
+      vertices.push_back(vertices.end(), meshi.vertices.begin(), meshi.vertices.end());
+      uvs.push_back(uvs.end(), meshi.uvs.begin(), meshi.uvs.end());
+
+      uint32_t base =
+
+
+
+
+
+    }
+
     for (auto& z_quads : quads_) {
       for (VoxelTypeQuad& typed_quad : z_quads) {
         auto meshi = CalculateMeshFromQuads(*atlas_, {0, 0, 0}, typed_quad);
+        auto meshi = CalculateMeshFromFace(*atlas_,
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo_.value);
         glBufferData(GL_ARRAY_BUFFER,
