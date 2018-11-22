@@ -22,6 +22,14 @@ Coord3ToArrayIndex(size_t side, size_t x, size_t y, size_t z) {
   return x + y_offset + z_offset;
 }
 
+inline Pair<int>
+ArrayIndexToCoord2(int side, int index) {
+  Pair<int> coord = {};
+  coord.y = index/ side;
+  coord.x = index % side;
+  return coord;
+}
+
 inline Pair3<size_t>
 ArrayIndexToCoord3(size_t side, size_t index) {
   Pair3<size_t> coord = {};

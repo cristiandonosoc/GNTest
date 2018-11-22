@@ -5,59 +5,17 @@
 
 #include <vector>
 
+#include "src/atlas_data.h"
 #include "src/math/vec.h"
 #include "src/utils/clear_on_move.h"
-#include "src/texture_atlas.h"
 #include "src/utils/glm.h"
 #include "src/utils/macros.h"
 
 namespace warhol {
 
 class Shader;
-
-class Voxel {
- public:
-  enum class Face {
-    kFront,
-    kBack,
-    kLeft,
-    kRight,
-    kTop,
-    kBottom,
-  };
-
-  Voxel();
-  ~Voxel();
-  DELETE_COPY_AND_ASSIGN(Voxel);
-  DEFAULT_MOVE_AND_ASSIGN(Voxel);
-
-  bool Init();
-
-  // Set the textures index for the face. -1 means don't change the texture for
-  // this layer.
-  void SetFace(Face, int layer, Pair<Pair<float>> min_max_uvs);
-
-  const glm::vec3& position() const { return position_; }
-  void set_position(glm::vec3 pos) { position_ = pos; }
-
-  void Render(Shader*);
-
- private:
-  // TODO(Cristian): Voxels should not care about where they are. They only
-  //                 know about their vertices.
-  glm::vec3 position_;
-  glm::mat4 model_ = glm::mat4(1.0f);
-
-  ClearOnMove<uint32_t> vao_;
-  ClearOnMove<uint32_t> vertex_vbo_;
-  ClearOnMove<uint32_t> uv_vbo1_;
-  ClearOnMove<uint32_t> uv_vbo2_;
-  ClearOnMove<uint32_t> ebo_;
-
-  std::vector<float> uvs1_;
-  std::vector<float> uvs2_;
-  bool initialized_ = false;
-};
+class TextureArray2D;
+class TextureAtlas;
 
 // How many voxels a voxel chunk is. Voxel chunks are assumed to be a cube.
 constexpr size_t kVoxelChunkSize = 4;
@@ -82,6 +40,7 @@ struct TypedFace {
   static constexpr int kUVCount = 4 * 2;
   float verts[kVertCount];
   float uvs[kUVCount];
+  VoxelType type = VoxelType::kNone;
   // TODO(Cristian): Normals.
 };
 
@@ -92,26 +51,20 @@ class VoxelChunk {
   VoxelChunk(TextureAtlas*);
 
   bool Init();
-  bool InitialiazeGreedy();
-
-  void Render(Shader*);
-
-  void CalculateGreedyMesh();
-
-
-
-  // From the given voxel elements, a new mesh can be calculated that minimizes
-  // the amount of vertices needed.
   void CalculateMesh();
+  void Render(Shader*);
 
   VoxelElement& operator[](int index);
   VoxelElement& GetVoxelElement(int x, int y, int z);
 
   // TODO(Cristian): Return a reference to the actual array?
-  Voxel* voxels() { return voxels_; }
-  size_t voxel_count() const { return ARRAY_SIZE(voxels_); }
+  /* Voxel* voxels() { return voxels_; } */
+  /* size_t voxel_count() const { return ARRAY_SIZE(voxels_); } */
+  /* Voxel& GetVoxel(size_t x, size_t y, size_t z); */
 
-  Voxel& GetVoxel(size_t x, size_t y, size_t z);
+  uint32_t vao() const { return vao_.value; }
+  uint32_t vbo() const { return vbo_.value; }
+  uint32_t ebo() const { return ebo_.value; }
 
  private:
   std::vector<TypedFace> CalculateFaces();
@@ -125,20 +78,16 @@ class VoxelChunk {
   CalculateFacesZ(VoxelType, int z, int z_to_check, Quad3<int>);
 
   VoxelElement elements_[kVoxelChunkVoxelCount];
+  std::vector<TypedFace> faces_;
+  size_t face_count_;
 
-  Voxel voxels_[kVoxelChunkVoxelCount];
   TextureAtlas* atlas_;   // Not owning. Must outlive.
+  TextureArray2D* tex_array_;   // Not owning.
 
-  bool greedy = false;
-
-  /* std::vector<std::vector<VoxelTypeQuad>> quads_; */
-
-
+  // TODO(Cristian): Stop leaking these.
   ClearOnMove<uint32_t> vao_;
   ClearOnMove<uint32_t> vbo_;
   ClearOnMove<uint32_t> ebo_;
 };
-
-
 
 }  // namespace warhol

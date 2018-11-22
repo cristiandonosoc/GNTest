@@ -34,9 +34,19 @@ struct Pair {
   bool operator>=(const Pair& rhs) const { return *this > rhs || *this == rhs; }
 
   std::string ToString() const {
-    return StringPrintf("X: %f, Y: %f", (float)x, (float)y);
+    return StringPrintf("X: [%s], Y: [%s]",
+                        x.ToString().data(), y.ToString().data());
   }
+
+
+
 };
+
+template <>
+std::string Pair<float>::ToString() const;
+
+
+
 
 template <typename T>
 struct HashPair {

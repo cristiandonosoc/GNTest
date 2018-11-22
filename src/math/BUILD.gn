@@ -5,6 +5,7 @@ source_set("math") {
   sources = [
     "math.cc",
     "math.h",
+    "vec.cc",
     "vec.h",
   ]
 }

@@ -291,28 +291,10 @@ int main() {
   if (CHECK_GL_ERRORS("Creating voxel terrain"))
     return 1;
 
-  // We print the greedy mesh.
-  auto it = terrain.voxel_chunks().begin();
-  if (it == terrain.voxel_chunks().end()) {
-    LOG(ERROR) << "Did not find a valid voxel chunk.";
-    return 1;
-  }
-
-  auto quads = it->second.GreedyMesh();
-  LOG(DEBUG) << "Printing Greedy Mesh";
-  size_t z = 0;
-  for (auto& z_quads : quads) {
-    LOG(DEBUG) << "Z: " << z;
-    for (auto& typed_quad : z_quads) {
-      LOG(DEBUG) << "  " << typed_quad.quad.ToString();
-    }
-    z++;
-  }
-
   // Camera --------------------------------------------------------------------
 
   float camera_speed = 5.0f;
-  Camera camera(&sdl_context, {1.0f, 5.0f, 10.0f});
+  Camera camera(&sdl_context, {-10.0f, 5.0f, 10.0f});
   camera.SetTarget({});
   camera.UpdateView();
 

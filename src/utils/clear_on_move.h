@@ -15,7 +15,7 @@ struct ClearOnMove{
 
   ClearOnMove() = default;
   ClearOnMove(T value) : value(value) {}
-  DEFAULT_COPY_AND_ASSIGN(ClearOnMove);
+  DELETE_COPY_AND_ASSIGN(ClearOnMove);
 
   void clear() { value = 0; }
 

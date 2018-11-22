@@ -21,11 +21,13 @@ bool VoxelTerrain::Init() {
   VoxelChunk chunk(atlas_);
   if (!chunk.Init())
     return false;
+  chunk.CalculateMesh();
   voxel_chunks_[std::move(coord)] = std::move(chunk);
 
-  VoxelChunk chunk2(atlas_);
-  chunk2.InitialiazeGreedy();
-  voxel_chunks_[{1, 0, 1}] = std::move(chunk2);
+  /* VoxelChunk chunk2(atlas_); */
+  /* chunk2.Init(); */
+  /* chunk2.CalculateMesh(); */
+  /* voxel_chunks_[{1, 0, 1}] = std::move(chunk2); */
   return true;
 }
 
