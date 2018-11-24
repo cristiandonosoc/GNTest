@@ -26,11 +26,7 @@
 #endif
 
 #if defined(_MSC_VER)
-  #define PRETTY_FUNCTION __FUNCTION__
-#elif defined(__GNUC__) || defined(__clang__)
-  #define PRETTY_FUNCTION __PRETTY_FUNCTION__
-#else
-  #define PRETTY_FUNCTION "__PRETTY_FUNCTION__ Not supported in this compiler"
+  #define __PRETTY_FUNCTION__ __FUNCTION__
 #endif
 
 #define DECLARE_COPY_AND_ASSIGN(class_name) \

@@ -45,7 +45,7 @@ void Texture::Set(Shader* shader, GLenum tex_unit) const {
   auto [unit_index, unit_name] = TextureUnitToUniform(tex_unit);
   shader->SetInt(unit_name, unit_index);
 
-  if (CHECK_GL_ERRORS(PRETTY_FUNCTION)) exit(1);
+  if (CHECK_GL_ERRORS(__PRETTY_FUNCTION__)) exit(1);
 }
 
 void Texture::Disable(GLenum tex_unit) {

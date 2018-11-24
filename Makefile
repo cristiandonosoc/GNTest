@@ -8,9 +8,8 @@ test: FORCE
 	ninja -C out tests
 	out/tests
 
-win_make:
-	win_ninja -C out opengl_example
-
+win: FORCE
+	ninja.exe -C out opengl_example
 
 shaders: FORCE
 	glslangValidator -V shaders/simple.vert -o out/simple.vert.spv

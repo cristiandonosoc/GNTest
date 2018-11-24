@@ -1,7 +1,7 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include "src/arch/arch_provider.h"
+#include "src/platform/platform.h"
 
 #include <string.h>
 #include <unistd.h>
@@ -10,9 +10,8 @@
 #include "src/utils/path.h"
 
 namespace warhol {
-namespace arch {
 
-std::string ArchProvider::GetCurrentExecutablePath() {
+std::string Platform::GetCurrentExecutablePath() {
   char buf[1024];
   int res = readlink("/proc/self/exe", buf, sizeof(buf));
   if (res < 0) {
@@ -24,7 +23,7 @@ std::string ArchProvider::GetCurrentExecutablePath() {
   return buf;
 }
 
-std::string ArchProvider::GetBasePath() {
+std::string Platform::GetBasePath() {
   std::string exe_path = GetCurrentExecutablePath();
   size_t separator = exe_path.rfind('/');
   if (separator == std::string::npos)
@@ -33,5 +32,4 @@ std::string ArchProvider::GetBasePath() {
   return PathJoin({std::move(base_path), ".."});
 }
 
-}  // namespace arch
 }  // namespace warhol

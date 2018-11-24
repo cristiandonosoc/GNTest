@@ -25,6 +25,7 @@ source_set("warhol_lib") {
     "//src/utils",
   ]
   public_deps = [
+    "//src/debug",
     "//src/graphics/GL",
     "//src/imgui",
     "//src/sdl2",
@@ -39,7 +40,7 @@ executable("opengl_example") {
   ]
   deps = [
     ":warhol_lib",
-    "//src/arch:arch_provider",
+    "//src/platform",
     "//src/utils",
   ]
 }

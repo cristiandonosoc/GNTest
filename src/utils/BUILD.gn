@@ -21,7 +21,7 @@ source_set("utils") {
     "path.h",
   ]
   deps = [
-    "//src/arch:arch_provider",
+    "//src/platform",
     "//third_party/stb",
   ]
 }

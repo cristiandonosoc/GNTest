@@ -4,6 +4,7 @@
 #include "src/voxel_chunk.h"
 
 #include <bitset>
+#include "src/debug/timer.h"
 #include "src/graphics/GL/utils.h"
 // TODO(Cristian): Remove this dependency.
 #include "src/sdl2/def.h"
@@ -12,13 +13,14 @@
 #include "src/texture_atlas.h"
 #include "src/utils/coords.h"
 #include "src/utils/glm_impl.h"
+#include "src/utils/macros.h"
 
 namespace warhol {
 
 namespace {
 
 static VoxelElement invalid_element = {
-  .type = VoxelType::kNone
+  VoxelType::kNone
 };
 
 template <typename It>
@@ -45,8 +47,8 @@ bool VoxelChunk::Init() {
   for (VoxelElement& voxel : elements_) {
     voxel.type = VoxelType::kDirt;
   }
-  size_t index = Coord3ToArrayIndex(kVoxelChunkSize, 1, 1, 0);
-  elements_[index].type = VoxelType::kNone;
+  /* size_t index = Coord3ToArrayIndex(kVoxelChunkSize, 1, 1, 0); */
+  /* elements_[index].type = VoxelType::kNone; */
 
   glGenVertexArrays(1, &vao_.value);
   glBindVertexArray(vao_.value);
@@ -95,12 +97,14 @@ VoxelElement& VoxelChunk::GetVoxelElement(int x, int y, int z) {
 }
 
 void VoxelChunk::CalculateMesh() {
-  uint64_t before = SDL_GetPerformanceCounter();
+  FUNCTION_TIMER();
 
   // Get the calculated faces.
   faces_ = CalculateFaces();
 
   std::vector<int> texture_indices;
+
+  NAMED_TIMER(inserting_data, "Inserting data");
 
   // Put them into separate buckets so we can but them separatedly into the
   // OpenGL buffers.
@@ -117,77 +121,78 @@ void VoxelChunk::CalculateMesh() {
     /* texture_indices.push_back(index); */
   }
 
+
+
   size_t uvs_start = vbo_data.size();
   for (auto& face : faces_) {
     vbo_data.insert(vbo_data.end(), face.uvs, face.uvs + TypedFace::kUVCount);
   }
 
+
   glBindVertexArray(vao_.value);
 
-  // Send the data over to the GPU.
-  LOG(DEBUG) << "VBO: " << vbo_.value;
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_.value);
-  if (CHECK_GL_ERRORS("BindBuffer"))
-    exit(1);
+  inserting_data.End();
 
-  LOG(DEBUG) << "TOTAL VAO SIZE: " << vbo_data.size() << ", BYTES: " << vbo_data.size() * sizeof(float);
-  glBufferData(GL_ARRAY_BUFFER,
-               vbo_data.size() * sizeof(float), vbo_data.data(),
-               GL_STATIC_DRAW);
-  if (CHECK_GL_ERRORS("BufferData"))
-    exit(1);
+  {
+    TIMER("Send data over to GPU");
 
-  // Vertices start at the beginning of the buffer.
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-  glEnableVertexAttribArray(0);
-  if (CHECK_GL_ERRORS("VBO"))
-    exit(1);
-  // UVs start right after.
-  size_t uv_offset = uvs_start * sizeof(float);
-  glVertexAttribPointer(1,
-                        2,
-                        GL_FLOAT,
-                        GL_FALSE,
-                        2 * sizeof(float),
-                        (void*)(uv_offset));
-  glEnableVertexAttribArray(1);
-  LOG(DEBUG) << "UVS START: " << uvs_start << ", TOTAL OFFSET: " << uv_offset;
+    // Send the data over to the GPU.
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_.value);
+    if (CHECK_GL_ERRORS("BindBuffer"))
+      exit(1);
 
+    glBufferData(GL_ARRAY_BUFFER,
+                 vbo_data.size() * sizeof(float),
+                 vbo_data.data(),
+                 GL_STATIC_DRAW);
+    if (CHECK_GL_ERRORS("BufferData"))
+      exit(1);
 
-  if (CHECK_GL_ERRORS("VBO"))
-    exit(1);
+    // Vertices start at the beginning of the buffer.
+    glVertexAttribPointer(
+        0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    if (CHECK_GL_ERRORS("VBO"))
+      exit(1);
+    // UVs start right after.
+    size_t uv_offset = uvs_start * sizeof(float);
+    glVertexAttribPointer(
+        1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(uv_offset));
+    glEnableVertexAttribArray(1);
 
-
-  // Calculate the indices
-  std::vector<uint32_t> indices;
-  size_t index_base = 0;
-  for (size_t i = 0; i < faces_.size(); i++) {
-    indices.emplace_back(index_base + 0);
-    indices.emplace_back(index_base + 1);
-    indices.emplace_back(index_base + 2);
-    indices.emplace_back(index_base + 2);
-    indices.emplace_back(index_base + 1);
-    indices.emplace_back(index_base + 3);
-    index_base += 4;
+    if (CHECK_GL_ERRORS("VBO"))
+      exit(1);
   }
 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_.value);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-               indices.size() * sizeof(uint32_t),
-               indices.data(),
-               GL_STATIC_DRAW);
+  {
+    TIMER("Indices");
 
-  if (CHECK_GL_ERRORS("Greedy mesh sending over to the GPU"))
-    exit(1);
+    // Calculate the indices
+    std::vector<uint32_t> indices;
+    size_t index_base = 0;
+    for (size_t i = 0; i < faces_.size(); i++) {
+      indices.emplace_back(index_base + 0);
+      indices.emplace_back(index_base + 1);
+      indices.emplace_back(index_base + 2);
+      indices.emplace_back(index_base + 2);
+      indices.emplace_back(index_base + 1);
+      indices.emplace_back(index_base + 3);
+      index_base += 4;
+    }
 
-  uint64_t after = SDL_GetPerformanceCounter();
-  uint64_t frequency = SDL_GetPerformanceFrequency();
-  uint64_t delta = after - before;
-  float time = (float)((double)delta / frequency);
-  LOG(DEBUG) << "Meshing timing: " << time * 1000.0f << " ms.";
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_.value);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 indices.size() * sizeof(uint32_t),
+                 indices.data(),
+                 GL_STATIC_DRAW);
+
+    if (CHECK_GL_ERRORS("Greedy mesh sending over to the GPU"))
+      exit(1);
+  }
 }
 
 std::vector<TypedFace> VoxelChunk::CalculateFaces() {
+  FUNCTION_TIMER();
   // We iterate over z and creating the greatest chunks we can.
   std::vector<ExpandedVoxel> expanded_voxels = ExpandVoxels();
 
@@ -198,7 +203,7 @@ std::vector<TypedFace> VoxelChunk::CalculateFaces() {
 }
 
 std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
-  LOG(DEBUG) << "EXPANDING VOXELS!";
+  FUNCTION_TIMER();
   constexpr int side = kVoxelChunkSize;
 
   // Look over which voxels are there and create one big mask 3D matrix.
@@ -212,23 +217,13 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
     }
   }
 
-  printf("MASK: ");
-  for (size_t i = 0; i < mask.size(); i++)
-    printf("%d", (int)mask[i]);
-  printf("\n");
-
   std::vector<ExpandedVoxel> expanded_voxels;
-
   // Iterate from bottom to top (in our view, that's the Y axis).
   for (int y = 0; y < side; y++) {
-    LOG(DEBUG) << "------------------------------";
-    LOG(DEBUG) <<  "Checking Y layer " << y;
-
     // TODO(Cristian): Can we update the mask on the fly and not dot 2 passes?
     for (int z = 0; z < side; z++) {
       for (int x = 0; x < side; x++) {
 
-        const char* indent = "  ";
         int index = Coord3ToArrayIndex(side, x, y, z);
         // We found a quad, we see how big of a grouping we can do.
         if (mask[index]) {
@@ -236,31 +231,16 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
           quad.min = {x, y, z};
           quad.max = {x, y, z};
 
-          LOG(DEBUG) << indent << "Found free block at " << quad.min.ToString();
-          indent = "    ";
-
-          LOG(DEBUG) << "Looking for X extension";
-          indent = "      ";
-
           // We look over the X-axis to see how big this chunk is.
           for (int ix = x + 1; ix < side; ix++) {
             int new_index = Coord3ToArrayIndex(side, ix, y, z);
             if (!mask[new_index]) {
-              LOG(DEBUG) << indent << "Did not find free X at: "
-                         << Pair3<int>{ix, y, z}.ToString();
               break;
             }
 
             quad.max.x = ix;
             mask[new_index] = false;
           }
-
-          LOG(DEBUG) << indent
-                     << "Extended X to: " << quad.max.ToString();
-
-          indent = "    ";
-          LOG(DEBUG) << indent << "Looking for Z extension";
-          indent = "      ";
 
           // We go over Z row for row to see if this chunk extends
           bool found_z_extension = true;
@@ -277,31 +257,17 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
             // We check if the row did extend the piece.
             // If not, we could not extend and don't mark anything.
             if (!found_z_extension) {
-              LOG(DEBUG) << indent << "Did not find a Z extension";
               break;
             }
 
             // We were able to extend the chunk, so we mark it as not available
             // anymore.
             quad.max.z = iz;
-
-            LOG(DEBUG) << indent
-                       << "Found and Z extension to: " << quad.max.ToString();
-
             for (int ix = x; ix <= quad.max.x; ix++) {
               int new_index = Coord3ToArrayIndex(side, ix, y, iz);
               mask[new_index] = false;
             }
           }
-
-          if (found_z_extension) {
-            LOG(DEBUG) << indent
-                       << "Extended Z to: " << quad.max.ToString();
-          }
-
-          indent = "    ";
-          LOG(DEBUG) << indent << "Looking for Y extension";
-          indent = "      ";
 
           // Now we see if we can make it grow upwards.
           bool found_y_extension = true;
@@ -311,11 +277,6 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
                 // We see if in this current x row we could extend all the way.
                 int new_index = Coord3ToArrayIndex(side, ix, iy, iz);
                 if (!mask[new_index]) {
-                  LOG(DEBUG)
-                      << indent
-                      << "FAILED AT: " << Pair3<int>{ix, iy, iz}.ToString()
-                      << " (INDEX: " << new_index
-                      << ") (MASK: " << mask[new_index] << ")";
                   found_y_extension = false;
                   break;
                 }
@@ -330,12 +291,8 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
             // At this point, we iterated over the whole "plane" at this Y level
             // and if we didn't find an extension, simply ignore it.
             if (!found_y_extension) {
-              LOG(DEBUG) << indent << "Did not find Y extension";
               break;
             }
-
-            LOG(DEBUG) << indent << "Found Y extension from " << y << " to "
-                       << iy;
 
             // We found an extension upwards! We need to also mark whole plane
             // as found (a lot of iteration :| ).
@@ -348,38 +305,11 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
             }
           }
 
-          if (found_y_extension) {
-            LOG(DEBUG) << indent << "Extended Y to: " << quad.max.ToString();
-          }
-
-
           ExpandedVoxel expanded_voxel;
           expanded_voxel.quad = std::move(quad);
           expanded_voxel.type = VoxelType::kDirt;
           expanded_voxels.push_back(std::move(expanded_voxel));
 
-#if 0
-          // Now that we have the quad as big as it gets, we need to know how
-          // much of the face is visible. We do this by repeating the greedy
-          // algorithm, but per face.
-          std::vector<Quad3<int>> faces;
-
-          // X faces.
-          auto x_faces_down = CalculateFacesX(quad.min.x - 1, quad.min.x, quad);
-          faces.insert(faces.end(), x_faces_down.begin(), x_faces_down.end());
-          auto x_faces_up = CalculateFacesX(quad.max.x + 1, quad.max.x, quad);
-          faces.insert(faces.end(), x_faces_up.begin(), x_faces_up.end());
-
-          // Now we have the quad as big as we could extend it, first X-wise and
-          // then Z-wise, so we add it to the arrays.
-
-          for (auto& face : faces) {
-            VoxelTypeQuad typed_quad;
-            typed_quad.type = VoxelElement::Type::kDirt;
-            typed_quad.quad = std::move(face);
-            quads.push_back(std::move(typed_quad));
-          }
-#endif
         }
       }
     }
@@ -391,6 +321,7 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
 std::vector<TypedFace>
 CalculateFacesFromVoxels(const TextureAtlas& atlas,
                          const std::vector<ExpandedVoxel>& voxels) {
+  FUNCTION_TIMER();
   std::vector<TypedFace> faces;
   faces.reserve(6 * voxels.size());
 

@@ -13,13 +13,14 @@
 #include <third_party/imgui/imgui.h>
 #include <third_party/stb/stb_image.h>
 
-#include "src/arch/arch_provider.h"
 #include "src/assets.h"
 #include "src/camera.h"
+#include "src/debug/time_logger.h"
 #include "src/imgui/imgui_context.h"
 #include "src/input/input.h"
 #include "src/graphics/GL/def.h"
 #include "src/graphics/GL/utils.h"
+#include "src/platform/platform.h"
 #include "src/math/math.h"
 #include "src/model/cube.h"
 #include "src/model/plane.h"
@@ -85,8 +86,7 @@ int main() {
   SDL_GL_SetSwapInterval(1);  // Enable v-sync.
 
   // Test current executable path.
-  LOG(DEBUG) << "Current executable: "
-             << arch::ArchProvider::GetCurrentExecutablePath();
+  LOG(DEBUG) << "Current executable: " << Platform::GetCurrentExecutablePath();
 
   // Data about displays.
   LOG(DEBUG) << "Information from SDL:" << std::endl
@@ -490,6 +490,9 @@ int main() {
       ImGui::End();
     }
     imgui_context.Render();
+
+    TimeLoggerManager::Get().LogFrame();
+
 
     SDL_GL_SwapWindow(sdl_context.get_window());
   }
