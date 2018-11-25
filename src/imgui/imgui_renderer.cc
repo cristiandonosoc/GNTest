@@ -8,26 +8,22 @@
 #include "src/utils/macros.h"
 #include "src/assets.h"
 #include "src/utils/file.h"
+#include "src/utils/log.h"
 
 namespace warhol {
 
 namespace {
 
+// TODO(Cristian): Improve this stupid ass interface.
 std::tuple<bool, std::vector<char>, std::vector<char>>
 ReadShaders(const char* vert_file, const char* frag_file) {
   std::vector<char> vert;
-  auto status = ReadWholeFile(Assets::ShaderPath(vert_file), &vert);
-  if (!status.ok()) {
-    LOG(ERROR) << status.err_msg();
+  if (!ReadWholeFile(Assets::ShaderPath(vert_file), &vert))
     return {false, {}, {}};
-  }
 
   std::vector<char> frag;
-  status = ReadWholeFile(Assets::ShaderPath(frag_file), &frag);
-  if (!status.ok()) {
-    LOG(ERROR) << status.err_msg();
+  if (!ReadWholeFile(Assets::ShaderPath(frag_file), &frag))
     return {false, {}, {}};
-  }
 
   return {true, std::move(vert), std::move(frag)};
 }
@@ -53,11 +49,8 @@ bool ImguiRenderer::Init(ImGuiIO* io) {
   if (auto [ok, vert_src, frag_src] = ReadShaders("imgui.vert", "imgui.frag");
       ok) {
     shader_ = Shader(vert_src.data(), frag_src.data());
-    auto status = shader_.Init();
-    if (!status.ok()) {
-      LOG(ERROR) << status.err_msg();
+    if (!shader_.Init())
       return false;
-    }
   } else {
     return false;
   }

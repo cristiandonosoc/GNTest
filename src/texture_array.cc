@@ -13,6 +13,8 @@ TextureArray2D::TextureArray2D(std::string path, Pair<int> size)
 bool TextureArray2D::Init() {
   stbi_set_flip_vertically_on_load(true);
 
+  glGenTextures(1, &handle_.handle);
+
 
 
 

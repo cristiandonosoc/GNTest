@@ -8,6 +8,7 @@
 #include "src/input/input.h"
 #include "src/sdl2/def.h"
 #include "src/sdl2/sdl_context.h"
+#include "src/utils/log.h"
 
 namespace warhol {
 

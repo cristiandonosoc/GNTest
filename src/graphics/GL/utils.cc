@@ -306,4 +306,24 @@ CheckGLErrors(const char* file, int line, const char* context) {
   return error_found;
 }
 
+// Handle specializations.
+template <>
+void GLHandle<GL_VERTEX_SHADER>::InternalClear() {
+  if (handle)
+    glDeleteShader(handle);
+}
+
+template <>
+void GLHandle<GL_FRAGMENT_SHADER>::InternalClear() {
+  if (handle)
+    glDeleteShader(handle);
+}
+
+template <>
+void GLHandle<GL_PROGRAM>::InternalClear() {
+  if (handle)
+    glDeleteProgram(handle);
+}
+
+
 }  // namespace warhol

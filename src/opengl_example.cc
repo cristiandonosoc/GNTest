@@ -16,6 +16,7 @@
 #include "src/assets.h"
 #include "src/camera.h"
 #include "src/debug/time_logger.h"
+#include "src/debug/timer.h"
 #include "src/imgui/imgui_context.h"
 #include "src/input/input.h"
 #include "src/graphics/GL/def.h"
@@ -40,9 +41,10 @@
  *
  * TODOs:
  *
+ * - Use an OpenGL utility handle wrapper to free resources and invalidate on
+ *   move (similar to ClearOnMove, but that also frees).
  * - Used static indices to attributes (Not we have Shader::Attributes::kModel
  *   as a name, but it should also have the attribute number).
- * - Add a decent API for profiling timing (Watch how Casey does it).
  * - Use UBO (Uniform Buffer Objects) to bind common uniforms around.
  * - Move math into utils. (The dependencies are not good between these).
  * - Don't hardcode VoxelChunks to cubes.
@@ -62,13 +64,7 @@
  * - Move EventAction outside of SDL, as we could use it with another window
  *   library and it should just work (tm).
  * - Handle mouse buttons similar as keyboard (ask for down and up).
- * - Calculate a start->end frame timing. Right now we measure complete round
- *   trip, which is gated by OpenGL's buffer swap timing, so we don't know how
- *   much we take to calculate a frame.
- * - Remove all the #include <SDL2/SDL.h> to #include "src/sdl2/def.h"
- * - Make voxel chunks render their own vertices instead of a lot of cubes.
  * - Make a scene graph.
- * - Separate VoxelChunk into its own file.
  *
  * WAAAY DOWN THE LINE:
  * - Abstract the renderer and enable Vulkan (that way we don't depend on the
@@ -120,56 +116,37 @@ int main() {
   glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &vert_attribs);
   LOG(DEBUG) << "Max Vertex Attributes: " << vert_attribs;
 
-  Status res;
   std::vector<char> vertex_shader;
-  res = ReadWholeFile(Assets::ShaderPath("simple.vert"), &vertex_shader);
-  if (!res.ok()) {
-    LOG(ERROR) << res;
+  if (!ReadWholeFile(Assets::ShaderPath("simple.vert"), &vertex_shader))
     return 1;
-  }
 
   std::vector<char> fragment_shader;
-  res = ReadWholeFile(Assets::ShaderPath("simple.frag"), &fragment_shader);
-  if (!res.ok()) {
-    LOG_STATUS(res);
+  if (!ReadWholeFile(Assets::ShaderPath("simple.frag"), &fragment_shader))
     return 1;
-  }
 
   std::vector<char> voxel_frag_src;
-  res = ReadWholeFile(Assets::ShaderPath("voxel.frag"), &voxel_frag_src);
-  if (!res.ok()) {
-    LOG_STATUS(res);
+  if (!ReadWholeFile(Assets::ShaderPath("voxel.frag"), &voxel_frag_src))
     return 1;
-  }
 
   // Shaders -------------------------------------------------------------------
 
   // Simple shader.
   Shader shader(vertex_shader.data(), fragment_shader.data());
-  res = shader.Init();
-  if (!res.ok()) {
-    LOG_STATUS(res);
+  if (!shader.Init())
     return 1;
-  }
 
   // Alpha test shader.
   std::vector<char> alpha_test_frag;
   ReadWholeFile(Assets::ShaderPath("alpha_test.frag"), &alpha_test_frag);
   Shader alpha_test_shader(vertex_shader.data(), alpha_test_frag.data());
 
-  res = alpha_test_shader.Init();
-  if (!res.ok()) {
-    LOG_STATUS(res);
+  if (!alpha_test_shader.Init())
     return 1;
-  }
 
   // Voxel shader.
   Shader voxel_shader(vertex_shader.data(), voxel_frag_src.data());
-  res = voxel_shader.Init();
-  if (!res.ok()) {
-    LOG_STATUS(res);
+  if (!voxel_shader.Init())
     return 1;
-  }
 
   if (CHECK_GL_ERRORS("Creating shaders"))
     exit(1);
@@ -309,6 +286,9 @@ int main() {
 
   bool running = true;
   while (running) {
+    Timer frame_timer = Timer::ManualTimer();
+    frame_timer.Init();
+
     SDLContext::EventAction action = sdl_context.NewFrame(&input);
     if (action == SDLContext::EventAction::kQuit)
       break;
@@ -451,8 +431,11 @@ int main() {
     camera.SetView(&voxel_shader);
     terrain.Render(&voxel_shader);
 
+
     if (CHECK_GL_ERRORS("Drawing plane"))
       return 1;
+
+    float frame_time = frame_timer.End();
 
     // ImGUI
     ImGui::ShowDemoWindow(nullptr);
@@ -460,12 +443,10 @@ int main() {
     {
       ImGui::Begin("Test window");
 
+      ImGui::Text("Application Frame: %.3f ms", frame_time);
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                   1000.0 * sdl_context.frame_delta(),
                   sdl_context.framerate());
-      ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-                  1000.0f / ImGui::GetIO().Framerate,
-                  ImGui::GetIO().Framerate);
 
       ImGui::InputFloat3("Camera direction", (float*)camera.direction().data());
       ImGui::InputFloat3("Angles (rad)", (float*)camera.rotation().data());

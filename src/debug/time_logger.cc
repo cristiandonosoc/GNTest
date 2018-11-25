@@ -52,9 +52,6 @@ void TimeLogger::EndEvent(uint64_t id) {
 
 void
 TimeLogger::LogFrame() {
-
-  static uint64_t freq = SDL_GetPerformanceFrequency();
-
   struct LogEntry {
     int indent = 0;
     uint64_t start = 0;
@@ -87,8 +84,7 @@ TimeLogger::LogFrame() {
       LogEntry* entry = it->second;
       entry->end = event.counter;
 
-      float seconds = (float)((double)(entry->end - entry->start) / freq);
-      entry->time = seconds * 1000.0f;
+      entry->time = CalculateTiming(entry->start, entry->end);
       indent -= 2;
     } else {
       assert(false);

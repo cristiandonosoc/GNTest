@@ -6,10 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "utils/status.h"
-
 namespace warhol {
 
-Status ReadWholeFile(const std::string& path, std::vector<char>* out);
+bool ReadWholeFile(const std::string& path, std::vector<char>* out);
 
 }  // namespace warhol

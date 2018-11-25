@@ -7,6 +7,7 @@
 
 #include "src/graphics/GL/utils.h"
 #include "src/utils/glm_impl.h"
+#include "src/utils/log.h"
 
 namespace warhol {
 
@@ -17,7 +18,7 @@ const char* Shader::Attributes::kModel = "model";
 
 namespace {
 
-Status CompileShader(GLenum kind, const std::string& src, int* handle);
+uint32_t CompileShader(GLenum kind, const std::string& src);
 typedef void(*GLMatrixFunction)(GLint, GLsizei, GLboolean, const GLfloat*);
 
 }  // namespace
@@ -31,79 +32,82 @@ Shader::Shader(std::string vert_src, std::string frag_src)
 
 Shader::~Shader() { Clear(); }
 
-Status Shader::Init() {
-  Status res = InternalInit();
-  if (!res.ok())
+bool Shader::Init() {
+  bool res = InternalInit();
+  if (!res)
     Clear();
   return res;
 }
 
-Status
-Shader::InternalInit() {
-  if (vert_src_.empty() || frag_src_.empty())
-    return STATUS("Shaders sources must be set before calling Init");
+bool Shader::InternalInit() {
+  if (vert_src_.empty() || frag_src_.empty()) {
+    LOG(WARNING) << "Shaders sources must be set before calling Init";
+  }
 
-  Status res = CompileShader(GL_VERTEX_SHADER, vert_src_, &vert_handle_);
-  if (!res.ok())
-    return res;
-  res = CompileShader(GL_FRAGMENT_SHADER, frag_src_, &frag_handle_);
-  if (!res.ok())
-    return res;
+  vert_handle_ = CompileShader(GL_VERTEX_SHADER, vert_src_);
+  if (!vert_handle_)
+    return false;
+
+  frag_handle_ = CompileShader(GL_FRAGMENT_SHADER, frag_src_);
+  if (!frag_handle_)
+    return false;
 
   // Create the shader program.
-  handle_ = glCreateProgram();
-  if (!handle_)
-    return STATUS("glCreateProgram: could not allocate a program");
+  program_handle_ = glCreateProgram();
+  if (!program_handle_) {
+    LOG(ERROR) << "glCreateProgram: could not allocate a program";
+    return false;
+  }
 
-  glAttachShader(handle_, vert_handle_);
-  glAttachShader(handle_, frag_handle_);
-  glLinkProgram(handle_);
+  glAttachShader(*program_handle_, *vert_handle_);
+  glAttachShader(*program_handle_, *frag_handle_);
+  glLinkProgram(*program_handle_);
 
   GLint success = 0;
-  glGetProgramiv(handle_, GL_LINK_STATUS, &success);
+  glGetProgramiv(*program_handle_, GL_LINK_STATUS, &success);
   if (success == GL_FALSE) {
     GLchar log[2048];
-    glGetProgramInfoLog(handle_, sizeof(log), 0, log);
-    return STATUS_VA("Could not link shader: %s", log);
+    glGetProgramInfoLog(*program_handle_, sizeof(log), 0, log);
+    LOG(ERROR) << "Could not link shader: " << log;
+    return false;
   }
 
   ObtainAttributes();
   ObtainUniforms();
 
-  return Status::Ok();
+  return true;
 }
 
 void Shader::Use() {
-  assert(handle_ != 0);
-  glUseProgram(handle_);
+  assert(program_handle_);
+  glUseProgram(*program_handle_);
 }
 
 void Shader::Clear() {
-  if (vert_handle_)
-    glDeleteShader(vert_handle_);
-  if (frag_handle_)
-    glDeleteShader(frag_handle_);
-  if (handle_)
-    glDeleteShader(handle_);
+  vert_handle_.Clear();
+  frag_handle_.Clear();
+  program_handle_.Clear();
 }
 
 void Shader::ObtainUniforms() {
   char buf[256];
   // Size of the longest uniform name.
   GLint max_name_size;
-  glGetProgramiv(handle_, GL_ACTIVE_UNIFORM_MAX_LENGTH, &max_name_size);
+  glGetProgramiv(
+      *program_handle_, GL_ACTIVE_UNIFORM_MAX_LENGTH, &max_name_size);
   assert((uint32_t)max_name_size <= sizeof(buf));
 
   // Get the uniforms.
   GLint uniform_count = 0;
-  glGetProgramiv(handle_, GL_ACTIVE_UNIFORMS, &uniform_count);
+  glGetProgramiv(*program_handle_, GL_ACTIVE_UNIFORMS, &uniform_count);
   for (GLint i = 0; i < uniform_count; i++) {
     // Get type data.
     GLsizei length, count;
     GLenum type;
-    glGetActiveUniform(handle_, i, max_name_size, &length, &count, &type, buf);
+    glGetActiveUniform(
+        *program_handle_, i, max_name_size, &length, &count, &type, buf);
     // Get location data.
-    GLint location = glGetUniformLocation(handle_, buf);
+    GLint location = glGetUniformLocation(*program_handle_, buf);
     if (location < 0) {
       LOG(ERROR) << "Could not find location for uniform: " << buf;
       assert(false);
@@ -122,16 +126,18 @@ void Shader::ObtainUniforms() {
 void Shader::ObtainAttributes() {
   char buf[256];
   GLint max_name_size;
-  glGetProgramiv(handle_, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &max_name_size);
+  glGetProgramiv(
+      *program_handle_, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &max_name_size);
   assert((uint32_t)max_name_size <= sizeof(buf));
 
   GLint attribute_count = 0;
-  glGetProgramiv(handle_, GL_ACTIVE_ATTRIBUTES, &attribute_count);
+  glGetProgramiv(*program_handle_, GL_ACTIVE_ATTRIBUTES, &attribute_count);
   for (GLint i = 0; i < attribute_count; i++) {
     GLsizei length, count;
     GLenum type;
-    glGetActiveAttrib(handle_, i, max_name_size, &length, &count, &type, buf);
-    GLint location = glGetAttribLocation(handle_, buf);
+    glGetActiveAttrib(
+        *program_handle_, i, max_name_size, &length, &count, &type, buf);
+    GLint location = glGetAttribLocation(*program_handle_, buf);
     if (location < 0) {
       LOG(ERROR) << "Could not find attribute for attribute: " << buf;
       assert(false);
@@ -213,10 +219,12 @@ Shader::SetMatrix(const std::string& uniform_name,
 
 namespace {
 
-Status CompileShader(GLenum kind, const std::string& src, int* out) {
-  int handle = glCreateShader(kind);
-  if (!handle)
-    return STATUS("Could not allocate a shader");
+uint32_t CompileShader(GLenum kind, const std::string& src) {
+  uint32_t handle = glCreateShader(kind);
+  if (!handle) {
+    LOG(ERROR) << "Could not allocate shader.";
+    return 0;
+  }
 
   // Compile the shader source.
   const GLchar* gl_src = src.data();
@@ -229,11 +237,11 @@ Status CompileShader(GLenum kind, const std::string& src, int* out) {
     GLchar log[2048];
     glGetShaderInfoLog(handle, sizeof(log), 0, log);
     glDeleteShader(handle);
-    return STATUS_VA(
-        "Error compiling %s shader: %s", GLEnumToString(kind), log);
+    LOG(ERROR) << "Error compiling " << GLEnumToString(kind)
+               << " shader: " << log;
+    return 0;
   }
-  *out = handle;
-  return Status::Ok();
+  return handle;
 }
 
 }  // namespace

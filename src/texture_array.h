@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include "src/graphics/GL/utils.h"
 #include "src/math/vec.h"
 #include "src/utils/clear_on_move.h"
 #include "src/utils/macros.h"
@@ -35,7 +36,7 @@ class TextureArray2D {
   std::string path_;
   Pair<int> size_;
 
-  ClearOnMove<uint32_t> handle_;
+  GLHandle<GL_TEXTURE_2D_ARRAY> handle_;
   bool init_ = false;
 };
 
