@@ -13,6 +13,8 @@ source_set("warhol_lib") {
     "texture.h",
     "texture_atlas.cc",
     "texture_atlas.h",
+    "texture_array.cc",
+    "texture_array.h",
     "voxel_chunk.cc",
     "voxel_chunk.h",
     "voxel_terrain.cc",

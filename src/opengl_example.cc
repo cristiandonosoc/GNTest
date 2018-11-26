@@ -30,6 +30,7 @@
 #include "src/shader.h"
 #include "src/texture.h"
 #include "src/texture_atlas.h"
+#include "src/texture_array.h"
 #include "src/utils/macros.h"
 #include "src/utils/file.h"
 #include "src/utils/log.h"
@@ -41,18 +42,14 @@
  *
  * TODOs:
  *
- * - Use an OpenGL utility handle wrapper to free resources and invalidate on
- *   move (similar to ClearOnMove, but that also frees).
+ * - Use GLHandle on all elements.
  * - Used static indices to attributes (Not we have Shader::Attributes::kModel
  *   as a name, but it should also have the attribute number).
  * - Use UBO (Uniform Buffer Objects) to bind common uniforms around.
  * - Move math into utils. (The dependencies are not good between these).
  * - Don't hardcode VoxelChunks to cubes.
- * - Change VoxelChunk to use VoxelElement instead of Voxel (VoxelElement
- *   becomes Voxel).
  * - Create imgui_def.h and pass it through the context too.
- * - Fix shader move (doesn't invalidate ints).
- * - Create char constants for shader uniforms and attributes.
+ * - Create const char* constants for shader uniforms and attributes.
  * - Find out about sRGB OpenGL extensions (Handmade Hero).
  * - Replace glm with my own math library (or find a decent one online). The
  *   API is too awkward, both header-wise and specially getting the pointers to
@@ -248,6 +245,41 @@ int main() {
 
   if (CHECK_GL_ERRORS("Create textures"))
     return 1;
+
+  // Texture array -------------------------------------------------------------
+
+  // So that this matches what OpenGL expects.
+  stbi_set_flip_vertically_on_load(true);
+  int x, y, channels;
+
+  uint8_t* data = stbi_load(Assets::TexturePath("grid.png").data(),
+                            &x, &y, &channels, 4);
+  (void)data;
+  // Grid is square.
+  assert(x == y);
+
+  constexpr int side_count = 16;
+  int elem_side = x / side_count;
+  TextureArray2D tex_array({elem_side, elem_side, side_count * side_count},
+                           side_count, GL_RGBA);
+  (void)tex_array;
+  /* if (!tex_array.Init()) */
+  /*   return 1; */
+
+  /* for (int i = 0; i < tex_array.size().z; i++) { */
+  /*   int offset = elem_side * i; */
+  /*   uint8_t elem_data[elem_side * elem_side]; */
+  /*   for (int v = 0; v < elem_side; v++) { */
+  /*     for (int u = 0; u < elem_side; u++) { */
+
+
+  /*     } */
+  /*   } */
+  /*   if (!tex_array.AddElement(data + offset, */
+
+  /* } */
+
+
 
   // Matrices ------------------------------------------------------------------
 

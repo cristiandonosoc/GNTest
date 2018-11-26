@@ -325,5 +325,11 @@ void GLHandle<GL_PROGRAM>::InternalClear() {
     glDeleteProgram(handle);
 }
 
+template <>
+void GLHandle<GL_TEXTURE_2D_ARRAY>::InternalClear() {
+  if (handle)
+    glDeleteTextures(1, &handle);
+}
+
 
 }  // namespace warhol
