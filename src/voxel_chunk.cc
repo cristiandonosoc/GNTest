@@ -50,33 +50,25 @@ bool VoxelChunk::Init() {
   /* size_t index = Coord3ToArrayIndex(kVoxelChunkSize, 1, 1, 0); */
   /* elements_[index].type = VoxelType::kNone; */
 
-  glGenVertexArrays(1, &vao_.value);
-  glBindVertexArray(vao_.value);
+  GL_CALL(glGenVertexArrays, 1, &vao_.value);
+  GL_CALL(glBindVertexArray, vao_.value);
 
   uint32_t buffers[2];
-  glGenBuffers(ARRAY_SIZE(buffers), buffers);
+  GL_CALL(glGenBuffers, ARRAY_SIZE(buffers), buffers);
   vbo_ = buffers[0];
   /* uv_vbo1_ = buffers[1]; */
   /* uv_vbo2_ = buffers[2]; */
   ebo_ = buffers[1];
 
-  if (CHECK_GL_ERRORS("Creating buffers"))
-    exit(1);
-
   // Vertices.
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_.value);
-  if (CHECK_GL_ERRORS("Buffering vertices"))
-    exit(1);
+  GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, vbo_.value);
 
   // Indices
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_.value);
+  GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, ebo_.value);
 
-  glBindVertexArray(NULL);
-  glBindBuffer(GL_ARRAY_BUFFER, NULL);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, NULL);
-
-  if (CHECK_GL_ERRORS("Unbinding"))
-    exit(1);
+  GL_CALL(glBindVertexArray, NULL);
+  GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, NULL);
+  GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, NULL);
 
   return true;
 }
@@ -128,8 +120,7 @@ void VoxelChunk::CalculateMesh() {
     vbo_data.insert(vbo_data.end(), face.uvs, face.uvs + TypedFace::kUVCount);
   }
 
-
-  glBindVertexArray(vao_.value);
+  GL_CALL(glBindVertexArray, vao_.value);
 
   inserting_data.End();
 
@@ -137,31 +128,22 @@ void VoxelChunk::CalculateMesh() {
     TIMER("Send data over to GPU");
 
     // Send the data over to the GPU.
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_.value);
-    if (CHECK_GL_ERRORS("BindBuffer"))
-      exit(1);
+    GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, vbo_.value);
 
-    glBufferData(GL_ARRAY_BUFFER,
-                 vbo_data.size() * sizeof(float),
-                 vbo_data.data(),
-                 GL_STATIC_DRAW);
-    if (CHECK_GL_ERRORS("BufferData"))
-      exit(1);
+    GL_CALL(glBufferData, GL_ARRAY_BUFFER,
+                          vbo_data.size() * sizeof(float),
+                          vbo_data.data(),
+                          GL_STATIC_DRAW);
 
     // Vertices start at the beginning of the buffer.
-    glVertexAttribPointer(
-        0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    if (CHECK_GL_ERRORS("VBO"))
-      exit(1);
+    GL_CALL(glVertexAttribPointer,
+            0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    GL_CALL(glEnableVertexAttribArray, 0);
     // UVs start right after.
     size_t uv_offset = uvs_start * sizeof(float);
-    glVertexAttribPointer(
-        1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(uv_offset));
-    glEnableVertexAttribArray(1);
-
-    if (CHECK_GL_ERRORS("VBO"))
-      exit(1);
+    GL_CALL(glVertexAttribPointer,
+            1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(uv_offset));
+    GL_CALL(glEnableVertexAttribArray, 1);
   }
 
   {
@@ -180,14 +162,11 @@ void VoxelChunk::CalculateMesh() {
       index_base += 4;
     }
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_.value);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 indices.size() * sizeof(uint32_t),
-                 indices.data(),
-                 GL_STATIC_DRAW);
-
-    if (CHECK_GL_ERRORS("Greedy mesh sending over to the GPU"))
-      exit(1);
+    GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, ebo_.value);
+    GL_CALL(glBufferData, GL_ELEMENT_ARRAY_BUFFER,
+                          indices.size() * sizeof(uint32_t),
+                          indices.data(),
+                          GL_STATIC_DRAW);
   }
 }
 
@@ -414,8 +393,9 @@ VoxelChunk::Render(Shader* shader) {
   // TODO(donosoc): Do this only when needed.
   shader->SetMat4(Shader::Attributes::kModel, glm::mat4(1.0f));
 
-  glBindVertexArray(vao_.value);
-  glDrawElements(GL_TRIANGLES, 6 * faces_.size(), GL_UNSIGNED_INT, 0);
+  GL_CALL(glBindVertexArray, vao_.value);
+  GL_CALL(glDrawElements,
+          GL_TRIANGLES, 6 * faces_.size(), GL_UNSIGNED_INT, (void*)0);
 }
 
 #if 0

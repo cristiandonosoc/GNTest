@@ -293,19 +293,6 @@ std::pair<int, const char*> TextureUnitToUniform(GLenum tex) {
   }
 }
 
-bool
-CheckGLErrors(const char* file, int line, const char* context) {
-  GLenum err = glGetError();
-  bool error_found = false;
-  while (err != GL_NO_ERROR) {
-    fprintf(stderr, "[ERROR][%s:%d] OpenGL Error %s: %s\n", file, line,
-                    GLEnumToString(err), context);
-    error_found = true;
-    err = glGetError();
-  }
-  return error_found;
-}
-
 // Handle specializations.
 template <>
 void GLHandle<GL_VERTEX_SHADER>::InternalClear() {

@@ -10,6 +10,8 @@ config("GL_config") {
 
 source_set("GL") {
   sources = [
+    "debug.cc",
+    "debug.h",
     "def.cc",
     "def.h",
     "utils.cc",

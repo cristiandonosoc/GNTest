@@ -42,6 +42,7 @@
  *
  * TODOs:
  *
+ * - Remove all calls to CHECK_GL_ERRORS and use GL_CALL instead.
  * - Use GLHandle on all elements.
  * - Used static indices to attributes (Not we have Shader::Attributes::kModel
  *   as a name, but it should also have the attribute number).
@@ -93,11 +94,7 @@ int main() {
              << "OpenGL Shading Language Version: "
              << glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-  glEnable(GL_DEPTH_TEST);
-  /* glEnable(GL_TEXTURE_2D); */
-
-  if (CHECK_GL_ERRORS("GL enables"))
-    exit(1);
+  GL_CALL(glEnable, GL_DEPTH_TEST);
 
   // ImGUI ---------------------------------------------------------------------
 
@@ -110,7 +107,7 @@ int main() {
   // Shader Sources ------------------------------------------------------------
 
   int vert_attribs;
-  glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &vert_attribs);
+  GL_CALL(glGetIntegerv, GL_MAX_VERTEX_ATTRIBS, &vert_attribs);
   LOG(DEBUG) << "Max Vertex Attributes: " << vert_attribs;
 
   std::vector<char> vertex_shader;
@@ -145,9 +142,6 @@ int main() {
   if (!voxel_shader.Init())
     return 1;
 
-  if (CHECK_GL_ERRORS("Creating shaders"))
-    exit(1);
-
   for (const auto& [key, attrib] : shader.attributes()) {
     LOG(DEBUG) << "Attribute " << key << ": " << attrib.location;
   }
@@ -158,80 +152,69 @@ int main() {
 
   // Generate the VAO that will hold the configuration.
   uint32_t cube_vao;
-  glGenVertexArrays(1, &cube_vao);
-  glBindVertexArray(cube_vao);
+  GL_CALL(glGenVertexArrays, 1, &cube_vao);
+  GL_CALL(glBindVertexArray, cube_vao);
 
   // Create cube VBO
   uint32_t cube_vbo;
-  glGenBuffers(1, &cube_vbo);
-  glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
-  glBufferData(GL_ARRAY_BUFFER,
-               sizeof(float) * cube_vertices.size(),
-               cube_vertices.data(),
-               GL_STATIC_DRAW);
+  GL_CALL(glGenBuffers, 1, &cube_vbo);
+  GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, cube_vbo);
+  GL_CALL(glBufferData, GL_ARRAY_BUFFER,
+                        sizeof(float) * cube_vertices.size(),
+                        cube_vertices.data(),
+                        GL_STATIC_DRAW);
   // How to interpret the buffer
   GLsizei cube_stride = (GLsizei)(5 * sizeof(float));
   auto a_pos = shader.GetAttribute("a_pos");
-  glVertexAttribPointer(
-      a_pos->location, 3, GL_FLOAT, GL_FALSE, cube_stride, (void*)0);
-  glEnableVertexAttribArray(a_pos->location);
+  GL_CALL(glVertexAttribPointer,
+          a_pos->location, 3, GL_FLOAT, GL_FALSE, cube_stride, (void*)0);
+  GL_CALL(glEnableVertexAttribArray, a_pos->location);
 
   auto a_tex_coord0 = shader.GetAttribute("a_tex_coord0");
-  glVertexAttribPointer(a_tex_coord0->location,
-                        2,
-                        GL_FLOAT,
-                        GL_FALSE,
-                        cube_stride,
-                        (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(a_tex_coord0->location);
+  GL_CALL(glVertexAttribPointer, a_tex_coord0->location,
+          2, GL_FLOAT, GL_FALSE, cube_stride,
+          (void*)(3 * sizeof(float)));
+  GL_CALL(glEnableVertexAttribArray, a_tex_coord0->location);
 
   auto a_tex_coord1 = shader.GetAttribute("a_tex_coord1");
-  glVertexAttribPointer(a_tex_coord1->location,
-                        2,
-                        GL_FLOAT,
-                        GL_FALSE,
-                        cube_stride,
-                        (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(a_tex_coord1->location);
+  GL_CALL(glVertexAttribPointer, a_tex_coord1->location,
+                                 2, GL_FLOAT, GL_FALSE, cube_stride,
+                                 (void*)(3 * sizeof(float)));
+  GL_CALL(glEnableVertexAttribArray, a_tex_coord1->location);
 
-  glBindVertexArray(NULL);
-
-  if (CHECK_GL_ERRORS("Creating cube"))
-    exit(1);
+  GL_CALL(glBindVertexArray, NULL);
 
   // Plane "model" -------------------------------------------------------------
 
   auto plane_vertices = Plane::Create(10.0f, 10.0f);
 
   uint32_t plane_vao;
-  glGenVertexArrays(1, &plane_vao);
-  glBindVertexArray(plane_vao);
+  GL_CALL(glGenVertexArrays, 1, &plane_vao);
+  GL_CALL(glBindVertexArray, plane_vao);
 
   uint32_t plane_vbo;
-  glGenBuffers(1, &plane_vbo);
-  glBindBuffer(GL_ARRAY_BUFFER, plane_vbo);
+  GL_CALL(glGenBuffers, 1, &plane_vbo);
+  GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, plane_vbo);
 
   // Send the vertices over.
-  glBufferData(GL_ARRAY_BUFFER,
-               sizeof(float) * plane_vertices.size(),
-               plane_vertices.data(),
-               GL_STATIC_DRAW);
+  GL_CALL(glBufferData, GL_ARRAY_BUFFER,
+                        sizeof(float) * plane_vertices.size(),
+                        plane_vertices.data(),
+                        GL_STATIC_DRAW);
 
   // How to interpret the plane.
   GLsizei plane_stride = (GLsizei)(5 * sizeof(float));
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, plane_stride, (void*)0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(
-      1, 2, GL_FLOAT, GL_FALSE, plane_stride, (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glVertexAttribPointer(
-      2, 2, GL_FLOAT, GL_FALSE, plane_stride, (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(2);
+  GL_CALL(glVertexAttribPointer,
+          0, 3, GL_FLOAT, GL_FALSE, plane_stride, (void*)0);
+  GL_CALL(glEnableVertexAttribArray, 0);
+  GL_CALL(glVertexAttribPointer,
+          1, 2, GL_FLOAT, GL_FALSE, plane_stride, (void*)(3 * sizeof(float)));
+  GL_CALL(glEnableVertexAttribArray, 1);
+  GL_CALL(glVertexAttribPointer,
+          2, 2, GL_FLOAT, GL_FALSE, plane_stride, (void*)(3 * sizeof(float)));
+  GL_CALL(glEnableVertexAttribArray, 2);
 
-  glBindVertexArray(NULL);
-
-  if (CHECK_GL_ERRORS("Creating plane"))
-    return 1;
+  GL_CALL(glBindVertexArray, NULL);
 
   // Textures ------------------------------------------------------------------
 
@@ -242,9 +225,6 @@ int main() {
   assert(face.valid());
   Texture grid(Assets::TexturePath("grid.png"));
   assert(grid.valid());
-
-  if (CHECK_GL_ERRORS("Create textures"))
-    return 1;
 
   // Texture array -------------------------------------------------------------
 
@@ -262,9 +242,8 @@ int main() {
   int elem_side = x / side_count;
   TextureArray2D tex_array({elem_side, elem_side, side_count * side_count},
                            side_count, GL_RGBA);
-  (void)tex_array;
-  /* if (!tex_array.Init()) */
-  /*   return 1; */
+  if (!tex_array.Init())
+    return 1;
 
   /* for (int i = 0; i < tex_array.size().z; i++) { */
   /*   int offset = elem_side * i; */
@@ -296,9 +275,6 @@ int main() {
     LOG(ERROR) << "Could not initialize voxel terrain";
     exit(1);
   }
-
-  if (CHECK_GL_ERRORS("Creating voxel terrain"))
-    return 1;
 
   // Camera --------------------------------------------------------------------
 
@@ -389,36 +365,26 @@ int main() {
 
 
     if (!ui_state.polygon_mode) {
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      GL_CALL(glPolygonMode, GL_FRONT_AND_BACK, GL_FILL);
     } else {
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+      GL_CALL(glPolygonMode, GL_FRONT_AND_BACK, GL_LINE);
     }
 
     // Draw the triangle.
-    glClearColor(0.137f, 0.152f, 0.637f, 1.00f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    if (CHECK_GL_ERRORS("Clear"))
-      return 1;
+    GL_CALL(glClearColor, 0.137f, 0.152f, 0.637f, 1.00f);
+    GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     shader.Use();
     camera.SetProjection(&shader);
     camera.SetView(&shader);
 
-    if (CHECK_GL_ERRORS("Setting Camera"))
-      return 1;
-
     // Draw the cubes.
-    glBindVertexArray(cube_vao);
+    GL_CALL(glBindVertexArray, cube_vao);
     // Set the cube textures.
 		wall.Set(&shader, GL_TEXTURE0);
     face.Set(&shader, GL_TEXTURE1);
     shader.SetMat4("model", glm::translate(glm::mat4(1.0f), {5.0f, 0.0, 0.0f}));
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-    if (CHECK_GL_ERRORS("Drawing cube"))
-      return 1;
+    GL_CALL(glDrawArrays, GL_TRIANGLES, 0, 36);
 
     glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
                                   glm::vec3(2.0f, 5.0f, -15.0f),
@@ -441,9 +407,6 @@ int main() {
       /* glDrawArrays(GL_TRIANGLES, 0, 36); */
     }
 
-    if (CHECK_GL_ERRORS("Drawing minecraft cube"))
-      return 1;
-
     // We only need one texture for the plane.
     grid.Set(&shader, GL_TEXTURE0);
 
@@ -452,20 +415,16 @@ int main() {
     camera.SetProjection(&alpha_test_shader);
     camera.SetView(&alpha_test_shader);
 
-    glBindVertexArray(plane_vao);
+    GL_CALL(glBindVertexArray, plane_vao);
     // The model at the origin.
     shader.SetMat4("model", glm::mat4(1.0f));
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    GL_CALL(glDrawArrays, GL_TRIANGLE_STRIP, 0, 4);
 
 
     voxel_shader.Use();
     camera.SetProjection(&voxel_shader);
     camera.SetView(&voxel_shader);
     terrain.Render(&voxel_shader);
-
-
-    if (CHECK_GL_ERRORS("Drawing plane"))
-      return 1;
 
     float frame_time = frame_timer.End();
 
