@@ -16,15 +16,16 @@ bool TextureArray2D::Init() {
   GL_CALL(glGenTextures, 1, &*handle_);
   GL_CALL(glBindTexture, GL_TEXTURE_2D_ARRAY, *handle_);
 
-  /* // Allocate the texture space. */
-  /* GL_CALL(glTexImage3D, *handle_, */
-  /*                       0,  // No mip-map for now. */
-  /*                       format_, */
-  /*                       size_.x, size_.y, size_.z, */
-  /*                       0,  // No border */
-  /*                       format_, */
-  /*                       GL_UNSIGNED_BYTE, */
-  /*                       (void*)NULL);  // No data, we are just allocating space. */
+  // Allocate the texture space.
+  LOG(DEBUG) << __PRETTY_FUNCTION__ << ": Format is " << GLEnumToString(format_);
+  GL_CALL(glTexImage3D, GL_TEXTURE_2D_ARRAY,
+                        0,  // No mip-map for now.
+                        format_,
+                        size_.x, size_.y, size_.z,
+                        0,  // No border
+                        format_,
+                        GL_UNSIGNED_BYTE,
+                        (void*)NULL);  // No data, we are just allocating space.
 
   init_ = true;
   return true;
@@ -42,6 +43,7 @@ bool TextureArray2D::AddElement(uint8_t* data, int size) {
     return false;
   }
 
+  GL_CALL(glBindTexture, GL_TEXTURE_2D_ARRAY, *handle_);
   GL_CALL(glTexSubImage3D, GL_TEXTURE_2D_ARRAY,
                            0,  // Mip-map level.
                            0, 0,  element_count_,    // X, Y, Z coords of the sub image.
