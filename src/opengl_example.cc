@@ -31,10 +31,11 @@
 #include "src/texture.h"
 #include "src/texture_atlas.h"
 #include "src/texture_array.h"
-#include "src/utils/macros.h"
+#include "src/utils/coords.h"
 #include "src/utils/file.h"
 #include "src/utils/log.h"
 #include "src/utils/glm_impl.h"
+#include "src/utils/macros.h"
 #include "src/voxel_terrain.h"
 
 /**
@@ -238,6 +239,7 @@ int main() {
   // Grid is square.
   assert(x == y);
 
+
   constexpr int side_count = 16;
   int elem_side = x / side_count;
   TextureArray2D tex_array({elem_side, elem_side, side_count * side_count},
@@ -245,19 +247,63 @@ int main() {
   if (!tex_array.Init())
     return 1;
 
+  uint32_t face_vao;
+  GL_CALL(glGenVertexArrays, 1, &face_vao);
+  GL_CALL(glBindVertexArray, face_vao);
+
+  uint32_t face_vbo = 0;
+  float face_verts[] = {
+    0.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 1.0f,
+    0.0f, 1.0f, 0.0f,
+    0.0f, 0.0f, 1.0f,
+    0.0f, 1.0f, 0.0f,
+    0.0f, 1.0f, 1.0f,
+    0.0f, 0.0f,
+    1.0f, 0.0f,
+    0.0f, 1.0f,
+    1.0f, 0.0f,
+    0.0f, 1.0f,
+    1.0f, 1.0f,
+  };
+
+  GL_CALL(glGenBuffers, 1, &face_vbo);
+  GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, face_vbo);
+  GL_CALL(glBufferData, GL_ARRAY_BUFFER, sizeof(float) * 3 * 6, face_verts, GL_STATIC_DRAW);
+
+  GL_CALL(glVertexAttribPointer, 0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
+  GL_CALL(glEnableVertexAttribArray, 0);
+  GL_CALL(glVertexAttribPointer, 1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)(sizeof(float) * 3 * 6));
+  GL_CALL(glEnableVertexAttribArray, 1);
+
+  glBindVertexArray(NULL);
+
+
+  std::vector<uint32_t> cut_textures(side_count * side_count);
+  GL_CALL(glGenTextures, cut_textures.size(), cut_textures.data());
+
+  LOG(DEBUG) << "CUT TEXTURE SIZE: " << cut_textures.size();
+  for (auto i : cut_textures)
+    printf("%d, ", i);
+  printf("\n");
+  fflush(stdout);
+
+
   /* for (int i = 0; i < tex_array.size().z; i++) { */
-  /*   int offset = elem_side * i; */
-  /*   uint8_t elem_data[elem_side * elem_side]; */
+  /*   auto coord = ArrayIndexToCoord2(side_count, i); */
+  /*   std::vector<uint8_t> elem_data(elem_side * elem_side); */
+  /*   uint8_t* ptr = elem_data.data(); */
   /*   for (int v = 0; v < elem_side; v++) { */
+  /*     uint8_t* base = data + x * coord.y + elem_side * coord.x; */
   /*     for (int u = 0; u < elem_side; u++) { */
-
-
+  /*       *ptr++ = *base++; */
   /*     } */
   /*   } */
-  /*   if (!tex_array.AddElement(data + offset, */
 
+  /*   GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]); */
+  /*   GL_CALL(glTexImage2D, GL_TEXTURE_2D, 0, GL_RGBA, elem_side, elem_side, 0, */
+  /*       GL_RGBA, GL_UNSIGNED_BYTE, elem_data.data()); */
   /* } */
-
 
 
   // Matrices ------------------------------------------------------------------
@@ -291,6 +337,8 @@ int main() {
     bool polygon_mode = false;
   };
   UIState ui_state = {};
+
+  LOG(DEBUG) << "Going to draw";
 
   bool running = true;
   while (running) {
@@ -407,6 +455,20 @@ int main() {
       /* glDrawArrays(GL_TRIANGLES, 0, 36); */
     }
 
+    for (size_t i = 0; i < cut_textures.size(); i++) {
+      auto coord = ArrayIndexToCoord2(side_count, i);
+      /* LOG(DEBUG) << "INDEX: " << i << ", COORD: " << coord.ToString(); */
+      auto model =
+          glm::translate(glm::mat4(1.0f),
+              glm::vec3(0.0f, coord.y * 1.1f, coord.x * 1.1f));
+
+      GL_CALL(glBindVertexArray, face_vao);
+      shader.SetMat4("model", model);
+      glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+
+
+
     // We only need one texture for the plane.
     grid.Set(&shader, GL_TEXTURE0);
 
@@ -421,10 +483,10 @@ int main() {
     GL_CALL(glDrawArrays, GL_TRIANGLE_STRIP, 0, 4);
 
 
-    voxel_shader.Use();
-    camera.SetProjection(&voxel_shader);
-    camera.SetView(&voxel_shader);
-    terrain.Render(&voxel_shader);
+    /* voxel_shader.Use(); */
+    /* camera.SetProjection(&voxel_shader); */
+    /* camera.SetView(&voxel_shader); */
+    /* terrain.Render(&voxel_shader); */
 
     float frame_time = frame_timer.End();
 

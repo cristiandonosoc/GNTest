@@ -38,12 +38,15 @@ struct Pair {
                         x.ToString().data(), y.ToString().data());
   }
 
-
-
 };
+
+
+template <>
+std::string Pair<int>::ToString() const;
 
 template <>
 std::string Pair<float>::ToString() const;
+
 
 
 

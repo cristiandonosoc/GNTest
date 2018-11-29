@@ -10,10 +10,11 @@ if (compiler == "msvc") {
       "/W4",
       "/WX",
       # Warning ignores
-      "/wd4700",    # Un-initialized variable
-      "/wd4702",    # Un-reachable code
-      "/wd4996",    # fopen
-      "/wd4267",    # size_t to int
+      "/wd4267",    # size_t to int.
+      "/wd4244",    # int to boolean.
+      "/wd4700",    # Un-initialized variable.
+      "/wd4702",    # Un-reachable code.
+      "/wd4996",    # fopen.
     ]
   }
 
