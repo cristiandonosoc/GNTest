@@ -233,15 +233,18 @@ int main() {
   stbi_set_flip_vertically_on_load(true);
   int x, y, channels;
 
-  uint8_t* data = stbi_load(Assets::TexturePath("grid.png").data(),
-                            &x, &y, &channels, 4);
+  uint8_t* data = stbi_load(Assets::TexturePath("atlas.png").data(),
+                            &x, &y, &channels, 0);
   (void)data;
+  LOG(DEBUG) << "X: " << x << ", Y: " << y << ", CHANNELS: " << channels;
   // Grid is square.
   assert(x == y);
 
 
   constexpr int side_count = 16;
   int elem_side = x / side_count;
+  LOG(DEBUG) << "X: " << x << ", SIDE: " << elem_side;
+
   TextureArray2D tex_array({elem_side, elem_side, side_count * side_count},
                            side_count, GL_RGBA);
   if (!tex_array.Init())
@@ -269,15 +272,14 @@ int main() {
 
   GL_CALL(glGenBuffers, 1, &face_vbo);
   GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, face_vbo);
-  GL_CALL(glBufferData, GL_ARRAY_BUFFER, sizeof(float) * 3 * 6, face_verts, GL_STATIC_DRAW);
+  GL_CALL(glBufferData, GL_ARRAY_BUFFER, sizeof(face_verts), face_verts, GL_STATIC_DRAW);
 
   GL_CALL(glVertexAttribPointer, 0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
   GL_CALL(glEnableVertexAttribArray, 0);
   GL_CALL(glVertexAttribPointer, 1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)(sizeof(float) * 3 * 6));
   GL_CALL(glEnableVertexAttribArray, 1);
 
-  glBindVertexArray(NULL);
-
+  GL_CALL(glBindVertexArray, NULL);
 
   std::vector<uint32_t> cut_textures(side_count * side_count);
   GL_CALL(glGenTextures, cut_textures.size(), cut_textures.data());
@@ -289,21 +291,28 @@ int main() {
   fflush(stdout);
 
 
-  /* for (int i = 0; i < tex_array.size().z; i++) { */
-  /*   auto coord = ArrayIndexToCoord2(side_count, i); */
-  /*   std::vector<uint8_t> elem_data(elem_side * elem_side); */
-  /*   uint8_t* ptr = elem_data.data(); */
-  /*   for (int v = 0; v < elem_side; v++) { */
-  /*     uint8_t* base = data + x * coord.y + elem_side * coord.x; */
-  /*     for (int u = 0; u < elem_side; u++) { */
-  /*       *ptr++ = *base++; */
-  /*     } */
-  /*   } */
+  for (int i = 0; i < tex_array.size().z; i++) {
+    std::vector<uint8_t> elem_data(elem_side * elem_side * 4);
+    for (size_t i = 0; i < elem_data.size(); i += 4) {
+      uint32_t* ptr = (uint32_t*)(elem_data.data() + i);
+      *ptr = 0xFF0000FFu;
+    }
 
-  /*   GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]); */
-  /*   GL_CALL(glTexImage2D, GL_TEXTURE_2D, 0, GL_RGBA, elem_side, elem_side, 0, */
-  /*       GL_RGBA, GL_UNSIGNED_BYTE, elem_data.data()); */
-  /* } */
+
+    /* auto coord = ArrayIndexToCoord2(side_count, i); */
+    /* std::vector<uint8_t> elem_data(elem_side * elem_side); */
+    /* uint8_t* ptr = elem_data.data(); */
+    /* for (int v = 0; v < elem_side; v++) { */
+    /*   uint8_t* base = data + x * coord.y + elem_side * coord.x; */
+    /*   for (int u = 0; u < elem_side; u++) { */
+    /*     *ptr++ = *base++; */
+    /*   } */
+    /* } */
+
+    GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]);
+    GL_CALL(glTexImage2D, GL_TEXTURE_2D, 0, GL_RGBA, elem_side, elem_side, 0,
+        GL_RGBA, GL_UNSIGNED_BYTE, elem_data.data());
+  }
 
 
   // Matrices ------------------------------------------------------------------
@@ -455,6 +464,8 @@ int main() {
       /* glDrawArrays(GL_TRIANGLES, 0, 36); */
     }
 
+    GL_CALL(glActiveTexture, GL_TEXTURE0);
+
     for (size_t i = 0; i < cut_textures.size(); i++) {
       auto coord = ArrayIndexToCoord2(side_count, i);
       /* LOG(DEBUG) << "INDEX: " << i << ", COORD: " << coord.ToString(); */
@@ -462,6 +473,8 @@ int main() {
           glm::translate(glm::mat4(1.0f),
               glm::vec3(0.0f, coord.y * 1.1f, coord.x * 1.1f));
 
+
+      GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]);
       GL_CALL(glBindVertexArray, face_vao);
       shader.SetMat4("model", model);
       glDrawArrays(GL_TRIANGLES, 0, 6);
