@@ -128,31 +128,6 @@ GLEnumToSize(GLenum type) {
   }
 }
 
-std::pair<int, const char*> TextureUnitToUniform(GLenum tex) {
-  switch (tex) {
-    case GL_TEXTURE0: return {0, "tex0"};
-    case GL_TEXTURE1: return {1, "tex1"};
-    case GL_TEXTURE2: return {2, "tex2"};
-    case GL_TEXTURE3: return {3, "tex3"};
-    case GL_TEXTURE4: return {4, "tex4"};
-    case GL_TEXTURE5: return {5, "tex5"};
-    case GL_TEXTURE6: return {6, "tex6"};
-    case GL_TEXTURE7: return {7, "tex7"};
-    case GL_TEXTURE8: return {8, "tex8"};
-    case GL_TEXTURE9: return {9, "tex9"};
-    case GL_TEXTURE10: return {10, "tex10"};
-    case GL_TEXTURE11: return {11, "tex11"};
-    case GL_TEXTURE12: return {12, "tex12"};
-    case GL_TEXTURE13: return {13, "tex13"};
-    case GL_TEXTURE14: return {14, "tex14"};
-    case GL_TEXTURE15: return {15, "tex15"};
-    default:
-      LOG(ERROR) << "Invalid texture given: " << GLEnumToString(tex);
-      assert(false);
-      return {0, nullptr};
-  }
-}
-
 // Handle specializations.
 template <>
 void GLHandle<GL_VERTEX_SHADER>::InternalClear() {

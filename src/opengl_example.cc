@@ -53,6 +53,7 @@
  * - Create imgui_def.h and pass it through the context too.
  * - Create const char* constants for shader uniforms and attributes.
  * - Find out about sRGB OpenGL extensions (Handmade Hero).
+ * - Make ReadWholeFile return a string instead of vector of char.
  * - Replace glm with my own math library (or find a decent one online). The
  *   API is too awkward, both header-wise and specially getting the pointers to
  *   the raw data (glm::value_ptr()... really?).
@@ -81,19 +82,19 @@ int main() {
   SDL_GL_SetSwapInterval(1);  // Enable v-sync.
 
   // Test current executable path.
-  LOG(DEBUG) << "Current executable: " << Platform::GetCurrentExecutablePath();
+  LOG(INFO) << "Current executable: " << Platform::GetCurrentExecutablePath();
 
   // Data about displays.
-  LOG(DEBUG) << "Information from SDL:" << std::endl
-             << "Amount of displays: " << SDL_GetNumVideoDisplays();
+  LOG(INFO) << "Information from SDL:" << std::endl
+            << "Amount of displays: " << SDL_GetNumVideoDisplays();
 
   // Test OpenGL is running.
-  LOG(DEBUG) << std::endl
-             << "OpenGL Vendor: " << glGetString(GL_VENDOR) << std::endl
-             << "OpenGL Renderer: " << glGetString(GL_RENDERER) << std::endl
-             << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl
-             << "OpenGL Shading Language Version: "
-             << glGetString(GL_SHADING_LANGUAGE_VERSION);
+  LOG(INFO) << std::endl
+            << "OpenGL Vendor: " << glGetString(GL_VENDOR) << std::endl
+            << "OpenGL Renderer: " << glGetString(GL_RENDERER) << std::endl
+            << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl
+            << "OpenGL Shading Language Version: "
+            << glGetString(GL_SHADING_LANGUAGE_VERSION);
 
   GL_CALL(glEnable, GL_DEPTH_TEST);
 
@@ -105,47 +106,19 @@ int main() {
     exit(1);
   }
 
-  // Shader Sources ------------------------------------------------------------
+ // Shaders -------------------------------------------------------------------
 
-  int vert_attribs;
-  GL_CALL(glGetIntegerv, GL_MAX_VERTEX_ATTRIBS, &vert_attribs);
-  LOG(DEBUG) << "Max Vertex Attributes: " << vert_attribs;
+  Shader simple_shader =
+      Shader::FromAssetPath("simple", "simple.vert", "simple.frag");
+  assert(simple_shader.valid());
 
-  std::vector<char> vertex_shader;
-  if (!ReadWholeFile(Assets::ShaderPath("simple.vert"), &vertex_shader))
-    return 1;
+  Shader alpha_test_shader =
+      Shader::FromAssetPath("alpha_test", "simple.vert", "alpha_test.frag");
+  assert(alpha_test_shader.valid());
 
-  std::vector<char> fragment_shader;
-  if (!ReadWholeFile(Assets::ShaderPath("simple.frag"), &fragment_shader))
-    return 1;
-
-  std::vector<char> voxel_frag_src;
-  if (!ReadWholeFile(Assets::ShaderPath("voxel.frag"), &voxel_frag_src))
-    return 1;
-
-  // Shaders -------------------------------------------------------------------
-
-  // Simple shader.
-  Shader shader(vertex_shader.data(), fragment_shader.data());
-  if (!shader.Init())
-    return 1;
-
-  // Alpha test shader.
-  std::vector<char> alpha_test_frag;
-  ReadWholeFile(Assets::ShaderPath("alpha_test.frag"), &alpha_test_frag);
-  Shader alpha_test_shader(vertex_shader.data(), alpha_test_frag.data());
-
-  if (!alpha_test_shader.Init())
-    return 1;
-
-  // Voxel shader.
-  Shader voxel_shader(vertex_shader.data(), voxel_frag_src.data());
-  if (!voxel_shader.Init())
-    return 1;
-
-  for (const auto& [key, attrib] : shader.attributes()) {
-    LOG(DEBUG) << "Attribute " << key << ": " << attrib.location;
-  }
+  Shader voxel_shader =
+      Shader::FromAssetPath("voxel", "simple.vert", "voxel.frag");
+  assert(voxel_shader.valid());
 
   // Cube "model" --------------------------------------------------------------
 
@@ -166,18 +139,24 @@ int main() {
                         GL_STATIC_DRAW);
   // How to interpret the buffer
   GLsizei cube_stride = (GLsizei)(5 * sizeof(float));
-  auto a_pos = shader.GetAttribute("a_pos");
+  auto a_pos = simple_shader.GetAttribute(Shader::Attribute::kPos);
+  if (!a_pos)
+    return 1;
   GL_CALL(glVertexAttribPointer,
           a_pos->location, 3, GL_FLOAT, GL_FALSE, cube_stride, (void*)0);
   GL_CALL(glEnableVertexAttribArray, a_pos->location);
 
-  auto a_tex_coord0 = shader.GetAttribute("a_tex_coord0");
-  GL_CALL(glVertexAttribPointer, a_tex_coord0->location,
-          2, GL_FLOAT, GL_FALSE, cube_stride,
+  auto a_tex_coord0 = simple_shader.GetAttribute(Shader::Attribute::kTexCoord0);
+  if (!a_tex_coord0)
+    return 1;
+  GL_CALL(glVertexAttribPointer, a_tex_coord0->location, 2,
+          GL_FLOAT, GL_FALSE, cube_stride,
           (void*)(3 * sizeof(float)));
   GL_CALL(glEnableVertexAttribArray, a_tex_coord0->location);
 
-  auto a_tex_coord1 = shader.GetAttribute("a_tex_coord1");
+  auto a_tex_coord1 = simple_shader.GetAttribute(Shader::Attribute::kTexCoord1);
+  if (!a_tex_coord1)
+    return 1;
   GL_CALL(glVertexAttribPointer, a_tex_coord1->location,
                                  2, GL_FLOAT, GL_FALSE, cube_stride,
                                  (void*)(3 * sizeof(float)));
@@ -293,7 +272,7 @@ int main() {
 
   for (int i = 0; i < tex_array.size().z; i++) {
     std::vector<uint8_t> elem_data(elem_side * elem_side * 4);
-    for (size_t i = 0; i < elem_data.size(); i += 4) {
+    for (size_t j = 0; j < elem_data.size(); j += 4) {
       uint32_t* ptr = (uint32_t*)(elem_data.data() + i);
       *ptr = 0xFF0000FFu;
     }
@@ -347,7 +326,7 @@ int main() {
   };
   UIState ui_state = {};
 
-  LOG(DEBUG) << "Going to draw";
+  LOG(INFO) << "Going to draw";
 
   bool running = true;
   while (running) {
@@ -431,16 +410,17 @@ int main() {
     GL_CALL(glClearColor, 0.137f, 0.152f, 0.637f, 1.00f);
     GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    shader.Use();
-    camera.SetProjection(&shader);
-    camera.SetView(&shader);
+    simple_shader.Use();
+    camera.SetProjection(&simple_shader);
+    camera.SetView(&simple_shader);
 
     // Draw the cubes.
     GL_CALL(glBindVertexArray, cube_vao);
     // Set the cube textures.
-		wall.Set(&shader, GL_TEXTURE0);
-    face.Set(&shader, GL_TEXTURE1);
-    shader.SetMat4("model", glm::translate(glm::mat4(1.0f), {5.0f, 0.0, 0.0f}));
+		wall.Set(&simple_shader, GL_TEXTURE0);
+    face.Set(&simple_shader, GL_TEXTURE1);
+    simple_shader.SetMat4(Shader::Uniform::kModel,
+                          glm::translate(glm::mat4(1.0f), {5.0f, 0.0, 0.0f}));
     GL_CALL(glDrawArrays, GL_TRIANGLES, 0, 36);
 
     glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
@@ -459,7 +439,7 @@ int main() {
       float angle = sdl_context.seconds() * glm::radians(20.0f * i);
       model =
           glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
-      shader.SetMat4("model", model);
+      simple_shader.SetMat4(Shader::Uniform::kModel, model);
 
       /* glDrawArrays(GL_TRIANGLES, 0, 36); */
     }
@@ -476,14 +456,14 @@ int main() {
 
       GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]);
       GL_CALL(glBindVertexArray, face_vao);
-      shader.SetMat4("model", model);
+      simple_shader.SetMat4(Shader::Uniform::kModel, model);
       glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
 
 
     // We only need one texture for the plane.
-    grid.Set(&shader, GL_TEXTURE0);
+    grid.Set(&simple_shader, GL_TEXTURE0);
 
     // Draw the plane.
     alpha_test_shader.Use();
@@ -492,7 +472,7 @@ int main() {
 
     GL_CALL(glBindVertexArray, plane_vao);
     // The model at the origin.
-    shader.SetMat4("model", glm::mat4(1.0f));
+    simple_shader.SetMat4(Shader::Uniform::kModel, glm::mat4(1.0f));
     GL_CALL(glDrawArrays, GL_TRIANGLE_STRIP, 0, 4);
 
 

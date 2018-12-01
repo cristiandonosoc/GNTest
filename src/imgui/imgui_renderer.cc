@@ -48,7 +48,7 @@ ImguiRenderer::~ImguiRenderer() {
 bool ImguiRenderer::Init(ImGuiIO* io) {
   if (auto [ok, vert_src, frag_src] = ReadShaders("imgui.vert", "imgui.frag");
       ok) {
-    shader_ = Shader(vert_src.data(), frag_src.data());
+    shader_ = Shader("imgui", vert_src.data(), frag_src.data());
     if (!shader_.Init())
       return false;
   } else {
@@ -195,8 +195,8 @@ ImguiRenderer::Render(ImGuiIO* io, ImDrawData* draw_data) {
   };
   shader_.Use();
   /* glUniform1i(g_AttribLocationTex, 0); */
-  shader_.SetInt("tex", 0);
-  auto* u_proj = shader_.GetUniform("u_proj");
+  assert(shader_.SetInt(Shader::Uniform::kTexSampler0, 0));
+  auto* u_proj = shader_.GetUniform(Shader::Uniform::kProjection);
   assert(u_proj);
   glUniformMatrix4fv(u_proj->location, 1, GL_FALSE, &ortho_projection[0][0]);
 #ifdef GL_SAMPLER_BINDING
@@ -212,8 +212,8 @@ ImguiRenderer::Render(ImGuiIO* io, ImDrawData* draw_data) {
   glBindVertexArray(vao_handle);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);
 
-  const Attribute* attribute;
-  attribute = shader_.GetAttribute("a_pos");
+  const Shader::Attribute* attribute;
+  attribute = shader_.GetAttribute(Shader::Attribute::kPos);
   assert(attribute );
   glVertexAttribPointer(attribute ->location,
                         2,
@@ -223,8 +223,8 @@ ImguiRenderer::Render(ImGuiIO* io, ImDrawData* draw_data) {
                         (GLvoid*)IM_OFFSETOF(ImDrawVert, pos));
   glEnableVertexAttribArray(attribute ->location);
 
-  attribute = shader_.GetAttribute("a_uv");
-  assert(attribute );
+  attribute = shader_.GetAttribute(Shader::Attribute::kTexCoord0);
+  assert(attribute);
   glVertexAttribPointer(attribute ->location,
                         2,
                         GL_FLOAT,
@@ -233,7 +233,7 @@ ImguiRenderer::Render(ImGuiIO* io, ImDrawData* draw_data) {
                         (GLvoid*)IM_OFFSETOF(ImDrawVert, uv));
   glEnableVertexAttribArray(attribute ->location);
 
-  attribute = shader_.GetAttribute("a_color");
+  attribute = shader_.GetAttribute(Shader::Attribute::kColor);
   assert(attribute );
   glVertexAttribPointer(attribute ->location,
                         4,

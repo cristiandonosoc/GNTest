@@ -391,7 +391,7 @@ CalculateFacesFromVoxels(const TextureAtlas& atlas,
 void
 VoxelChunk::Render(Shader* shader) {
   // TODO(donosoc): Do this only when needed.
-  shader->SetMat4(Shader::Attributes::kModel, glm::mat4(1.0f));
+  shader->SetMat4(Shader::Uniform::kModel, glm::mat4(1.0f));
 
   GL_CALL(glBindVertexArray, vao_.value);
   GL_CALL(glDrawElements,

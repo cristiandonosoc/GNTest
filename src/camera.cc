@@ -67,11 +67,11 @@ void Camera::UpdateProjection() {
 }
 
 void Camera::SetView(Shader* shader) const {
-  shader->SetMat4("view", view_);
+  shader->SetMat4(Shader::Uniform::kView, view_);
 }
 
 void Camera::SetProjection(Shader* shader) const {
-  shader->SetMat4("projection", proj_);
+  shader->SetMat4(Shader::Uniform::kProjection, proj_);
 }
 
 }  // namespace warhol

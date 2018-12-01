@@ -6,8 +6,7 @@
 #include <string>
 #include <memory>
 
-#include <GL/gl3w.h>
-
+#include "src/graphics/GL/def.h"
 #include "src/utils/macros.h"
 
 namespace warhol {

@@ -5,30 +5,72 @@
 
 #include <assert.h>
 
+#include "src/assets.h"
 #include "src/graphics/GL/utils.h"
+#include "src/utils/file.h"
 #include "src/utils/glm_impl.h"
 #include "src/utils/log.h"
 
 namespace warhol {
 
-const char* Shader::Attributes::kModel = "model";
+ShaderString Shader::Attribute::kPos = {"a_pos"};
+ShaderString Shader::Attribute::kColor = {"a_color"};
+ShaderString Shader::Attribute::kTexCoord0 = {"a_tex_coord0"};
+ShaderString Shader::Attribute::kTexCoord1 = {"a_tex_coord1"};
+
+ShaderString Shader::Uniform::kModel = {"u_model"};
+ShaderString Shader::Uniform::kView = {"u_view"};
+ShaderString Shader::Uniform::kProjection = {"u_projection"};
+ShaderString Shader::Uniform::kTexSampler0 = {"u_tex_sampler0"};
+ShaderString Shader::Uniform::kTexSampler1 = {"u_tex_sampler1"};
+ShaderString Shader::Uniform::kTexSampler2 = {"u_tex_sampler2"};
+ShaderString Shader::Uniform::kTexSampler3 = {"u_tex_sampler3"};
+ShaderString Shader::Uniform::kTexSampler4 = {"u_tex_sampler4"};
+ShaderString Shader::Uniform::kTexSampler5 = {"u_tex_sampler5"};
+ShaderString Shader::Uniform::kTexSampler6 = {"u_tex_sampler6"};
+ShaderString Shader::Uniform::kTexSampler7 = {"u_tex_sampler7"};
+ShaderString Shader::Uniform::kTexSampler8 = {"u_tex_sampler8"};
+ShaderString Shader::Uniform::kTexSampler9 = {"u_tex_sampler9"};
+ShaderString Shader::Uniform::kTexSampler10 = {"u_tex_sampler10"};
+ShaderString Shader::Uniform::kTexSampler11 = {"u_tex_sampler11"};
+ShaderString Shader::Uniform::kTexSampler12 = {"u_tex_sampler12"};
+ShaderString Shader::Uniform::kTexSampler13 = {"u_tex_sampler13"};
+ShaderString Shader::Uniform::kTexSampler14 = {"u_tex_sampler14"};
+ShaderString Shader::Uniform::kTexSampler15 = {"u_tex_sampler15"};
 
 
 // Helpers Declarations --------------------------------------------------------
 
 namespace {
 
-uint32_t CompileShader(GLenum kind, const std::string& src);
-typedef void(*GLMatrixFunction)(GLint, GLsizei, GLboolean, const GLfloat*);
+uint32_t
+CompileShader(const std::string& name, GLenum kind, const std::string& src);
+typedef void (*GLMatrixFunction)(GLint, GLsizei, GLboolean, const GLfloat*);
 
 }  // namespace
 
 // Shader Implementation -------------------------------------------------------
 
+Shader
+Shader::FromAssetPath(std::string name, std::string vert, std::string frag) {
+  std::vector<char> vert_data, frag_data;
+  if (!ReadWholeFile(Assets::ShaderPath(std::move(vert)), &vert_data) ||
+      !ReadWholeFile(Assets::ShaderPath(std::move(frag)), &frag_data)) {
+    return Shader();
+  }
+
+  Shader shader(std::move(name), vert_data.data(), frag_data.data());
+  if (!shader.Init())
+    return Shader();
+  return shader;
+}
+
 Shader::Shader() = default;
 
-Shader::Shader(std::string vert_src, std::string frag_src)
-    : vert_src_(std::move(vert_src)), frag_src_(std::move(frag_src)) {}
+Shader::Shader(std::string name, std::string vert_src, std::string frag_src)
+    : name_(std::move(name)),
+      vert_src_(std::move(vert_src)),
+      frag_src_(std::move(frag_src)) {}
 
 Shader::~Shader() { Clear(); }
 
@@ -44,11 +86,11 @@ bool Shader::InternalInit() {
     LOG(WARNING) << "Shaders sources must be set before calling Init";
   }
 
-  vert_handle_ = CompileShader(GL_VERTEX_SHADER, vert_src_);
+  vert_handle_ = CompileShader(name_, GL_VERTEX_SHADER, vert_src_);
   if (!vert_handle_)
     return false;
 
-  frag_handle_ = CompileShader(GL_FRAGMENT_SHADER, frag_src_);
+  frag_handle_ = CompileShader(name_, GL_FRAGMENT_SHADER, frag_src_);
   if (!frag_handle_)
     return false;
 
@@ -139,7 +181,8 @@ void Shader::ObtainAttributes() {
         *program_handle_, i, max_name_size, &length, &count, &type, buf);
     GLint location = glGetAttribLocation(*program_handle_, buf);
     if (location < 0) {
-      LOG(ERROR) << "Could not find attribute for attribute: " << buf;
+      LOG(ERROR) << "Shader " << name_
+                 << ": Could not find attribute for attribute: " << buf;
       assert(false);
     }
 
@@ -153,56 +196,55 @@ void Shader::ObtainAttributes() {
   }
 }
 
-const Uniform* Shader::GetUniform(const std::string& name) const {
-  auto it = uniforms_.find(name);
-  if (it == uniforms_.end())
+const Shader::Attribute* Shader::GetAttribute(ShaderString name) const {
+  auto it = attributes_.find(name.value);
+  if (it == attributes_.end()) {
+    LOG(WARNING) << "Shader " << name_
+                 << ": Could not get attribute: " << name.value;
     return nullptr;
-  return &it->second;
-}
-
-const Attribute* Shader::GetAttribute(const std::string& name) const {
-  auto it = attributes_.find(name);
-  if (it == attributes_.end())
-    return nullptr;
-  return &it->second;
-}
-
-bool Shader::SetFloat(const std::string& name, float val) {
-  const Uniform* uniform = GetUniform(name);
-  if (!uniform) {
-    LOG(WARNING) << "Could not find uniform: " << name;
-    return false;
   }
+  return &it->second;
+}
+
+const Shader::Uniform* Shader::GetUniform(ShaderString name) const {
+  auto it = uniforms_.find(name.value);
+  if (it == uniforms_.end()) {
+    LOG(WARNING) << "Shader " << name_
+                 << ": Could not get uniform: " << name.value;
+    return nullptr;
+  }
+  return &it->second;
+}
+
+bool Shader::SetFloat(ShaderString name, float val) {
+  const Uniform* uniform = GetUniform(name);
+  if (!uniform)
+    return false;
 
   glUniform1f(uniform->location, val);
   return true;
 }
 
 
-bool Shader::SetInt(const std::string& name, int val) {
+bool Shader::SetInt(ShaderString name, int val) {
   const Uniform* uniform = GetUniform(name);
-  if (!uniform) {
-    LOG(WARNING) << "Could not find uniform: " << name;
+  if (!uniform)
     return false;
-  }
 
   glUniform1i(uniform->location, val);
   return true;
 }
 
-bool Shader::SetMat4(const std::string& uniform_name, const glm::mat4& mat) {
-  return SetMatrix(uniform_name, 4, glm::value_ptr(mat));
+bool Shader::SetMat4(ShaderString name, const glm::mat4& mat) {
+  return SetMatrix(name, 4, glm::value_ptr(mat));
 }
 
-bool
-Shader::SetMatrix(const std::string& uniform_name,
+bool Shader::SetMatrix(ShaderString name,
                   size_t mat_length,
                   const float* data) {
-  const Uniform* uniform = GetUniform(uniform_name);
-  if (!uniform) {
-    LOG(WARNING) << "Could not find uniform: " << uniform_name;
+  const Uniform* uniform = GetUniform(name);
+  if (!uniform)
     return false;
-  }
 
   int loc = uniform->location;
   switch (mat_length) {
@@ -210,7 +252,8 @@ Shader::SetMatrix(const std::string& uniform_name,
     case 3: glUniformMatrix3fv(loc, 1, GL_FALSE, data); return true;
     case 4: glUniformMatrix4fv(loc, 1, GL_FALSE, data); return true;
     default:
-      LOG(WARNING) << "Wrong matrix length: " << mat_length;
+      LOG(WARNING) << "Shader " << name_
+                   << ": Wrong matrix length: " << mat_length;
       return false;
   }
 }
@@ -219,10 +262,11 @@ Shader::SetMatrix(const std::string& uniform_name,
 
 namespace {
 
-uint32_t CompileShader(GLenum kind, const std::string& src) {
+uint32_t
+CompileShader(const std::string& name, GLenum kind, const std::string& src) {
   uint32_t handle = glCreateShader(kind);
   if (!handle) {
-    LOG(ERROR) << "Could not allocate shader.";
+    LOG(ERROR) << "Shader " << name << ": Could not allocate shader.";
     return 0;
   }
 
@@ -237,13 +281,38 @@ uint32_t CompileShader(GLenum kind, const std::string& src) {
     GLchar log[2048];
     glGetShaderInfoLog(handle, sizeof(log), 0, log);
     glDeleteShader(handle);
-    LOG(ERROR) << "Error compiling " << GLEnumToString(kind)
-               << " shader: " << log;
+    LOG(ERROR) << "Shader " << name << ": Error compiling "
+               << GLEnumToString(kind) << " shader: " << log;
     return 0;
   }
   return handle;
 }
 
 }  // namespace
+
+std::pair<int, ShaderString> TextureUnitToUniform(GLenum tex) {
+  switch (tex) {
+    case GL_TEXTURE0: return {0, Shader::Uniform::kTexSampler0};
+    case GL_TEXTURE1: return {1, Shader::Uniform::kTexSampler1};
+    case GL_TEXTURE2: return {2, Shader::Uniform::kTexSampler2};
+    case GL_TEXTURE3: return {3, Shader::Uniform::kTexSampler3};
+    case GL_TEXTURE4: return {4, Shader::Uniform::kTexSampler4};
+    case GL_TEXTURE5: return {5, Shader::Uniform::kTexSampler5};
+    case GL_TEXTURE6: return {6, Shader::Uniform::kTexSampler6};
+    case GL_TEXTURE7: return {7, Shader::Uniform::kTexSampler7};
+    case GL_TEXTURE8: return {8, Shader::Uniform::kTexSampler8};
+    case GL_TEXTURE9: return {9, Shader::Uniform::kTexSampler9};
+    case GL_TEXTURE10: return {10, Shader::Uniform::kTexSampler10};
+    case GL_TEXTURE11: return {11, Shader::Uniform::kTexSampler11};
+    case GL_TEXTURE12: return {12, Shader::Uniform::kTexSampler12};
+    case GL_TEXTURE13: return {13, Shader::Uniform::kTexSampler13};
+    case GL_TEXTURE14: return {14, Shader::Uniform::kTexSampler14};
+    case GL_TEXTURE15: return {15, Shader::Uniform::kTexSampler15};
+    default:
+      LOG(ERROR) << "Invalid texture given: " << GLEnumToString(tex);
+      assert(false);
+      return {0, ShaderString()};
+  }
+}
 
 }  // namespace warhol
