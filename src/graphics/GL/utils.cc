@@ -54,13 +54,14 @@ GLEnumToSize(GLenum type) {
     case GL_SAMPLER_1D: return 1 * sizeof(uint32_t);
     case GL_SAMPLER_2D: return 1 * sizeof(uint32_t);
     case GL_SAMPLER_3D: return 1 * sizeof(uint32_t);
+    case GL_RGBA: return 4 * sizeof(uint8_t);
+    case GL_SAMPLER_2D_ARRAY: return 1 * sizeof(uint32_t);
 
 #ifdef GLENUM_TO_SIZE_COMPLETE_TYPES_AS_NEEDED
     case GL_SAMPLER_CUBE: return;
     case GL_SAMPLER_1D_SHADOW: return;
     case GL_SAMPLER_2D_SHADOW: return;
     case GL_SAMPLER_1D_ARRAY: return;
-    case GL_SAMPLER_2D_ARRAY: return;
     case GL_SAMPLER_1D_ARRAY_SHADOW: return;
     case GL_SAMPLER_2D_ARRAY_SHADOW: return;
     case GL_SAMPLER_2D_MULTISAMPLE: return;
@@ -122,7 +123,8 @@ GLEnumToSize(GLenum type) {
     case GL_UNSIGNED_INT_ATOMIC_COUNTER: return;
 #endif
     default:
-      LOG(ERROR) << "Uncovered GLenum type: " << (uint32_t)type;
+      LOG(ERROR) << "Uncovered GLenum type: " << GLEnumToString(type) << "("
+                 << (uint32_t)type << ").";
       assert(false);
       return 0;
   }

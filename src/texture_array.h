@@ -32,6 +32,7 @@ class TextureArray2D {
 
   const Pair3<int>& size() const { return size_; }
   int stride() const { return stride_; }
+  uint32_t handle() const { return handle_.handle; }
 
  private:
   Pair3<int> size_;

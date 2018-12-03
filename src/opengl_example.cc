@@ -124,6 +124,10 @@ int main() {
       Shader::FromAssetPath("one_texture", "simple.vert", "one_tex.frag");
   assert(one_texture.valid());
 
+  Shader tex_array_shader =
+    Shader::FromAssetPath("tex_array", "simple.vert", "tex_array.frag");
+  assert(tex_array_shader.valid());
+
   // Cube "model" --------------------------------------------------------------
 
   const auto& cube_vertices = Cube::GetVertices();
@@ -213,13 +217,6 @@ int main() {
   // Texture array -------------------------------------------------------------
 
 
-  constexpr int side_count = 16;
-
-  TextureArray2D tex_array({side_count, side_count, side_count * side_count},
-                           side_count, GL_RGBA);
-  if (!tex_array.Init())
-    return 1;
-
   uint32_t face_vao;
   GL_CALL(glGenVertexArrays, 1, &face_vao);
   GL_CALL(glBindVertexArray, face_vao);
@@ -261,38 +258,28 @@ int main() {
 
   GL_CALL(glBindVertexArray, NULL);
 
-  std::vector<uint32_t> cut_textures(side_count * side_count);
-  GL_CALL(glGenTextures, cut_textures.size(), cut_textures.data());
-
-  LOG(DEBUG) << "CUT TEXTURE SIZE: " << cut_textures.size();
-  for (auto i : cut_textures)
-    printf("%d, ", i);
-  printf("\n");
-  fflush(stdout);
 
   // So that this matches what OpenGL expects.
   stbi_set_flip_vertically_on_load(true);
   int x, y, channels;
   uint8_t* data = stbi_load(Assets::TexturePath("atlas.png").data(),
                             &x, &y, &channels, 0);
-  (void)data;
-  LOG(DEBUG) << "X: " << x << ", Y: " << y << ", CHANNELS: " << channels;
-  // Grid is square.
   assert(x == y);
+
+  constexpr int side_count = 16;
   int elem_side = x / side_count;
-  LOG(DEBUG) << "X: " << x << ", SIDE: " << elem_side;
+  TextureArray2D tex_array({elem_side, elem_side, side_count * side_count},
+                           side_count, GL_RGBA);
+  if (!tex_array.Init())
+    return 1;
+
+  std::vector<uint32_t> cut_textures(side_count * side_count);
+  GL_CALL(glGenTextures, cut_textures.size(), cut_textures.data());
 
   for (int i = 0; i < tex_array.size().z; i++) {
-    /* uint32_t* ptr = (uint32_t*)elem_data.data(); */
-    /* for (int j = 0; j < elem_side * elem_side; j += 1) { */
-    /*   *ptr++ = 0xFF0000FFu; */
-    /* } */
-
-
     std::vector<uint8_t> elem_data(elem_side * elem_side * 4);
     uint32_t* ptr = (uint32_t*)elem_data.data();
     auto coord = ArrayIndexToCoord2(side_count, i);
-    LOG(DEBUG) << "Coord: " << coord.ToString();
     for (int v = 0; v < elem_side; v++) {
       uint32_t* base = (uint32_t*)data +
             x * elem_side * coord.y +   // Right initial Y .
@@ -302,6 +289,11 @@ int main() {
         *ptr++ = *base++;
       }
     }
+
+    // Add to the texture array.
+    if (!tex_array.AddElement(elem_data.data(), elem_data.size()))
+      exit(1);
+
 
     GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]);
     GL_CALL(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -462,8 +454,17 @@ int main() {
     /*   /1* glDrawArrays(GL_TRIANGLES, 0, 36); *1/ */
     /* } */
 
+    tex_array_shader.Use();
+    auto [unit_index, unit_name] = TextureUnitToUniform(GL_TEXTURE0);
+    /* for (auto& [name, attrib] : tex_array_shader.uniforms()) { */
+    /*   LOG(DEBUG) << "Attib: " << name << ", " << attrib.location; */
+    /* } */
+    /* LOG(DEBUG) << "Unit name: " << unit_name.value << ", INDEX: " << unit_index; */
+    tex_array_shader.SetInt(unit_name, unit_index);
     GL_CALL(glActiveTexture, GL_TEXTURE0);
-    simple_shader.SetFloat({"u_interpolation"}, ui_state.interpolation);
+    GL_CALL(glBindTexture, GL_TEXTURE_2D_ARRAY, tex_array.handle());
+
+    /* simple_shader.SetFloat({"u_interpolation"}, ui_state.interpolation); */
 
     /* one_texture.Use(); */
     GL_CALL(glBindVertexArray, face_vao);
@@ -475,14 +476,17 @@ int main() {
           glm::translate(glm::mat4(1.0f),
               glm::vec3(0.0f, coord.y * 1.1f, coord.x * 1.1f));
 
+      tex_array_shader.SetFloat({"u_texture_index"}, i);
 
-      simple_shader.SetInt(Shader::Uniform::kTexSampler0, 0);
+      /* simple_shader.SetInt(Shader::Uniform::kTexSampler0, 0); */
 
-      GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]);
-      simple_shader.SetMat4(Shader::Uniform::kModel, model);
+      /* GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]); */
+      tex_array_shader.SetMat4(Shader::Uniform::kModel, model);
       glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
+
+    simple_shader.Use();
 
 
     // We only need one texture for the plane.

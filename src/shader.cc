@@ -221,7 +221,7 @@ bool Shader::SetFloat(ShaderString name, float val) {
   if (!uniform)
     return false;
 
-  glUniform1f(uniform->location, val);
+  GL_CALL(glUniform1f, uniform->location, val);
   return true;
 }
 
@@ -231,7 +231,7 @@ bool Shader::SetInt(ShaderString name, int val) {
   if (!uniform)
     return false;
 
-  glUniform1i(uniform->location, val);
+  GL_CALL(glUniform1i, uniform->location, val);
   return true;
 }
 
@@ -248,9 +248,9 @@ bool Shader::SetMatrix(ShaderString name,
 
   int loc = uniform->location;
   switch (mat_length) {
-    case 2: glUniformMatrix2fv(loc, 1, GL_FALSE, data); return true;
-    case 3: glUniformMatrix3fv(loc, 1, GL_FALSE, data); return true;
-    case 4: glUniformMatrix4fv(loc, 1, GL_FALSE, data); return true;
+    case 2: GL_CALL(glUniformMatrix2fv, loc, 1, GL_FALSE, data); return true;
+    case 3: GL_CALL(glUniformMatrix3fv, loc, 1, GL_FALSE, data); return true;
+    case 4: GL_CALL(glUniformMatrix4fv, loc, 1, GL_FALSE, data); return true;
     default:
       LOG(WARNING) << "Shader " << name_
                    << ": Wrong matrix length: " << mat_length;

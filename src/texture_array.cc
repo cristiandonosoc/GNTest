@@ -17,7 +17,8 @@ bool TextureArray2D::Init() {
   GL_CALL(glBindTexture, GL_TEXTURE_2D_ARRAY, *handle_);
 
   // Allocate the texture space.
-  LOG(DEBUG) << __PRETTY_FUNCTION__ << ": Format is " << GLEnumToString(format_);
+  LOG(DEBUG) << __PRETTY_FUNCTION__ << ": Format is "
+             << GLEnumToString(format_);
   GL_CALL(glTexImage3D, GL_TEXTURE_2D_ARRAY,
                         0,  // No mip-map for now.
                         format_,
@@ -37,9 +38,11 @@ bool TextureArray2D::AddElement(uint8_t* data, int size) {
     return false;
   }
 
-  if (size != size_.x * size_.y) {
+  int expected_size = size_.x * size_.y * GLEnumToSize(format_);
+
+  if (size != expected_size) {
     LOG(WARNING) << "Expected different size sub-image (Expected: "
-                 << size_.x * size_.y << ", got: " << size << ").";
+                 << expected_size << ", got: " << size << ").";
     return false;
   }
 
