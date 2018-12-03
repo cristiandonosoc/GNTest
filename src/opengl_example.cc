@@ -120,6 +120,10 @@ int main() {
       Shader::FromAssetPath("voxel", "simple.vert", "voxel.frag");
   assert(voxel_shader.valid());
 
+  Shader one_texture =
+      Shader::FromAssetPath("one_texture", "simple.vert", "one_tex.frag");
+  assert(one_texture.valid());
+
   // Cube "model" --------------------------------------------------------------
 
   const auto& cube_vertices = Cube::GetVertices();
@@ -208,23 +212,10 @@ int main() {
 
   // Texture array -------------------------------------------------------------
 
-  // So that this matches what OpenGL expects.
-  stbi_set_flip_vertically_on_load(true);
-  int x, y, channels;
-
-  uint8_t* data = stbi_load(Assets::TexturePath("atlas.png").data(),
-                            &x, &y, &channels, 0);
-  (void)data;
-  LOG(DEBUG) << "X: " << x << ", Y: " << y << ", CHANNELS: " << channels;
-  // Grid is square.
-  assert(x == y);
-
 
   constexpr int side_count = 16;
-  int elem_side = x / side_count;
-  LOG(DEBUG) << "X: " << x << ", SIDE: " << elem_side;
 
-  TextureArray2D tex_array({elem_side, elem_side, side_count * side_count},
+  TextureArray2D tex_array({side_count, side_count, side_count * side_count},
                            side_count, GL_RGBA);
   if (!tex_array.Init())
     return 1;
@@ -241,6 +232,14 @@ int main() {
     0.0f, 0.0f, 1.0f,
     0.0f, 1.0f, 0.0f,
     0.0f, 1.0f, 1.0f,
+
+    0.0f, 0.0f,
+    1.0f, 0.0f,
+    0.0f, 1.0f,
+    1.0f, 0.0f,
+    0.0f, 1.0f,
+    1.0f, 1.0f,
+
     0.0f, 0.0f,
     1.0f, 0.0f,
     0.0f, 1.0f,
@@ -257,6 +256,8 @@ int main() {
   GL_CALL(glEnableVertexAttribArray, 0);
   GL_CALL(glVertexAttribPointer, 1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)(sizeof(float) * 3 * 6));
   GL_CALL(glEnableVertexAttribArray, 1);
+  GL_CALL(glVertexAttribPointer, 2, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)(sizeof(float) * (3 * 6 + 2 * 6)));
+  GL_CALL(glEnableVertexAttribArray, 2);
 
   GL_CALL(glBindVertexArray, NULL);
 
@@ -269,26 +270,41 @@ int main() {
   printf("\n");
   fflush(stdout);
 
+  // So that this matches what OpenGL expects.
+  stbi_set_flip_vertically_on_load(true);
+  int x, y, channels;
+  uint8_t* data = stbi_load(Assets::TexturePath("atlas.png").data(),
+                            &x, &y, &channels, 0);
+  (void)data;
+  LOG(DEBUG) << "X: " << x << ", Y: " << y << ", CHANNELS: " << channels;
+  // Grid is square.
+  assert(x == y);
+  int elem_side = x / side_count;
+  LOG(DEBUG) << "X: " << x << ", SIDE: " << elem_side;
 
   for (int i = 0; i < tex_array.size().z; i++) {
-    std::vector<uint8_t> elem_data(elem_side * elem_side * 4);
-    for (size_t j = 0; j < elem_data.size(); j += 4) {
-      uint32_t* ptr = (uint32_t*)(elem_data.data() + i);
-      *ptr = 0xFF0000FFu;
-    }
-
-
-    /* auto coord = ArrayIndexToCoord2(side_count, i); */
-    /* std::vector<uint8_t> elem_data(elem_side * elem_side); */
-    /* uint8_t* ptr = elem_data.data(); */
-    /* for (int v = 0; v < elem_side; v++) { */
-    /*   uint8_t* base = data + x * coord.y + elem_side * coord.x; */
-    /*   for (int u = 0; u < elem_side; u++) { */
-    /*     *ptr++ = *base++; */
-    /*   } */
+    /* uint32_t* ptr = (uint32_t*)elem_data.data(); */
+    /* for (int j = 0; j < elem_side * elem_side; j += 1) { */
+    /*   *ptr++ = 0xFF0000FFu; */
     /* } */
 
+
+    std::vector<uint8_t> elem_data(elem_side * elem_side * 4);
+    uint32_t* ptr = (uint32_t*)elem_data.data();
+    auto coord = ArrayIndexToCoord2(side_count, i);
+    LOG(DEBUG) << "Coord: " << coord.ToString();
+    for (int v = 0; v < elem_side; v++) {
+      uint32_t* base = (uint32_t*)data +
+            x * elem_side * coord.y +   // Right initial Y .
+            x * v +                     // Offset into the square.
+            elem_side * coord.x;        // Initial X for square.
+      for (int u = 0; u < elem_side; u++) {
+        *ptr++ = *base++;
+      }
+    }
+
     GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]);
+    GL_CALL(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     GL_CALL(glTexImage2D, GL_TEXTURE_2D, 0, GL_RGBA, elem_side, elem_side, 0,
         GL_RGBA, GL_UNSIGNED_BYTE, elem_data.data());
   }
@@ -323,6 +339,8 @@ int main() {
 
   struct UIState {
     bool polygon_mode = false;
+    float interpolation = 0.0f;
+
   };
   UIState ui_state = {};
 
@@ -423,28 +441,32 @@ int main() {
                           glm::translate(glm::mat4(1.0f), {5.0f, 0.0, 0.0f}));
     GL_CALL(glDrawArrays, GL_TRIANGLES, 0, 36);
 
-    glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
-                                  glm::vec3(2.0f, 5.0f, -15.0f),
-                                  glm::vec3(-1.5f, -2.2f, -2.5f),
-                                  glm::vec3(-3.8f, -2.0f, -12.3f),
-                                  glm::vec3(2.4f, -0.4f, -3.5f),
-                                  glm::vec3(-1.7f, 3.0f, -7.5f),
-                                  glm::vec3(1.3f, -2.0f, -2.5f),
-                                  glm::vec3(1.5f, 2.0f, -2.5f),
-                                  glm::vec3(1.5f, 0.2f, -1.5f),
-                                  glm::vec3(-1.3f, 1.0f, -1.5f)};
+    /* glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f), */
+    /*                               glm::vec3(2.0f, 5.0f, -15.0f), */
+    /*                               glm::vec3(-1.5f, -2.2f, -2.5f), */
+    /*                               glm::vec3(-3.8f, -2.0f, -12.3f), */
+    /*                               glm::vec3(2.4f, -0.4f, -3.5f), */
+    /*                               glm::vec3(-1.7f, 3.0f, -7.5f), */
+    /*                               glm::vec3(1.3f, -2.0f, -2.5f), */
+    /*                               glm::vec3(1.5f, 2.0f, -2.5f), */
+    /*                               glm::vec3(1.5f, 0.2f, -1.5f), */
+    /*                               glm::vec3(-1.3f, 1.0f, -1.5f)}; */
 
-    for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
-      glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
-      float angle = sdl_context.seconds() * glm::radians(20.0f * i);
-      model =
-          glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
-      simple_shader.SetMat4(Shader::Uniform::kModel, model);
+    /* for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) { */
+    /*   glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]); */
+    /*   float angle = sdl_context.seconds() * glm::radians(20.0f * i); */
+    /*   model = */
+    /*       glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f)); */
+    /*   simple_shader.SetMat4(Shader::Uniform::kModel, model); */
 
-      /* glDrawArrays(GL_TRIANGLES, 0, 36); */
-    }
+    /*   /1* glDrawArrays(GL_TRIANGLES, 0, 36); *1/ */
+    /* } */
 
     GL_CALL(glActiveTexture, GL_TEXTURE0);
+    simple_shader.SetFloat({"u_interpolation"}, ui_state.interpolation);
+
+    /* one_texture.Use(); */
+    GL_CALL(glBindVertexArray, face_vao);
 
     for (size_t i = 0; i < cut_textures.size(); i++) {
       auto coord = ArrayIndexToCoord2(side_count, i);
@@ -454,8 +476,9 @@ int main() {
               glm::vec3(0.0f, coord.y * 1.1f, coord.x * 1.1f));
 
 
+      simple_shader.SetInt(Shader::Uniform::kTexSampler0, 0);
+
       GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]);
-      GL_CALL(glBindVertexArray, face_vao);
       simple_shader.SetMat4(Shader::Uniform::kModel, model);
       glDrawArrays(GL_TRIANGLES, 0, 6);
     }
@@ -513,6 +536,7 @@ int main() {
 
       ImGui::Separator();
       ImGui::Checkbox("Polygon mode", &ui_state.polygon_mode);
+      ImGui::DragFloat("Interpolation", &ui_state.interpolation, 0.1f, 0.0f, 1.0f);
 
       ImGui::End();
     }
