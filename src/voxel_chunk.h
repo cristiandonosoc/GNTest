@@ -40,6 +40,8 @@ struct TypedFace {
   static constexpr int kUVCount = 4 * 2;
   float verts[kVertCount];
   float uvs[kUVCount];
+  uint32_t tex_index;
+
   VoxelType type = VoxelType::kNone;
   // TODO(Cristian): Normals.
 };
@@ -48,7 +50,7 @@ struct TypedFace {
 class VoxelChunk {
  public:
   VoxelChunk();
-  VoxelChunk(TextureAtlas*);
+  VoxelChunk(TextureArray2D*);
 
   bool Init();
   void CalculateMesh();
@@ -81,7 +83,6 @@ class VoxelChunk {
   std::vector<TypedFace> faces_;
   size_t face_count_;
 
-  TextureAtlas* atlas_;   // Not owning. Must outlive.
   TextureArray2D* tex_array_;   // Not owning.
 
   // TODO(Cristian): Stop leaking these.

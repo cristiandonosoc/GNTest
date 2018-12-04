@@ -117,7 +117,7 @@ int main() {
   assert(alpha_test_shader.valid());
 
   Shader voxel_shader =
-      Shader::FromAssetPath("voxel", "simple.vert", "voxel.frag");
+      Shader::FromAssetPath("voxel", "voxel.vert", "voxel.frag");
   assert(voxel_shader.valid());
 
   Shader one_texture =
@@ -216,7 +216,6 @@ int main() {
 
   // Texture array -------------------------------------------------------------
 
-
   uint32_t face_vao;
   GL_CALL(glGenVertexArrays, 1, &face_vao);
   GL_CALL(glBindVertexArray, face_vao);
@@ -224,25 +223,25 @@ int main() {
   uint32_t face_vbo = 0;
   float face_verts[] = {
     0.0f, 0.0f, 0.0f,
-    0.0f, 0.0f, 1.0f,
-    0.0f, 1.0f, 0.0f,
-    0.0f, 0.0f, 1.0f,
-    0.0f, 1.0f, 0.0f,
-    0.0f, 1.0f, 1.0f,
+    0.0f, 0.0f, 4.0f,
+    0.0f, 4.0f, 0.0f,
+    0.0f, 0.0f, 4.0f,
+    0.0f, 4.0f, 0.0f,
+    0.0f, 4.0f, 4.0f,
 
     0.0f, 0.0f,
-    1.0f, 0.0f,
-    0.0f, 1.0f,
-    1.0f, 0.0f,
-    0.0f, 1.0f,
-    1.0f, 1.0f,
+    4.0f, 0.0f,
+    0.0f, 4.0f,
+    4.0f, 0.0f,
+    0.0f, 4.0f,
+    4.0f, 4.0f,
 
     0.0f, 0.0f,
-    1.0f, 0.0f,
-    0.0f, 1.0f,
-    1.0f, 0.0f,
-    0.0f, 1.0f,
-    1.0f, 1.0f,
+    4.0f, 0.0f,
+    0.0f, 4.0f,
+    4.0f, 0.0f,
+    0.0f, 4.0f,
+    4.0f, 4.0f,
   };
 
   GL_CALL(glGenBuffers, 1, &face_vbo);
@@ -258,7 +257,6 @@ int main() {
 
   GL_CALL(glBindVertexArray, NULL);
 
-
   // So that this matches what OpenGL expects.
   stbi_set_flip_vertically_on_load(true);
   int x, y, channels;
@@ -272,9 +270,6 @@ int main() {
                            side_count, GL_RGBA);
   if (!tex_array.Init())
     return 1;
-
-  std::vector<uint32_t> cut_textures(side_count * side_count);
-  GL_CALL(glGenTextures, cut_textures.size(), cut_textures.data());
 
   for (int i = 0; i < tex_array.size().z; i++) {
     std::vector<uint8_t> elem_data(elem_side * elem_side * 4);
@@ -293,12 +288,6 @@ int main() {
     // Add to the texture array.
     if (!tex_array.AddElement(elem_data.data(), elem_data.size()))
       exit(1);
-
-
-    GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]);
-    GL_CALL(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    GL_CALL(glTexImage2D, GL_TEXTURE_2D, 0, GL_RGBA, elem_side, elem_side, 0,
-        GL_RGBA, GL_UNSIGNED_BYTE, elem_data.data());
   }
 
 
@@ -454,48 +443,47 @@ int main() {
     /*   /1* glDrawArrays(GL_TRIANGLES, 0, 36); *1/ */
     /* } */
 
+
+    Timer tex_array_timer = Timer::ManualTimer();
+    tex_array_timer.Init();
+
     tex_array_shader.Use();
+    camera.SetProjection(&tex_array_shader);
+    camera.SetView(&tex_array_shader);
     auto [unit_index, unit_name] = TextureUnitToUniform(GL_TEXTURE0);
-    /* for (auto& [name, attrib] : tex_array_shader.uniforms()) { */
-    /*   LOG(DEBUG) << "Attib: " << name << ", " << attrib.location; */
-    /* } */
-    /* LOG(DEBUG) << "Unit name: " << unit_name.value << ", INDEX: " << unit_index; */
     tex_array_shader.SetInt(unit_name, unit_index);
+    /* simple_shader.SetFloat({"u_interpolation"}, ui_state.interpolation); */
+
     GL_CALL(glActiveTexture, GL_TEXTURE0);
     GL_CALL(glBindTexture, GL_TEXTURE_2D_ARRAY, tex_array.handle());
-
-    /* simple_shader.SetFloat({"u_interpolation"}, ui_state.interpolation); */
 
     /* one_texture.Use(); */
     GL_CALL(glBindVertexArray, face_vao);
 
-    for (size_t i = 0; i < cut_textures.size(); i++) {
+    for (int i = 0; i < tex_array.size().z; i++) {
       auto coord = ArrayIndexToCoord2(side_count, i);
       /* LOG(DEBUG) << "INDEX: " << i << ", COORD: " << coord.ToString(); */
       auto model =
           glm::translate(glm::mat4(1.0f),
-              glm::vec3(0.0f, coord.y * 1.1f, coord.x * 1.1f));
+              glm::vec3(0.0f, coord.y * 4.1f, coord.x * 4.1f));
 
       tex_array_shader.SetFloat({"u_texture_index"}, i);
 
-      /* simple_shader.SetInt(Shader::Uniform::kTexSampler0, 0); */
 
       /* GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]); */
       tex_array_shader.SetMat4(Shader::Uniform::kModel, model);
       glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
-
-    simple_shader.Use();
-
-
-    // We only need one texture for the plane.
-    grid.Set(&simple_shader, GL_TEXTURE0);
+    float tex_array_time = tex_array_timer.End();
 
     // Draw the plane.
     alpha_test_shader.Use();
     camera.SetProjection(&alpha_test_shader);
     camera.SetView(&alpha_test_shader);
+
+    // We only need one texture for the plane.
+    grid.Set(&simple_shader, GL_TEXTURE0);
 
     GL_CALL(glBindVertexArray, plane_vao);
     // The model at the origin.
@@ -503,10 +491,10 @@ int main() {
     GL_CALL(glDrawArrays, GL_TRIANGLE_STRIP, 0, 4);
 
 
-    /* voxel_shader.Use(); */
-    /* camera.SetProjection(&voxel_shader); */
-    /* camera.SetView(&voxel_shader); */
-    /* terrain.Render(&voxel_shader); */
+    voxel_shader.Use();
+    camera.SetProjection(&voxel_shader);
+    camera.SetView(&voxel_shader);
+    terrain.Render(&voxel_shader);
 
     float frame_time = frame_timer.End();
 
@@ -517,6 +505,7 @@ int main() {
       ImGui::Begin("Test window");
 
       ImGui::Text("Application Frame: %.3f ms", frame_time);
+      ImGui::Text("Tex array time: %.3f ms", tex_array_time);
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                   1000.0 * sdl_context.frame_delta(),
                   sdl_context.framerate());

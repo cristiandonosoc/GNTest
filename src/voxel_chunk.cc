@@ -35,13 +35,11 @@ AddToContainer(It it, std::initializer_list<float> elems) {
 }  // namespace
 
 static std::vector<TypedFace>
-CalculateFacesFromVoxels(const TextureAtlas&,
-                         const std::vector<ExpandedVoxel>&);
-
+CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>&);
 
 
 VoxelChunk::VoxelChunk() = default;
-VoxelChunk::VoxelChunk(TextureAtlas* atlas) : atlas_(atlas) {}
+VoxelChunk::VoxelChunk(TextureArray2D* tex_array) : tex_array_(tex_array) {}
 
 bool VoxelChunk::Init() {
   for (VoxelElement& voxel : elements_) {
@@ -101,8 +99,9 @@ void VoxelChunk::CalculateMesh() {
   // Put them into separate buckets so we can but them separatedly into the
   // OpenGL buffers.
   std::vector<float> vbo_data;
-  vbo_data.reserve(TypedFace::kVertCount * faces_.size() +
-                   TypedFace::kUVCount * faces_.size());
+  vbo_data.reserve(TypedFace::kVertCount * faces_.size() +  // Vert
+                   TypedFace::kUVCount * faces_.size() +    // UV
+                   faces_.size());                          // Tex index
 
   // We put the vertex data first, then the uv
   for (auto& face : faces_) {
@@ -113,11 +112,14 @@ void VoxelChunk::CalculateMesh() {
     /* texture_indices.push_back(index); */
   }
 
-
-
   size_t uvs_start = vbo_data.size();
   for (auto& face : faces_) {
     vbo_data.insert(vbo_data.end(), face.uvs, face.uvs + TypedFace::kUVCount);
+  }
+
+  size_t tex_index_start = vbo_data.size();
+  for (auto& face : faces_) {
+    vbo_data.emplace_back(face.tex_index);
   }
 
   GL_CALL(glBindVertexArray, vao_.value);
@@ -144,7 +146,6 @@ void VoxelChunk::CalculateMesh() {
     GL_CALL(glVertexAttribPointer,
             1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(uv_offset));
     GL_CALL(glEnableVertexAttribArray, 1);
-  }
 
   {
     TIMER("Indices");
@@ -176,8 +177,7 @@ std::vector<TypedFace> VoxelChunk::CalculateFaces() {
   std::vector<ExpandedVoxel> expanded_voxels = ExpandVoxels();
 
   // Get the faces from the expanded voxels.
-  std::vector<TypedFace> faces = CalculateFacesFromVoxels(*atlas_,
-                                                          expanded_voxels);
+  std::vector<TypedFace> faces = CalculateFacesFromVoxels(expanded_voxels);
   return faces;
 }
 
@@ -298,8 +298,7 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
 }
 
 std::vector<TypedFace>
-CalculateFacesFromVoxels(const TextureAtlas& atlas,
-                         const std::vector<ExpandedVoxel>& voxels) {
+CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
   FUNCTION_TIMER();
   std::vector<TypedFace> faces;
   faces.reserve(6 * voxels.size());
@@ -311,10 +310,15 @@ CalculateFacesFromVoxels(const TextureAtlas& atlas,
     Vec3 max{(float)quad_max.x, (float)quad_max.y, (float)quad_max.z};
     max += {1.0f, 1.0f, 1.0f};
 
-    auto uvs = atlas.GetUVs(static_cast<uint8_t>(voxel.type));
+    uint32_t tex_index = static_cast<uint32_t>(voxel.type);
     TypedFace face;
     float* vert_ptr = nullptr;
     float* uvs_ptr = nullptr;
+
+    /* uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.max().y}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.min().y}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.max().y}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.min().y}); */
 
     // X min.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
@@ -322,10 +326,11 @@ CalculateFacesFromVoxels(const TextureAtlas& atlas,
     vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, max.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.min().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.min().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.max().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.max().y});
+    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f});
+    face.tex_index = tex_index;
     faces.emplace_back(std::move(face));
     // X max.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
@@ -333,10 +338,11 @@ CalculateFacesFromVoxels(const TextureAtlas& atlas,
     vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.max().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.min().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.max().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.min().y});
+    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f});
+    face.tex_index = tex_index;
     faces.emplace_back(std::move(face));
     // Z min.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
@@ -344,10 +350,11 @@ CalculateFacesFromVoxels(const TextureAtlas& atlas,
     vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.min().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.min().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.max().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.max().y});
+    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f});
+    face.tex_index = tex_index;
     faces.emplace_back(std::move(face));
     // Z max.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
@@ -355,10 +362,11 @@ CalculateFacesFromVoxels(const TextureAtlas& atlas,
     vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, max.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.min().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.min().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.max().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.max().y});
+    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f});
+    face.tex_index = tex_index;
     faces.emplace_back(std::move(face));
     // Y min.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
@@ -366,10 +374,11 @@ CalculateFacesFromVoxels(const TextureAtlas& atlas,
     vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.min().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.min().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.max().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.max().y});
+    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f});
+    face.tex_index = tex_index;
     faces.emplace_back(std::move(face));
     // Y max.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
@@ -377,10 +386,11 @@ CalculateFacesFromVoxels(const TextureAtlas& atlas,
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.min().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.min().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.max().y});
-    uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.max().y});
+    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f});
+    face.tex_index = tex_index;
     faces.emplace_back(std::move(face));
   }
 

@@ -27,14 +27,18 @@ bool TextureArray2D::Init() {
                         format_,
                         GL_UNSIGNED_BYTE,
                         (void*)NULL);  // No data, we are just allocating space.
+  GL_CALL(glTexParameteri, GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  GL_CALL(glTexParameteri, GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  GL_CALL(glTexParameteri, GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  GL_CALL(glTexParameteri, GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
   init_ = true;
   return true;
 }
 
 bool TextureArray2D::AddElement(uint8_t* data, int size) {
-  if (element_count_ >= size_.y) {
-    LOG(WARNING) << "Element count exceeds capacity (max: " << size_.y << ").";
+  if (element_count_ >= size_.z) {
+    LOG(WARNING) << "Element count exceeds capacity (max: " << size_.z << ").";
     return false;
   }
 
@@ -49,11 +53,12 @@ bool TextureArray2D::AddElement(uint8_t* data, int size) {
   GL_CALL(glBindTexture, GL_TEXTURE_2D_ARRAY, *handle_);
   GL_CALL(glTexSubImage3D, GL_TEXTURE_2D_ARRAY,
                            0,  // Mip-map level.
-                           0, 0,  element_count_,    // X, Y, Z coords of the sub image.
-                           size_.x, size_.y, 1,      // X, Y, Z size of sub image.
+                           0, 0,  element_count_, // XYZ of the sub image.
+                           size_.x, size_.y, 1,   // XYZ size of sub image.
                            format_,
                            GL_UNSIGNED_BYTE,
                            data);
+  element_count_++;
 
   return true;
 }

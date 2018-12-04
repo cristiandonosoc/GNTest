@@ -17,6 +17,7 @@ ShaderString Shader::Attribute::kPos = {"a_pos"};
 ShaderString Shader::Attribute::kColor = {"a_color"};
 ShaderString Shader::Attribute::kTexCoord0 = {"a_tex_coord0"};
 ShaderString Shader::Attribute::kTexCoord1 = {"a_tex_coord1"};
+ShaderString Shader::Attribute::kTexIndex = {"a_tex_index"};
 
 ShaderString Shader::Uniform::kModel = {"u_model"};
 ShaderString Shader::Uniform::kView = {"u_view"};

@@ -33,6 +33,7 @@ class Shader {
     static ShaderString kColor;
     static ShaderString kTexCoord0;
     static ShaderString kTexCoord1;
+    static ShaderString kTexIndex;
   };
 
   struct Uniform {
