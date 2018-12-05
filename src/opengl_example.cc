@@ -471,7 +471,6 @@ int main() {
 
       tex_array_shader.SetFloat({"u_texture_index"}, i);
 
-
       /* GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]); */
       tex_array_shader.SetMat4(Shader::Uniform::kModel, model);
       glDrawArrays(GL_TRIANGLES, 0, 6);

@@ -3,7 +3,10 @@
 
 #include "src/voxel_chunk.h"
 
+#include <assert.h>
+
 #include <bitset>
+
 #include "src/debug/timer.h"
 #include "src/graphics/GL/utils.h"
 // TODO(Cristian): Remove this dependency.
@@ -13,6 +16,7 @@
 #include "src/texture_atlas.h"
 #include "src/utils/coords.h"
 #include "src/utils/glm_impl.h"
+#include "src/utils/log.h"
 #include "src/utils/macros.h"
 
 namespace warhol {
@@ -20,7 +24,7 @@ namespace warhol {
 namespace {
 
 static VoxelElement invalid_element = {
-  VoxelType::kNone
+  VoxelElement::Type::kNone
 };
 
 template <typename It>
@@ -34,6 +38,38 @@ AddToContainer(It it, std::initializer_list<float> elems) {
 
 }  // namespace
 
+// VoxelElement ----------------------------------------------------------------
+
+const char* VoxelElement::TypeToString(Type type) {
+  switch(type) {
+    case VoxelElement::Type::kNone: return "None";
+    case VoxelElement::Type::kDirt: return "Dirt";
+    case VoxelElement::Type::kGrassDirt: return "GrassDirt";
+    case VoxelElement::Type::kCount: break;
+  }
+
+  assert(false);
+  return "";
+}
+
+// Vertex Element Texture Index
+/* #define VETI(type) (float)VoxelType::k##type */
+
+/* const std::array<float, 6>& VoxelElement::GetFaceTexIndices(Type type) { */
+/*   static std::map<VoxelElement::Type, std::array<float, 6>> map = { */
+/*       {VoxelElement::Type::kDirt, {VETI(Dirt), VETI(Dirt), VETI(Dirt), */
+/*                                    VETI(Dirt), VETI(Dirt), VETI(Dirt)}}}; */
+
+/*   auto it = map.find(type); */
+/*   assert (it != map.end()); */
+/*   return it->second; */
+/* } */
+
+
+
+// VoxelChunk ------------------------------------------------------------------
+
+
 static std::vector<TypedFace>
 CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>&);
 
@@ -43,10 +79,10 @@ VoxelChunk::VoxelChunk(TextureArray2D* tex_array) : tex_array_(tex_array) {}
 
 bool VoxelChunk::Init() {
   for (VoxelElement& voxel : elements_) {
-    voxel.type = VoxelType::kDirt;
+    voxel.type = VoxelElement::Type::kDirt;
   }
-  /* size_t index = Coord3ToArrayIndex(kVoxelChunkSize, 1, 1, 0); */
-  /* elements_[index].type = VoxelType::kNone; */
+  size_t index = Coord3ToArrayIndex(kVoxelChunkSize, 1, 1, 0);
+  elements_[index].type = VoxelElement::Type::kGrassDirt;
 
   GL_CALL(glGenVertexArrays, 1, &vao_.value);
   GL_CALL(glBindVertexArray, vao_.value);
@@ -54,8 +90,6 @@ bool VoxelChunk::Init() {
   uint32_t buffers[2];
   GL_CALL(glGenBuffers, ARRAY_SIZE(buffers), buffers);
   vbo_ = buffers[0];
-  /* uv_vbo1_ = buffers[1]; */
-  /* uv_vbo2_ = buffers[2]; */
   ebo_ = buffers[1];
 
   // Vertices.
@@ -101,15 +135,12 @@ void VoxelChunk::CalculateMesh() {
   std::vector<float> vbo_data;
   vbo_data.reserve(TypedFace::kVertCount * faces_.size() +  // Vert
                    TypedFace::kUVCount * faces_.size() +    // UV
-                   faces_.size());                          // Tex index
+                   4 * faces_.size());                      // Tex index
 
   // We put the vertex data first, then the uv
   for (auto& face : faces_) {
     vbo_data.insert(vbo_data.end(), face.verts,
                                     face.verts + TypedFace::kVertCount);
-    /* auto coord = ArrayIndexToCoord2(kAtlasSide, (int)face.type); */
-    /* int index = tex_array_->GetTextureIndex(coord.x, coord.y); */
-    /* texture_indices.push_back(index); */
   }
 
   size_t uvs_start = vbo_data.size();
@@ -119,7 +150,9 @@ void VoxelChunk::CalculateMesh() {
 
   size_t tex_index_start = vbo_data.size();
   for (auto& face : faces_) {
-    vbo_data.emplace_back(face.tex_index);
+    LOG(DEBUG) << "Adding tex index: " << face.tex_index;
+    for (size_t i = 0; i < 4; i++)
+      vbo_data.emplace_back(face.tex_index);
   }
 
   inserting_data.End();
@@ -147,8 +180,12 @@ void VoxelChunk::CalculateMesh() {
     GL_CALL(glVertexAttribPointer,
             1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(uv_offset));
     GL_CALL(glEnableVertexAttribArray, 1);
-    GL_CALL(glVertexAttribPointer, 2, 2, GL_FLOAT, GL_FALSE,
-                                   1 * sizeof(float), (void*)(tex_index_start));
+
+    // Tex index
+    size_t tex_index_offset = tex_index_start * sizeof(float);
+    GL_CALL(glVertexAttribPointer, 2, 1, GL_FLOAT, GL_FALSE,
+                                   1 * sizeof(float),
+                                   (void*)(tex_index_offset));
     GL_CALL(glEnableVertexAttribArray, 2);
   }
 
@@ -202,6 +239,7 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
   }
 
   std::vector<ExpandedVoxel> expanded_voxels;
+
   // Iterate from bottom to top (in our view, that's the Y axis).
   for (int y = 0; y < side; y++) {
     // TODO(Cristian): Can we update the mask on the fly and not dot 2 passes?
@@ -291,9 +329,8 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
 
           ExpandedVoxel expanded_voxel;
           expanded_voxel.quad = std::move(quad);
-          expanded_voxel.type = VoxelType::kDirt;
+          expanded_voxel.type = VoxelElement::Type::kDirt;
           expanded_voxels.push_back(std::move(expanded_voxel));
-
         }
       }
     }
@@ -315,7 +352,8 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     Vec3 max{(float)quad_max.x, (float)quad_max.y, (float)quad_max.z};
     max += {1.0f, 1.0f, 1.0f};
 
-    uint32_t tex_index = static_cast<uint32_t>(voxel.type);
+    float tex_index = static_cast<float>(voxel.type);
+    LOG(DEBUG) << "Tex index is: " << tex_index;
     TypedFace face;
     float* vert_ptr = nullptr;
     float* uvs_ptr = nullptr;
@@ -324,6 +362,10 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     /* uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.min().y}); */
     /* uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.max().y}); */
     /* uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.min().y}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f}); */
 
     // X min.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
@@ -331,10 +373,10 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, max.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {min.y, min.z});
+    uvs_ptr = AddToContainer(uvs_ptr, {min.y, max.z});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.y, min.z});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.y, max.z});
     face.tex_index = tex_index;
     faces.emplace_back(std::move(face));
     // X max.
@@ -343,10 +385,10 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {min.y, max.z});
+    uvs_ptr = AddToContainer(uvs_ptr, {min.y, min.z});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.y, max.z});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.y, min.z});
     face.tex_index = tex_index;
     faces.emplace_back(std::move(face));
     // Z min.
@@ -355,10 +397,10 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.y});
+    uvs_ptr = AddToContainer(uvs_ptr, {min.x, min.y});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.y});
+    uvs_ptr = AddToContainer(uvs_ptr, {min.x, max.y});
     face.tex_index = tex_index;
     faces.emplace_back(std::move(face));
     // Z max.
@@ -367,10 +409,10 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, max.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {min.x, min.y});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.y});
+    uvs_ptr = AddToContainer(uvs_ptr, {min.x, max.y});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.y});
     face.tex_index = tex_index;
     faces.emplace_back(std::move(face));
     // Y min.
@@ -379,10 +421,10 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {min.x, max.z});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.z});
+    uvs_ptr = AddToContainer(uvs_ptr, {min.x, min.z});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.z});
     face.tex_index = tex_index;
     faces.emplace_back(std::move(face));
     // Y max.
@@ -391,10 +433,10 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 0.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 0.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f});
-    uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f});
+    uvs_ptr = AddToContainer(uvs_ptr, {min.x, max.z});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.z});
+    uvs_ptr = AddToContainer(uvs_ptr, {min.x, min.z});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.z});
     face.tex_index = tex_index;
     faces.emplace_back(std::move(face));
   }

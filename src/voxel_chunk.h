@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <array>
 #include <vector>
 
 #include "src/atlas_data.h"
@@ -24,15 +25,27 @@ constexpr size_t kVoxelChunkVoxelCount = kVoxelChunkSize *
                                          kVoxelChunkSize;
 
 struct VoxelElement {
-  VoxelType type = VoxelType::kNone;
+  // IMPORTANT: They *have* to be sequential, so no special indices can be used.
+  enum class Type {
+    kNone,
+    kDirt,
+    kGrassDirt,
 
-  explicit operator bool() const { return type != VoxelType::kNone; }
+    kCount,  // Not valid, should never be addressed.
+  };
+  static const char* TypeToString(Type);
+  // Format is x-min/max, z-min/max, y-min/max.
+  static const std::array<float, 6>& GetFaceTexIndices(Type);
+
+  explicit operator bool() const { return type != Type::kNone; }
+
+  Type type = Type::kNone;
 };
 
 // Represents a face within the cube.
 struct ExpandedVoxel {
   Quad3<int> quad;
-  VoxelType type = VoxelType::kDirt;
+  VoxelElement::Type type = VoxelElement::Type::kNone;
 };
 
 struct TypedFace {
@@ -40,7 +53,7 @@ struct TypedFace {
   static constexpr int kUVCount = 4 * 2;
   float verts[kVertCount];
   float uvs[kUVCount];
-  uint32_t tex_index;
+  float tex_index;
 
   VoxelType type = VoxelType::kNone;
   // TODO(Cristian): Normals.
