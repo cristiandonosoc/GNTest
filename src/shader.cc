@@ -232,7 +232,7 @@ bool Shader::SetInt(ShaderString name, int val) {
   if (!uniform)
     return false;
 
-  GL_CALL(glUniform1i, uniform->location, val);
+  CTX_GL_CALL(glUniform1i, uniform->location, val);
   return true;
 }
 

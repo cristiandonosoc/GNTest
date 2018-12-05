@@ -122,9 +122,10 @@ void VoxelChunk::CalculateMesh() {
     vbo_data.emplace_back(face.tex_index);
   }
 
+  inserting_data.End();
+
   GL_CALL(glBindVertexArray, vao_.value);
 
-  inserting_data.End();
 
   {
     TIMER("Send data over to GPU");
@@ -146,6 +147,10 @@ void VoxelChunk::CalculateMesh() {
     GL_CALL(glVertexAttribPointer,
             1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(uv_offset));
     GL_CALL(glEnableVertexAttribArray, 1);
+    GL_CALL(glVertexAttribPointer, 2, 2, GL_FLOAT, GL_FALSE,
+                                   1 * sizeof(float), (void*)(tex_index_start));
+    GL_CALL(glEnableVertexAttribArray, 2);
+  }
 
   {
     TIMER("Indices");

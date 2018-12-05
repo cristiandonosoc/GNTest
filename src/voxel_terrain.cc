@@ -5,6 +5,7 @@
 
 #include "src/shader.h"
 #include "src/texture_atlas.h"
+#include "src/utils/log.h"
 
 namespace warhol {
 
@@ -13,12 +14,12 @@ namespace {
 
 // VoxelTerrain ----------------------------------------------------------------
 
-VoxelTerrain::VoxelTerrain(TextureAtlas* atlas) : atlas_(atlas) {}
+VoxelTerrain::VoxelTerrain(TextureArray2D* tex_array) : tex_array_(tex_array) {}
 
 bool VoxelTerrain::Init() {
   // Create the initial chunk.
   Pair3<int> coord = {0, 0, 0};
-  VoxelChunk chunk(atlas_);
+  VoxelChunk chunk(tex_array_);
   if (!chunk.Init())
     return false;
   chunk.CalculateMesh();
@@ -31,13 +32,13 @@ bool VoxelTerrain::Init() {
   return true;
 }
 
-void VoxelTerrain::SetTextures(Shader* shader) const {
-  atlas_->texture().Set(shader, GL_TEXTURE0);
-  /* atlas_->texture().Set(shader, GL_TEXTURE1); */
-}
-
 void VoxelTerrain::Render(Shader* shader) {
-  SetTextures(shader);
+  GL_CALL(glActiveTexture, GL_TEXTURE0);
+  GL_CALL(glBindTexture, GL_TEXTURE_2D_ARRAY, tex_array_->handle());
+
+  auto [unit_index, unit_name] = TextureUnitToUniform(GL_TEXTURE0);
+  shader->SetInt(unit_name, unit_index);
+
   for (auto& [coord, voxel_chunk] : voxel_chunks_)
     voxel_chunk.Render(shader);
 }

@@ -7,6 +7,7 @@
 
 #include "src/math/vec.h"
 #include "src/voxel_chunk.h"
+#include "src/texture_array.h"
 
 namespace warhol {
 
@@ -19,21 +20,18 @@ class VoxelTerrain {
   using VoxelChunkHash = std::unordered_map<Pair3<int>, VoxelChunk,
                                             HashPair3<int>>;
 
-  VoxelTerrain(TextureAtlas*);
+  VoxelTerrain(TextureArray2D*);
+  bool Init();
 
-  // Will load the atlas as the current texture.
-  void SetTextures(Shader* shader) const;
 
   void Render(Shader*);
-
-  bool Init();
 
   VoxelChunkHash& voxel_chunks() { return voxel_chunks_; }
 
  private:
   VoxelChunkHash voxel_chunks_;
 
-  TextureAtlas* atlas_;   // Not owning. Must outlive.
+  TextureArray2D* tex_array_;   // Not owning. Must outlive.
 };
 
 }  // namespace warhol

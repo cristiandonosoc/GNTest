@@ -78,6 +78,9 @@ int main() {
   if (!sdl_context.Init())
     return 1;
 
+  LOG(INFO) << "Window size. WIDTH: " << sdl_context.width()
+            << ", HEIGHT: " << sdl_context.height();
+
   GL::Init();
   SDL_GL_SetSwapInterval(1);  // Enable v-sync.
 
@@ -198,9 +201,9 @@ int main() {
   GL_CALL(glVertexAttribPointer,
           1, 2, GL_FLOAT, GL_FALSE, plane_stride, (void*)(3 * sizeof(float)));
   GL_CALL(glEnableVertexAttribArray, 1);
-  GL_CALL(glVertexAttribPointer,
-          2, 2, GL_FLOAT, GL_FALSE, plane_stride, (void*)(3 * sizeof(float)));
-  GL_CALL(glEnableVertexAttribArray, 2);
+  /* GL_CALL(glVertexAttribPointer, */
+  /*         2, 2, GL_FLOAT, GL_FALSE, plane_stride, (void*)(3 * sizeof(float))); */
+  /* GL_CALL(glEnableVertexAttribArray, 2); */
 
   GL_CALL(glBindVertexArray, NULL);
 
@@ -246,16 +249,22 @@ int main() {
 
   GL_CALL(glGenBuffers, 1, &face_vbo);
   GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, face_vbo);
-  GL_CALL(glBufferData, GL_ARRAY_BUFFER, sizeof(face_verts), face_verts, GL_STATIC_DRAW);
+  GL_CALL(glBufferData, GL_ARRAY_BUFFER, sizeof(face_verts), face_verts,
+                        GL_STATIC_DRAW);
 
-  GL_CALL(glVertexAttribPointer, 0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
+  GL_CALL(glVertexAttribPointer, 0, 3, GL_FLOAT, GL_FALSE,
+          sizeof(float) * 3, (void*)0);
   GL_CALL(glEnableVertexAttribArray, 0);
-  GL_CALL(glVertexAttribPointer, 1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)(sizeof(float) * 3 * 6));
+  GL_CALL(glVertexAttribPointer, 1, 2, GL_FLOAT, GL_FALSE,
+          sizeof(float) * 2, (void*)(sizeof(float) * 3 * 6));
   GL_CALL(glEnableVertexAttribArray, 1);
-  GL_CALL(glVertexAttribPointer, 2, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)(sizeof(float) * (3 * 6 + 2 * 6)));
+  GL_CALL(glVertexAttribPointer, 2, 2, GL_FLOAT, GL_FALSE,
+          sizeof(float) * 2, (void*)(sizeof(float) * (3 * 6 + 2 * 6)));
   GL_CALL(glEnableVertexAttribArray, 2);
 
   GL_CALL(glBindVertexArray, NULL);
+
+  // TextureArray --------------------------------------------------------------
 
   // So that this matches what OpenGL expects.
   stbi_set_flip_vertically_on_load(true);
@@ -290,18 +299,9 @@ int main() {
       exit(1);
   }
 
-
-  // Matrices ------------------------------------------------------------------
-
-  LOG(INFO) << "Window size. WIDTH: " << sdl_context.width()
-            << ", HEIGHT: " << sdl_context.height();
-
   // Voxel Terrain -------------------------------------------------------------
 
-  Texture atlas_texture(Assets::TexturePath("atlas.png"));
-  TextureAtlas atlas(std::move(atlas_texture), 16, 16);
-
-  VoxelTerrain terrain(&atlas);
+  VoxelTerrain terrain(&tex_array);
   if (!terrain.Init()) {
     LOG(ERROR) << "Could not initialize voxel terrain";
     exit(1);
@@ -422,30 +422,32 @@ int main() {
                           glm::translate(glm::mat4(1.0f), {5.0f, 0.0, 0.0f}));
     GL_CALL(glDrawArrays, GL_TRIANGLES, 0, 36);
 
-    /* glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f), */
-    /*                               glm::vec3(2.0f, 5.0f, -15.0f), */
-    /*                               glm::vec3(-1.5f, -2.2f, -2.5f), */
-    /*                               glm::vec3(-3.8f, -2.0f, -12.3f), */
-    /*                               glm::vec3(2.4f, -0.4f, -3.5f), */
-    /*                               glm::vec3(-1.7f, 3.0f, -7.5f), */
-    /*                               glm::vec3(1.3f, -2.0f, -2.5f), */
-    /*                               glm::vec3(1.5f, 2.0f, -2.5f), */
-    /*                               glm::vec3(1.5f, 0.2f, -1.5f), */
-    /*                               glm::vec3(-1.3f, 1.0f, -1.5f)}; */
+    glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec3(2.0f, 5.0f, -15.0f),
+                                  glm::vec3(-1.5f, -2.2f, -2.5f),
+                                  glm::vec3(-3.8f, -2.0f, -12.3f),
+                                  glm::vec3(2.4f, -0.4f, -3.5f),
+                                  glm::vec3(-1.7f, 3.0f, -7.5f),
+                                  glm::vec3(1.3f, -2.0f, -2.5f),
+                                  glm::vec3(1.5f, 2.0f, -2.5f),
+                                  glm::vec3(1.5f, 0.2f, -1.5f),
+                                  glm::vec3(-1.3f, 1.0f, -1.5f)};
 
-    /* for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) { */
-    /*   glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]); */
-    /*   float angle = sdl_context.seconds() * glm::radians(20.0f * i); */
-    /*   model = */
-    /*       glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f)); */
-    /*   simple_shader.SetMat4(Shader::Uniform::kModel, model); */
+    for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
+      glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
+      float angle = sdl_context.seconds() * glm::radians(20.0f * i);
+      model =
+          glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
+      simple_shader.SetMat4(Shader::Uniform::kModel, model);
 
-    /*   /1* glDrawArrays(GL_TRIANGLES, 0, 36); *1/ */
-    /* } */
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+
 
 
     Timer tex_array_timer = Timer::ManualTimer();
     tex_array_timer.Init();
+
 
     tex_array_shader.Use();
     camera.SetProjection(&tex_array_shader);
@@ -465,7 +467,7 @@ int main() {
       /* LOG(DEBUG) << "INDEX: " << i << ", COORD: " << coord.ToString(); */
       auto model =
           glm::translate(glm::mat4(1.0f),
-              glm::vec3(0.0f, coord.y * 4.1f, coord.x * 4.1f));
+              glm::vec3(20.0f, coord.y * 4.1f, coord.x * 4.1f));
 
       tex_array_shader.SetFloat({"u_texture_index"}, i);
 
@@ -475,20 +477,24 @@ int main() {
       glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
+
     float tex_array_time = tex_array_timer.End();
+
 
     // Draw the plane.
     alpha_test_shader.Use();
     camera.SetProjection(&alpha_test_shader);
     camera.SetView(&alpha_test_shader);
 
-    // We only need one texture for the plane.
-    grid.Set(&simple_shader, GL_TEXTURE0);
-
     GL_CALL(glBindVertexArray, plane_vao);
+
+    // We only need one texture for the plane.
+    grid.Set(&alpha_test_shader, GL_TEXTURE0);
+
     // The model at the origin.
-    simple_shader.SetMat4(Shader::Uniform::kModel, glm::mat4(1.0f));
+    alpha_test_shader.SetMat4(Shader::Uniform::kModel, glm::mat4(1.0f));
     GL_CALL(glDrawArrays, GL_TRIANGLE_STRIP, 0, 4);
+
 
 
     voxel_shader.Use();
@@ -507,7 +513,7 @@ int main() {
       ImGui::Text("Application Frame: %.3f ms", frame_time);
       ImGui::Text("Tex array time: %.3f ms", tex_array_time);
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-                  1000.0 * sdl_context.frame_delta(),
+                  1000.0f * sdl_context.frame_delta(),
                   sdl_context.framerate());
 
       ImGui::InputFloat3("Camera direction", (float*)camera.direction().data());

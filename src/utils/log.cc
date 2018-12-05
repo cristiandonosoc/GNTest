@@ -24,9 +24,9 @@ LogEntry::LogEntry(LogLevel level) {
   os_ << "[" << LogLevelToString(level) << "] ";
 }
 
-LogEntry::LogEntry(LogLevel level, const char* file, int line) {
+LogEntry::LogEntry(LogLevel level, const Location& location) {
   os_ << "[" << LogLevelToString(level) << "]"
-      << "[" << file << ":" << line << "] ";
+      << "[" << location.file << ":" << location.line << "] ";
 }
 
 LogEntry::~LogEntry() {

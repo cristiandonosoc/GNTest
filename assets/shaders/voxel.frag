@@ -2,7 +2,7 @@
 
 in vec2 tex_coord0;
 in vec2 tex_coord1;
-in uint tex_index;
+in float tex_index;
 
 uniform sampler2DArray u_tex_sampler0;
 // uniform sampler2D u_tex_sampler1;

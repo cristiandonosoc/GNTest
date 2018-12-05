@@ -5,6 +5,8 @@
 
 #include <sstream>
 
+#include "src/utils/location.h"
+
 namespace warhol {
 
 using LogLevel = int;
@@ -20,7 +22,9 @@ class LogEntry {
  public:
   LogEntry();
   LogEntry(LogLevel);
-  LogEntry(LogLevel, const char* file, int line);
+  LogEntry(LogLevel, const Location&);
+
+
   ~LogEntry();
 
   std::ostream& stream() { return os_; }
@@ -30,7 +34,12 @@ class LogEntry {
 };
 
 #define LOG(level) \
-  ::warhol::LogEntry(::warhol::LOG_##level, __FILE__, __LINE__).stream()
+  ::warhol::LogEntry(::warhol::LOG_##level, {__FILE__, __LINE__}).stream()
+
+#define CONTEXTUAL_LOG(level)                              \
+  ::warhol::LogEntry(::warhol::LOG_##level,                \
+                     Location::GetThreadCurrentLocation()) \
+      .stream()
 
 }  // namespace warhol
 

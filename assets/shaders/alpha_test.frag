@@ -5,10 +5,10 @@ in vec2 tex_coord0;
 
 out vec4 out_color;
 
-uniform sampler2D tex0;
+uniform sampler2D u_tex_sampler0;
 
 void main() {
-  vec4 texel = texture(tex0, tex_coord0);
+  vec4 texel = texture(u_tex_sampler0, tex_coord0);
   if (texel.a < 0.5)
     discard;
   out_color = texel;

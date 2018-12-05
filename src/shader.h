@@ -7,6 +7,7 @@
 #include <string>
 
 #include "src/graphics/GL/utils.h"
+#include "src/utils/location.h"
 #include "src/utils/macros.h"
 #include "src/utils/glm.h"
 
