@@ -71,6 +71,7 @@ class VoxelChunk {
 
   VoxelElement& operator[](int index);
   VoxelElement& GetVoxelElement(int x, int y, int z);
+  VoxelElement& GetVoxelElement(int index);
 
   // TODO(Cristian): Return a reference to the actual array?
   /* Voxel* voxels() { return voxels_; } */

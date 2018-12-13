@@ -53,17 +53,20 @@ const char* VoxelElement::TypeToString(Type type) {
 }
 
 // Vertex Element Texture Index
-/* #define VETI(type) (float)VoxelType::k##type */
+#define VETI(type) (float)VoxelType::k##type
 
-/* const std::array<float, 6>& VoxelElement::GetFaceTexIndices(Type type) { */
-/*   static std::map<VoxelElement::Type, std::array<float, 6>> map = { */
-/*       {VoxelElement::Type::kDirt, {VETI(Dirt), VETI(Dirt), VETI(Dirt), */
-/*                                    VETI(Dirt), VETI(Dirt), VETI(Dirt)}}}; */
+// Xmin, Xmax, Zmin, Zmax, Ymin, Ymax
+const std::array<float, 6>& VoxelElement::GetFaceTexIndices(Type type) {
+  static std::map<VoxelElement::Type, std::array<float, 6>> map = {
+      {VoxelElement::Type::kDirt, {VETI(Dirt), VETI(Dirt), VETI(Dirt),
+                                   VETI(Dirt), VETI(Dirt), VETI(Dirt)}},
+      {VoxelElement::Type::kGrassDirt, { VETI(GrassDirt), VETI(GrassDirt), VETI(GrassDirt),
+                                         VETI(GrassDirt), VETI(Dirt), VETI(Grass) }}};
 
-/*   auto it = map.find(type); */
-/*   assert (it != map.end()); */
-/*   return it->second; */
-/* } */
+  auto it = map.find(type);
+  assert(it != map.end());
+  return it->second;
+}
 
 
 
@@ -81,8 +84,16 @@ bool VoxelChunk::Init() {
   for (VoxelElement& voxel : elements_) {
     voxel.type = VoxelElement::Type::kDirt;
   }
+
+  for (size_t z = 0; z < kVoxelChunkSize; z++) {
+    for (size_t x = 0; x < kVoxelChunkSize; x++) {
+      size_t index =
+          Coord3ToArrayIndex(kVoxelChunkSize, x, kVoxelChunkSize - 1, z);
+      elements_[index].type = VoxelElement::Type::kGrassDirt;
+    }
+  }
   size_t index = Coord3ToArrayIndex(kVoxelChunkSize, 1, 1, 0);
-  elements_[index].type = VoxelElement::Type::kGrassDirt;
+  elements_[index].type = VoxelElement::Type::kNone;
 
   GL_CALL(glGenVertexArrays, 1, &vao_.value);
   GL_CALL(glBindVertexArray, vao_.value);
@@ -120,6 +131,10 @@ VoxelElement& VoxelChunk::GetVoxelElement(int x, int y, int z) {
   return elements_[index];
 }
 
+VoxelElement& VoxelChunk::GetVoxelElement(int index) {
+  return (*this)[index];
+}
+
 void VoxelChunk::CalculateMesh() {
   FUNCTION_TIMER();
 
@@ -150,7 +165,6 @@ void VoxelChunk::CalculateMesh() {
 
   size_t tex_index_start = vbo_data.size();
   for (auto& face : faces_) {
-    LOG(DEBUG) << "Adding tex index: " << face.tex_index;
     for (size_t i = 0; i < 4; i++)
       vbo_data.emplace_back(face.tex_index);
   }
@@ -241,96 +255,104 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
   std::vector<ExpandedVoxel> expanded_voxels;
 
   // Iterate from bottom to top (in our view, that's the Y axis).
-  for (int y = 0; y < side; y++) {
-    // TODO(Cristian): Can we update the mask on the fly and not dot 2 passes?
-    for (int z = 0; z < side; z++) {
-      for (int x = 0; x < side; x++) {
 
-        int index = Coord3ToArrayIndex(side, x, y, z);
-        // We found a quad, we see how big of a grouping we can do.
-        if (mask[index]) {
-          Quad3<int> quad = {};
-          quad.min = {x, y, z};
-          quad.max = {x, y, z};
+  for (int i = 0; i < (int)VoxelElement::Type::kCount; i++) {
+    VoxelElement::Type voxel_type = (VoxelElement::Type)i;
+    for (int y = 0; y < side; y++) {
+      // TODO(Cristian): Can we update the mask on the fly and not dot 2 passes?
+      for (int z = 0; z < side; z++) {
+        for (int x = 0; x < side; x++) {
+          int index = Coord3ToArrayIndex(side, x, y, z);
+          auto& voxel_element = GetVoxelElement(index);
+          if (mask[index] && voxel_element.type == voxel_type) {
+            // We found a quad, we see how big of a grouping we can do.
+            mask[index] = false;
+            Quad3<int> quad = {};
+            quad.min = {x, y, z};
+            quad.max = {x, y, z};
 
-          // We look over the X-axis to see how big this chunk is.
-          for (int ix = x + 1; ix < side; ix++) {
-            int new_index = Coord3ToArrayIndex(side, ix, y, z);
-            if (!mask[new_index]) {
-              break;
-            }
-
-            quad.max.x = ix;
-            mask[new_index] = false;
-          }
-
-          // We go over Z row for row to see if this chunk extends
-          bool found_z_extension = true;
-          for (int iz = z + 1; iz < side; iz++) {
-            // If any in this row doesn't match, this quad is not extensible.
-            for (int ix = x; ix <= quad.max.x; ix++) {
-              int new_index = Coord3ToArrayIndex(side, ix, y, iz);
-              if (!mask[new_index]) {
-                found_z_extension = false;
+            // We look over the X-axis to see how big this chunk is.
+            for (int ix = x + 1; ix < side; ix++) {
+              int new_index = Coord3ToArrayIndex(side, ix, y, z);
+              auto& new_voxel_elem = GetVoxelElement(new_index);
+              if (!mask[new_index] || new_voxel_elem.type != voxel_type)
                 break;
-              }
-            }
 
-            // We check if the row did extend the piece.
-            // If not, we could not extend and don't mark anything.
-            if (!found_z_extension) {
-              break;
-            }
-
-            // We were able to extend the chunk, so we mark it as not available
-            // anymore.
-            quad.max.z = iz;
-            for (int ix = x; ix <= quad.max.x; ix++) {
-              int new_index = Coord3ToArrayIndex(side, ix, y, iz);
+              quad.max.x = ix;
               mask[new_index] = false;
             }
-          }
 
-          // Now we see if we can make it grow upwards.
-          bool found_y_extension = true;
-          for (int iy = y + 1; iy < side; iy++) {
-            for (int iz = quad.min.z; iz <= quad.max.z; iz++) {
-              for (int ix = quad.min.x; ix <= quad.max.x; ix++) {
-                // We see if in this current x row we could extend all the way.
-                int new_index = Coord3ToArrayIndex(side, ix, iy, iz);
-                if (!mask[new_index]) {
-                  found_y_extension = false;
+            // We go over Z row for row to see if this chunk extends
+            bool found_z_extension = true;
+            for (int iz = z + 1; iz < side; iz++) {
+              // If any in this row doesn't match, this quad is not extensible.
+              for (int ix = x; ix <= quad.max.x; ix++) {
+                int new_index = Coord3ToArrayIndex(side, ix, y, iz);
+                auto& new_voxel_elem = GetVoxelElement(new_index);
+                if (!mask[new_index] || new_voxel_elem.type != voxel_type) {
+                  found_z_extension = false;
                   break;
                 }
               }
 
-              // We iterated over the current X row for this Z value and we
-              // couldn't find the extension.
-              if (!found_y_extension)
+              // We check if the row did extend the piece.
+              // If not, we could not extend and don't mark anything.
+              if (!found_z_extension) {
                 break;
-            }
+              }
 
-            // At this point, we iterated over the whole "plane" at this Y level
-            // and if we didn't find an extension, simply ignore it.
-            if (!found_y_extension) {
-              break;
-            }
-
-            // We found an extension upwards! We need to also mark whole plane
-            // as found (a lot of iteration :| ).
-            quad.max.y = iy;
-            for (int iz = quad.min.z; iz <= quad.max.z; iz++) {
-              for (int ix = quad.min.x; ix <= quad.max.x; ix++) {
-                int new_index = Coord3ToArrayIndex(side, ix, iy, iz);
+              // We were able to extend the chunk, so we mark it as not
+              // available anymore.
+              quad.max.z = iz;
+              for (int ix = x; ix <= quad.max.x; ix++) {
+                int new_index = Coord3ToArrayIndex(side, ix, y, iz);
                 mask[new_index] = false;
               }
             }
-          }
 
-          ExpandedVoxel expanded_voxel;
-          expanded_voxel.quad = std::move(quad);
-          expanded_voxel.type = VoxelElement::Type::kDirt;
-          expanded_voxels.push_back(std::move(expanded_voxel));
+            // Now we see if we can make it grow upwards.
+            bool found_y_extension = true;
+            for (int iy = y + 1; iy < side; iy++) {
+              for (int iz = quad.min.z; iz <= quad.max.z; iz++) {
+                for (int ix = quad.min.x; ix <= quad.max.x; ix++) {
+                  // We see if in this current x row we could extend all the
+                  // way.
+                  int new_index = Coord3ToArrayIndex(side, ix, iy, iz);
+                  auto& new_voxel_elem = GetVoxelElement(new_index);
+                  if (!mask[new_index] || new_voxel_elem.type != voxel_type) {
+                    found_y_extension = false;
+                    break;
+                  }
+                }
+
+                // We iterated over the current X row for this Z value and we
+                // couldn't find the extension.
+                if (!found_y_extension)
+                  break;
+              }
+
+              // At this point, we iterated over the whole "plane" at this Y
+              // level and if we didn't find an extension, simply ignore it.
+              if (!found_y_extension) {
+                break;
+              }
+
+              // We found an extension upwards! We need to also mark whole plane
+              // as found (a lot of iteration :| ).
+              quad.max.y = iy;
+              for (int iz = quad.min.z; iz <= quad.max.z; iz++) {
+                for (int ix = quad.min.x; ix <= quad.max.x; ix++) {
+                  int new_index = Coord3ToArrayIndex(side, ix, iy, iz);
+                  mask[new_index] = false;
+                }
+              }
+            }
+
+            ExpandedVoxel expanded_voxel;
+            expanded_voxel.quad = std::move(quad);
+            expanded_voxel.type = voxel_type;
+            expanded_voxels.push_back(std::move(expanded_voxel));
+          }
         }
       }
     }
@@ -352,8 +374,8 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     Vec3 max{(float)quad_max.x, (float)quad_max.y, (float)quad_max.z};
     max += {1.0f, 1.0f, 1.0f};
 
-    float tex_index = static_cast<float>(voxel.type);
-    LOG(DEBUG) << "Tex index is: " << tex_index;
+    auto tex_indices = VoxelElement::GetFaceTexIndices(voxel.type);
+
     TypedFace face;
     float* vert_ptr = nullptr;
     float* uvs_ptr = nullptr;
@@ -377,7 +399,7 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     uvs_ptr = AddToContainer(uvs_ptr, {min.y, max.z});
     uvs_ptr = AddToContainer(uvs_ptr, {max.y, min.z});
     uvs_ptr = AddToContainer(uvs_ptr, {max.y, max.z});
-    face.tex_index = tex_index;
+    face.tex_index = tex_indices[0];
     faces.emplace_back(std::move(face));
     // X max.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
@@ -389,8 +411,9 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     uvs_ptr = AddToContainer(uvs_ptr, {min.y, min.z});
     uvs_ptr = AddToContainer(uvs_ptr, {max.y, max.z});
     uvs_ptr = AddToContainer(uvs_ptr, {max.y, min.z});
-    face.tex_index = tex_index;
+    face.tex_index = tex_indices[1];
     faces.emplace_back(std::move(face));
+
     // Z min.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
     vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, min.z});
@@ -401,7 +424,7 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     uvs_ptr = AddToContainer(uvs_ptr, {min.x, min.y});
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.y});
     uvs_ptr = AddToContainer(uvs_ptr, {min.x, max.y});
-    face.tex_index = tex_index;
+    face.tex_index = tex_indices[2];
     faces.emplace_back(std::move(face));
     // Z max.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
@@ -413,8 +436,9 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.y});
     uvs_ptr = AddToContainer(uvs_ptr, {min.x, max.y});
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.y});
-    face.tex_index = tex_index;
+    face.tex_index = tex_indices[3];
     faces.emplace_back(std::move(face));
+
     // Y min.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
     vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, max.z});
@@ -425,7 +449,7 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.z});
     uvs_ptr = AddToContainer(uvs_ptr, {min.x, min.z});
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.z});
-    face.tex_index = tex_index;
+    face.tex_index = tex_indices[4];
     faces.emplace_back(std::move(face));
     // Y max.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
@@ -437,7 +461,7 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.z});
     uvs_ptr = AddToContainer(uvs_ptr, {min.x, min.z});
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.z});
-    face.tex_index = tex_index;
+    face.tex_index = tex_indices[5];
     faces.emplace_back(std::move(face));
   }
 

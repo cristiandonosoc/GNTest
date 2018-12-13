@@ -2,8 +2,8 @@
 # This code has a BSD license. See LICENSE.
 
 declare_args() {
-  sdl2_include_path = getenv("SDL2_SDK") + "/include"
-  sdl2_lib_path = getenv("SDL2_SDK") + "/lib"
+  sdl2_include_path = getenv("sdl2_sdk") + "/include"
+  sdl2_lib_path = getenv("sdl2_sdk") + "/lib"
 }
 
 config("sdl2_config") {

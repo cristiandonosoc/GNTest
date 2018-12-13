@@ -1,3 +1,8 @@
+declare_args() {
+  extra_includes = ""
+}
+
+
 config("default_include_dirs") {
   include_dirs = [
     "${root_build_dir}",
@@ -11,6 +16,13 @@ config("default_include_dirs") {
       "/usr/include",
     ]
   }
+
+  if (extra_includes != "") {
+    include_dirs += [
+      "${extra_includes}",
+    ]
+  }
+
 }
 
 group("default") {
