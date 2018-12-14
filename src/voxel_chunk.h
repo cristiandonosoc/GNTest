@@ -34,8 +34,16 @@ struct VoxelElement {
     kCount,  // Not valid, should never be addressed.
   };
   static const char* TypeToString(Type);
+
+  // Represents the texture coordinates a particular Voxel will face for each
+  // particular face.
+  struct FaceTexIndices {
+    float x_min, x_max;
+    float z_min, z_max;
+    float y_min, y_max;
+  };
   // Format is x-min/max, z-min/max, y-min/max.
-  static const std::array<float, 6>& GetFaceTexIndices(Type);
+  static const FaceTexIndices& GetFaceTexIndices(Type);
 
   explicit operator bool() const { return type != Type::kNone; }
 
@@ -82,8 +90,12 @@ class VoxelChunk {
   uint32_t vbo() const { return vbo_.value; }
   uint32_t ebo() const { return ebo_.value; }
 
+  const std::vector<bool>& mask() const { return mask_; }
+
  private:
   std::vector<TypedFace> CalculateFaces();
+
+
 
   std::vector<ExpandedVoxel> ExpandVoxels();
   std::vector<TypedFace>
@@ -94,6 +106,8 @@ class VoxelChunk {
   CalculateFacesZ(VoxelType, int z, int z_to_check, Quad3<int>);
 
   VoxelElement elements_[kVoxelChunkVoxelCount];
+  std::vector<bool> mask_;
+
   std::vector<TypedFace> faces_;
   size_t face_count_;
 

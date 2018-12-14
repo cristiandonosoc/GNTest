@@ -56,25 +56,28 @@ const char* VoxelElement::TypeToString(Type type) {
 #define VETI(type) (float)VoxelType::k##type
 
 // Xmin, Xmax, Zmin, Zmax, Ymin, Ymax
-const std::array<float, 6>& VoxelElement::GetFaceTexIndices(Type type) {
-  static std::map<VoxelElement::Type, std::array<float, 6>> map = {
-      {VoxelElement::Type::kDirt, {VETI(Dirt), VETI(Dirt), VETI(Dirt),
-                                   VETI(Dirt), VETI(Dirt), VETI(Dirt)}},
-      {VoxelElement::Type::kGrassDirt, { VETI(GrassDirt), VETI(GrassDirt), VETI(GrassDirt),
-                                         VETI(GrassDirt), VETI(Dirt), VETI(Grass) }}};
+const VoxelElement::FaceTexIndices&
+VoxelElement::GetFaceTexIndices(Type type) {
+  static std::map<VoxelElement::Type, VoxelElement::FaceTexIndices> map = {
+      {VoxelElement::Type::kDirt,
+        { VETI(Dirt), VETI(Dirt), VETI(Dirt),
+          VETI(Dirt), VETI(Dirt), VETI(Dirt) } },
+
+      {VoxelElement::Type::kGrassDirt,
+        { VETI(GrassDirt), VETI(GrassDirt), VETI(GrassDirt),
+          VETI(GrassDirt), VETI(Dirt), VETI(Grass) } }
+  };
 
   auto it = map.find(type);
   assert(it != map.end());
   return it->second;
 }
 
-
-
 // VoxelChunk ------------------------------------------------------------------
 
-
-static std::vector<TypedFace>
-CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>&);
+std::vector<TypedFace>
+CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels,
+                         const std::vector<bool>&);
 
 
 VoxelChunk::VoxelChunk() = default;
@@ -94,6 +97,9 @@ bool VoxelChunk::Init() {
   }
   size_t index = Coord3ToArrayIndex(kVoxelChunkSize, 1, 1, 0);
   elements_[index].type = VoxelElement::Type::kNone;
+
+  GetVoxelElement(0, kVoxelChunkSize - 1, 1).type = VoxelElement::Type::kNone;
+  GetVoxelElement(0, kVoxelChunkSize - 2, 1).type = VoxelElement::Type::kGrassDirt;
 
   GL_CALL(glGenVertexArrays, 1, &vao_.value);
   GL_CALL(glBindVertexArray, vao_.value);
@@ -227,26 +233,31 @@ void VoxelChunk::CalculateMesh() {
   }
 }
 
-std::vector<TypedFace> VoxelChunk::CalculateFaces() {
+std::vector<TypedFace>
+VoxelChunk::CalculateFaces() {
   FUNCTION_TIMER();
   // We iterate over z and creating the greatest chunks we can.
   std::vector<ExpandedVoxel> expanded_voxels = ExpandVoxels();
 
   // Get the faces from the expanded voxels.
-  std::vector<TypedFace> faces = CalculateFacesFromVoxels(expanded_voxels);
+  std::vector<TypedFace> faces =
+      CalculateFacesFromVoxels(expanded_voxels, mask_);
   return faces;
 }
 
-std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
+std::vector<ExpandedVoxel>
+VoxelChunk::ExpandVoxels() {
   FUNCTION_TIMER();
   constexpr int side = kVoxelChunkSize;
 
   // Look over which voxels are there and create one big mask 3D matrix.
   std::bitset<side * side * side> mask;
+  mask_.reserve(side * side * side);
   for (int y = 0; y < side; y++) {
     for (int z = 0; z < side; z++) {
       for (int x = 0; x < side; x++) {
         int index = Coord3ToArrayIndex(side, x, y, z);
+        mask_[index] = (bool)elements_[index];
         mask[index] = (bool)elements_[index];
       }
     }
@@ -258,6 +269,7 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
 
   for (int i = 0; i < (int)VoxelElement::Type::kCount; i++) {
     VoxelElement::Type voxel_type = (VoxelElement::Type)i;
+
     for (int y = 0; y < side; y++) {
       // TODO(Cristian): Can we update the mask on the fly and not dot 2 passes?
       for (int z = 0; z < side; z++) {
@@ -297,9 +309,8 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
 
               // We check if the row did extend the piece.
               // If not, we could not extend and don't mark anything.
-              if (!found_z_extension) {
+              if (!found_z_extension)
                 break;
-              }
 
               // We were able to extend the chunk, so we mark it as not
               // available anymore.
@@ -362,10 +373,11 @@ std::vector<ExpandedVoxel> VoxelChunk::ExpandVoxels() {
 }
 
 std::vector<TypedFace>
-CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
+CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels,
+                         const std::vector<bool>&) {
   FUNCTION_TIMER();
   std::vector<TypedFace> faces;
-  faces.reserve(6 * voxels.size());
+
 
   for (const ExpandedVoxel& voxel : voxels) {
     auto& quad_min = voxel.quad.min;
@@ -380,6 +392,17 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     float* vert_ptr = nullptr;
     float* uvs_ptr = nullptr;
 
+#if 0
+
+    auto x_faces = CalculateFacesX(voxels, mask);
+    faces.insert(faces.end(), x_faces.begin(), x_faces.end());
+    auto z_faces = CalculateFacesZ(voxels, mask);
+    faces.insert(faces.end(), z_faces.begin(), z_faces.end());
+    auto y_faces = CalculateFacesY(voxels, mask);
+    faces.insert(faces.end(), y_faces.begin(), y_faces.end());
+
+#endif
+
     /* uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.max().y}); */
     /* uvs_ptr = AddToContainer(uvs_ptr, {uvs.min().x, uvs.min().y}); */
     /* uvs_ptr = AddToContainer(uvs_ptr, {uvs.max().x, uvs.max().y}); */
@@ -389,42 +412,46 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     /* uvs_ptr = AddToContainer(uvs_ptr, {0.0f, 1.0f}); */
     /* uvs_ptr = AddToContainer(uvs_ptr, {1.0f, 1.0f}); */
 
-    // X min.
-    face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
-    vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, min.z});
-    vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, max.z});
-    vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, min.z});
-    vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, max.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {min.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {min.y, max.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {max.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {max.y, max.z});
-    face.tex_index = tex_indices[0];
-    faces.emplace_back(std::move(face));
+    /* // X min. */
+    /* face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs; */
+    /* vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, min.z}); */
+    /* vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, max.z}); */
+    /* vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, min.z}); */
+    /* vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, max.z}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {min.z, min.y}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {max.z, min.y}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {min.z, max.y}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {max.z, max.y}); */
+    /* face.tex_index = tex_indices.x_min; */
+    /* faces.emplace_back(std::move(face)); */
     // X max.
-    face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
-    vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, max.z});
-    vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, min.z});
-    vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, max.z});
-    vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {min.y, max.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {min.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {max.y, max.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {max.y, min.z});
-    face.tex_index = tex_indices[1];
-    faces.emplace_back(std::move(face));
+    /* face = {}; */
+    /* vert_ptr = face.verts; */
+    /* uvs_ptr = face.uvs; */
+    /* vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, max.z}); */
+    /* vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, min.z}); */
+    /* vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, max.z}); */
+    /* vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, min.z}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {max.z, min.y}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {min.z, min.y}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {max.z, max.y}); */
+    /* uvs_ptr = AddToContainer(uvs_ptr, {min.z, max.y}); */
+    /* face.tex_index = tex_indices.x_max; */
+    /* faces.emplace_back(std::move(face)); */
 
     // Z min.
-    face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
-    vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, min.z});
+    face = {};
+    vert_ptr = face.verts;
+    uvs_ptr = face.uvs;
     vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, min.z});
-    vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, min.z});
+    vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, min.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, min.z});
-    uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.y});
+    vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, min.z});
     uvs_ptr = AddToContainer(uvs_ptr, {min.x, min.y});
-    uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.y});
+    uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.y});
     uvs_ptr = AddToContainer(uvs_ptr, {min.x, max.y});
-    face.tex_index = tex_indices[2];
+    uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.y});
+    face.tex_index = tex_indices.z_min;
     faces.emplace_back(std::move(face));
     // Z max.
     face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
@@ -436,11 +463,13 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.y});
     uvs_ptr = AddToContainer(uvs_ptr, {min.x, max.y});
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.y});
-    face.tex_index = tex_indices[3];
+    face.tex_index = tex_indices.z_max;
     faces.emplace_back(std::move(face));
 
     // Y min.
-    face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
+    face = {};
+    vert_ptr = face.verts;
+    uvs_ptr = face.uvs;
     vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, min.z});
@@ -449,10 +478,12 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.z});
     uvs_ptr = AddToContainer(uvs_ptr, {min.x, min.z});
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.z});
-    face.tex_index = tex_indices[4];
+    face.tex_index = tex_indices.y_min;
     faces.emplace_back(std::move(face));
     // Y max.
-    face = {}; vert_ptr = face.verts; uvs_ptr = face.uvs;
+    face = {};
+    vert_ptr = face.verts;
+    uvs_ptr = face.uvs;
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {max.x, max.y, max.z});
     vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, min.z});
@@ -461,13 +492,12 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels) {
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.z});
     uvs_ptr = AddToContainer(uvs_ptr, {min.x, min.z});
     uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.z});
-    face.tex_index = tex_indices[5];
+    face.tex_index = tex_indices.y_max;
     faces.emplace_back(std::move(face));
   }
 
   return faces;
 }
-
 
 void
 VoxelChunk::Render(Shader* shader) {
@@ -479,78 +509,93 @@ VoxelChunk::Render(Shader* shader) {
           GL_TRIANGLES, 6 * faces_.size(), GL_UNSIGNED_INT, (void*)0);
 }
 
-#if 0
-
 // NOTE(Cristian): This is an experiment to reduce the amount of faces sent
 //                 to draw, by expanding the faces once we have the expanded
 //                 voxels.
+std::vector<TypedFace>
+CalculateFacesX(const std::vector<ExpandedVoxel>& voxels,
+                const std::vector<bool>& mask) {
+  std::vector<TypedFace> faces;
 
-std::vector<Quad3<int>>renderdoc capture glBufferData
-VoxelChunk::CalculateFacesX(int x, int x_to_check, Quad3<int> quad) {
-  std::vector<Quad3<int>> faces;
-  constexpr int side = kVoxelChunkSize;
+  for (auto& voxel : voxels) {
+    auto& quad = voxel.quad;
+    auto& face_tex_indices = VoxelElement::GetFaceTexIndices(voxel.type);
 
-  std::bitset<side * side> slots;
-  for (int y = quad.min.y; y <= quad.max.y; y++) {
-    for (int z = quad.min.y; z <= quad.max.z; z++) {
-      size_t index = Coord2ToArrayIndex(side, z, y);
-      if (slots[index])
-        continue;
-      slots[index] = true;
+    // Xmin
+    int min_x = quad.min.x;
+    std::vector<bool> face_mask((quad.max.y - quad.min.y) *
+                                (quad.max.z * quad.min.z));
+    // This index will track where we are in the face mask.
+    int i = -1, ii = -1;
+    for (int y = quad.min.y; y <= quad.max.y; y++) {
+      for (int z = quad.min.z; z <= quad.max.z; z++) {
+        i++;
+        size_t min_index = Coord3ToArrayIndex(kVoxelChunkSize, min_x - 1, y, z);
+        // If either we have already seen this part of the face or this face is
+        // occluded, we ignore it.
+        if (face_mask[i] || mask[min_index])
+          continue;
 
-      // We check if the voxel below exists. If it does, then this
-      // face is not visible.
-      if (GetVoxelElement(x_to_check, y, z))
-        continue;
+        // This face is visible.
+        face_mask[i] = true;
+        Quad3<int> face_quad = {};
+        face_quad.min = {min_x, y, z};
+        face_quad.max = {min_x, y, z};
 
-      // This face is visible.
-      Quad3<int> face;
-      face.min = {x, y, z};
-      face.max = {x, y, z};
-
-      // We look how bit we can make this grow z-wise.
-      for (int iz = z + 1; iz < quad.max.z; iz++) {
-        size_t new_index = Coord2ToArrayIndex(side, iz, y);
-        if (slots[new_index])
-          break;
-        slots[new_index] = true;
-        if (GetVoxelElement(x_to_check, y, iz))
-          break;
-
-        // We can grow the face.
-        face.max.z = iz;
-      }
-
-      // We see how much we can grow the face y-wise
-      bool found_y_extension = true;
-      for (int iy = y + 1; iy <= quad.max.y; iy++) {
+        // We see how much we can make it grow.
+        ii = i;
         for (int iz = z + 1; iz <= quad.max.z; iz++) {
-          // We check if the current face is visible all the way.
-          size_t new_index = Coord2ToArrayIndex(side, iz, iy);
-          if (slots[new_index]) {
-            found_y_extension = false;
+          ii++;
+          size_t new_index =
+              Coord3ToArrayIndex(kVoxelChunkSize, min_x - 1, y, iz);
+          if (face_mask[ii] || mask[new_index])
             break;
-          }
-          slots[new_index] = true;
-          if (GetVoxelElement(x_to_check, iy, iz)) {
-            found_y_extension = false;
-            break;
+          face_mask[ii] = true;
+          face_quad.max.z++;
+        }
+        ii = i;
+        for (int iy = y + 1; iy <= quad.max.y; iy++) {
+          bool found_y_extension = true;
+          for (int iz = z + 1; iz <= face_quad.max.z; iz++) {
+            ii++;
+            size_t new_index =
+                Coord3ToArrayIndex(kVoxelChunkSize, min_x - 1, iy, iz);
+            if (face_mask[ii] || mask[new_index]) {
+              found_y_extension = false;
+              break;
+            }
+            if (!found_y_extension)
+              break;
+            face_quad.max.y++;
           }
         }
 
-        if (!found_y_extension)
-          break;
-        face.max.y = iy;
-      }
+        TypedFace face = {};
+        float* vert_ptr = face.verts;
+        float* uvs_ptr = face.uvs;
 
-      // Now we have grown the face as bit as it gets.
-      faces.push_back(std::move(face));
+        Vec3 min{(float)face_quad.min.x,
+                 (float)face_quad.min.y,
+                 (float)face_quad.min.z};
+        Vec3 max{(float)(face_quad.max.x + 1),
+                 (float)(face_quad.max.y + 1),
+                 (float)(face_quad.max.z + 1)};
+
+        vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, min.z});
+        vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, max.z});
+        vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, min.z});
+        vert_ptr = AddToContainer(vert_ptr, {min.x, max.y, max.z});
+        uvs_ptr = AddToContainer(uvs_ptr, {min.z, min.y});
+        uvs_ptr = AddToContainer(uvs_ptr, {max.z, min.y});
+        uvs_ptr = AddToContainer(uvs_ptr, {min.z, max.y});
+        uvs_ptr = AddToContainer(uvs_ptr, {max.z, max.y});
+        face.tex_index = face_tex_indices.x_min;
+        faces.push_back(std::move(face));
+      }
     }
   }
 
   return faces;
 }
-
-#endif
 
 }  // namespace warhol
