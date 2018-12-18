@@ -135,8 +135,20 @@ struct Vec3 {
   float y;
   float z;
 
+  Vec3() = default;
+  Vec3(int x, int y, int z) : x((float)x), y((float)y), z((float)z) {}
+  Vec3(float x, float y, float z) : x(x), y(y), z(z) {}
+
   float* data() { return (float*)this; }
   const float* data() const { return (const float*)this; }
+
+  // Operators -----------------------------------------------------------------
+
+  float& operator[](size_t i) {
+    assert(i < 3);
+    float* as_float = reinterpret_cast<float*>(this);
+    return *(as_float + i);
+  }
 
   // Vector Operations ---------------------------------------------------------
 

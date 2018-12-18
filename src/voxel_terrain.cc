@@ -19,7 +19,7 @@ VoxelTerrain::VoxelTerrain(TextureArray2D* tex_array) : tex_array_(tex_array) {}
 bool VoxelTerrain::Init() {
   // Create the initial chunk.
   Pair3<int> coord = {0, 0, 0};
-  VoxelChunk chunk(tex_array_);
+  VoxelChunk chunk;
   if (!chunk.Init())
     return false;
   chunk.CalculateMesh();

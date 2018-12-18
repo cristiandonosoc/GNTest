@@ -62,6 +62,7 @@ struct TypedFace {
   float verts[kVertCount];
   float uvs[kUVCount];
   float tex_index;
+  Vec3 face_color = {};
 
   VoxelType type = VoxelType::kNone;
   // TODO(Cristian): Normals.
@@ -71,7 +72,6 @@ struct TypedFace {
 class VoxelChunk {
  public:
   VoxelChunk();
-  VoxelChunk(TextureArray2D*);
 
   bool Init();
   void CalculateMesh();
@@ -80,11 +80,6 @@ class VoxelChunk {
   VoxelElement& operator[](int index);
   VoxelElement& GetVoxelElement(int x, int y, int z);
   VoxelElement& GetVoxelElement(int index);
-
-  // TODO(Cristian): Return a reference to the actual array?
-  /* Voxel* voxels() { return voxels_; } */
-  /* size_t voxel_count() const { return ARRAY_SIZE(voxels_); } */
-  /* Voxel& GetVoxel(size_t x, size_t y, size_t z); */
 
   uint32_t vao() const { return vao_.value; }
   uint32_t vbo() const { return vbo_.value; }
@@ -95,23 +90,12 @@ class VoxelChunk {
  private:
   std::vector<TypedFace> CalculateFaces();
 
-
-
   std::vector<ExpandedVoxel> ExpandVoxels();
-  std::vector<TypedFace>
-  CalculateFacesX(VoxelType, int z, int z_to_check, Quad3<int>);
-  std::vector<TypedFace>
-  CalculateFacesY(VoxelType, int z, int z_to_check, Quad3<int>);
-  std::vector<TypedFace>
-  CalculateFacesZ(VoxelType, int z, int z_to_check, Quad3<int>);
 
   VoxelElement elements_[kVoxelChunkVoxelCount];
   std::vector<bool> mask_;
 
   std::vector<TypedFace> faces_;
-  size_t face_count_;
-
-  TextureArray2D* tex_array_;   // Not owning.
 
   // TODO(Cristian): Stop leaking these.
   ClearOnMove<uint32_t> vao_;

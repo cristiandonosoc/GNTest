@@ -10,15 +10,19 @@
 
 namespace warhol {
 
-inline size_t
-Coord2ToArrayIndex(size_t side, size_t x, size_t y) {
+inline int
+Coord2ToArrayIndex(int side, int x, int y) {
+  if (x < 0 || x >= side || y < 0 || y >= side)
+    return -1;
   return x + y * side;
 }
 
-inline size_t
-Coord3ToArrayIndex(size_t side, size_t x, size_t y, size_t z) {
-  size_t z_offset = z * side;
-  size_t y_offset = y * side * side;
+inline int
+Coord3ToArrayIndex(int side, int x, int y, int z) {
+  if (x < 0 || x >= side || y < 0 || y >= side || z < 0 || z >= side)
+    return -1;
+  int z_offset = z * side;
+  int y_offset = y * side * side;
   return x + y_offset + z_offset;
 }
 
