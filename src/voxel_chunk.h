@@ -75,11 +75,12 @@ class VoxelChunk {
 
   bool Init();
   void CalculateMesh();
-  void Render(Shader*);
+  void Render(Shader*, Vec3 offset);
 
   VoxelElement& operator[](int index);
-  VoxelElement& GetVoxelElement(int x, int y, int z);
-  VoxelElement& GetVoxelElement(int index);
+  VoxelElement& GetVoxel(const Pair3<int>&);
+  VoxelElement& GetVoxel(int x, int y, int z);
+  VoxelElement& GetVoxel(int index);
 
   uint32_t vao() const { return vao_.value; }
   uint32_t vbo() const { return vbo_.value; }
@@ -87,20 +88,26 @@ class VoxelChunk {
 
   const std::vector<bool>& mask() const { return mask_; }
 
+  bool initialized() const { return initialized_; }
+
  private:
+  std::vector<ExpandedVoxel> ExpandVoxels();
   std::vector<TypedFace> CalculateFaces();
 
-  std::vector<ExpandedVoxel> ExpandVoxels();
-
   VoxelElement elements_[kVoxelChunkVoxelCount];
+
+  // TODO(Cristian): This information is not necessary to be kept track of.
+  //                 Can be calculated on the fly.
+  std::vector<TypedFace> faces_;
   std::vector<bool> mask_;
 
-  std::vector<TypedFace> faces_;
-
   // TODO(Cristian): Stop leaking these.
+  // TODO(Cristian): This should belong to a mesh class.
   ClearOnMove<uint32_t> vao_;
   ClearOnMove<uint32_t> vbo_;
   ClearOnMove<uint32_t> ebo_;
+
+  bool initialized_ = false;
 };
 
 }  // namespace warhol

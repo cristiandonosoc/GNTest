@@ -327,6 +327,9 @@ int main() {
 
   LOG(INFO) << "Going to draw";
 
+  Pair3<int> indices = {};
+  float current_time = sdl_context.seconds();
+
   bool running = true;
   while (running) {
     Timer frame_timer = Timer::ManualTimer();
@@ -398,6 +401,27 @@ int main() {
     if (camera_changed)
       camera.UpdateView();
 
+    static int limit = 6;
+
+    float t = sdl_context.seconds();
+    if (t - current_time > 0.1f) {
+      current_time = t;
+      terrain.SetVoxel({indices.x, indices.y, indices.z},
+                       VoxelElement::Type::kGrassDirt);
+      terrain.Update();
+      LOG(DEBUG) << "Added voxel: " << indices.ToString();
+      indices.x++;
+      if (indices.x >= limit) {
+        indices.x = 0;
+        indices.z++;
+        if (indices.z >= limit) {
+          indices.z = 0;
+          indices.y++;
+        }
+      }
+    }
+
+    // Drawing -----------------------------------------------------------------
 
     if (!ui_state.polygon_mode) {
       GL_CALL(glPolygonMode, GL_FRONT_AND_BACK, GL_FILL);
@@ -442,8 +466,6 @@ int main() {
 
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
-
-
 
     Timer tex_array_timer = Timer::ManualTimer();
     tex_array_timer.Init();
@@ -493,8 +515,6 @@ int main() {
     // The model at the origin.
     alpha_test_shader.SetMat4(Shader::Uniform::kModel, glm::mat4(1.0f));
     GL_CALL(glDrawArrays, GL_TRIANGLE_STRIP, 0, 4);
-
-
 
     voxel_shader.Use();
     camera.SetProjection(&voxel_shader);

@@ -206,10 +206,10 @@ struct Vec3 {
   }
 
   Vec3 operator*(float v) const { return {x * v, y * v, z * v}; }
-  void operator*=(const Vec3 rhs) {
-    x *= rhs.x;
-    y *= rhs.y;
-    z *= rhs.z;
+  void operator*=(float v) {
+    x *= v;
+    y *= v;
+    z *= v;
   }
 
   // Misc ----------------------------------------------------------------------

@@ -48,7 +48,7 @@ struct GL {
               location.line,
               func_str,
               error_name);
-      assert(false);
+      exit(1);
     }
   }
 };

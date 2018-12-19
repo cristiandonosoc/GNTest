@@ -23,15 +23,27 @@ class VoxelTerrain {
   VoxelTerrain(TextureArray2D*);
   bool Init();
 
+  void SetVoxel(Pair3<int> coord, VoxelElement::Type);
+  // This will update all the chucks that have changed since the last update.
+  void Update();
 
   void Render(Shader*);
 
   VoxelChunkHash& voxel_chunks() { return voxel_chunks_; }
 
+  bool initialized() const { return initialized_; }
+
  private:
+  // Struct to keep temporary track of relevent information.
+  struct VoxelChunkMetadata {
+    Pair3<int> chunk_coord;
+    bool dirty = false;
+  };
   VoxelChunkHash voxel_chunks_;
+  std::vector<VoxelChunkMetadata> temp_metadata_;
 
   TextureArray2D* tex_array_;   // Not owning. Must outlive.
+  bool initialized_ = false;
 };
 
 }  // namespace warhol

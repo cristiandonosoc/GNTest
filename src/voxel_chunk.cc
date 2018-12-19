@@ -82,26 +82,6 @@ VoxelElement::GetFaceTexIndices(Type type) {
 VoxelChunk::VoxelChunk() = default;
 
 bool VoxelChunk::Init() {
-  for (VoxelElement& voxel : elements_) {
-    voxel.type = VoxelElement::Type::kDirt;
-  }
-
-  for (size_t z = 0; z < kVoxelChunkSize; z++) {
-    for (size_t x = 0; x < kVoxelChunkSize; x++) {
-      size_t index =
-          Coord3ToArrayIndex(kVoxelChunkSize, x, kVoxelChunkSize - 1, z);
-      elements_[index].type = VoxelElement::Type::kGrassDirt;
-    }
-  }
-
-  /* size_t index = Coord3ToArrayIndex(kVoxelChunkSize, 1, 1, 0); */
-  /* elements_[index].type = VoxelElement::Type::kNone; */
-
-  /* GetVoxelElement(0, kVoxelChunkSize - 1, 1).type = VoxelElement::Type::kNone; */
-  /* GetVoxelElement(0, kVoxelChunkSize - 2, 1).type = VoxelElement::Type::kGrassDirt; */
-  GetVoxelElement(2, 2, 2).type = VoxelElement::Type::kGrassDirt;
-
-
   GL_CALL(glGenVertexArrays, 1, &vao_.value);
   GL_CALL(glBindVertexArray, vao_.value);
 
@@ -120,6 +100,7 @@ bool VoxelChunk::Init() {
   GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, NULL);
   GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, NULL);
 
+  initialized_ = true;
   return true;
 }
 
@@ -129,7 +110,11 @@ VoxelElement& VoxelChunk::operator[](int index) {
   return elements_[index];
 }
 
-VoxelElement& VoxelChunk::GetVoxelElement(int x, int y, int z) {
+VoxelElement& VoxelChunk::GetVoxel(const Pair3<int>& coord) {
+  return GetVoxel(coord.x, coord.y, coord.z);
+}
+
+VoxelElement& VoxelChunk::GetVoxel(int x, int y, int z) {
   if (x < 0 || y < 0 || z < 0)
     return invalid_element;
   size_t index = Coord3ToArrayIndex(kVoxelChunkSize, x, y, z);
@@ -138,19 +123,17 @@ VoxelElement& VoxelChunk::GetVoxelElement(int x, int y, int z) {
   return elements_[index];
 }
 
-VoxelElement& VoxelChunk::GetVoxelElement(int index) {
+VoxelElement& VoxelChunk::GetVoxel(int index) {
   return (*this)[index];
 }
 
+// CalculateMesh ---------------------------------------------------------------
+
 void VoxelChunk::CalculateMesh() {
-  FUNCTION_TIMER();
+  /* FUNCTION_TIMER(); */
 
   // Get the calculated faces.
   faces_ = CalculateFaces();
-
-  std::vector<int> texture_indices;
-
-  NAMED_TIMER(inserting_data, "Inserting data");
 
   // Put them into separate buckets so we can but them separatedly into the
   // OpenGL buffers.
@@ -159,7 +142,7 @@ void VoxelChunk::CalculateMesh() {
                    TypedFace::kUVCount * faces_.size() +    // UV
                    4 * faces_.size());                      // Tex index
 
-  // We put the vertex data first, then the uv
+  // We put the vertex data first, then the uv.
   for (auto& face : faces_) {
     vbo_data.insert(vbo_data.end(), face.verts,
                                     face.verts + TypedFace::kVertCount);
@@ -185,13 +168,10 @@ void VoxelChunk::CalculateMesh() {
     }
   }
 
-  inserting_data.End();
-
   GL_CALL(glBindVertexArray, vao_.value);
 
-
   {
-    TIMER("Send data over to GPU");
+    /* TIMER("Send data over to GPU"); */
 
     // Send the data over to the GPU.
     GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, vbo_.value);
@@ -220,18 +200,15 @@ void VoxelChunk::CalculateMesh() {
     GL_CALL(glEnableVertexAttribArray, 2);
 
     size_t face_color_offset = face_color_start * sizeof(float);
-    GL_CALL(glVertexAttribPointer, 3, 3, GL_FLOAT, GL_FALSE,
-                                   3 * sizeof(float),
-                                   (void*)(face_color_offset));
-    GL_CALL(glEnableVertexAttribArray, 3);
-
-
-
-
+    (void)face_color_offset;
+    /* GL_CALL(glVertexAttribPointer, 3, 3, GL_FLOAT, GL_FALSE, */
+    /*                                3 * sizeof(float), */
+    /*                                (void*)(face_color_offset)); */
+    /* GL_CALL(glEnableVertexAttribArray, 3); */
   }
 
   {
-    TIMER("Indices");
+    /* TIMER("Indices"); */
 
     // Calculate the indices
     std::vector<uint32_t> indices;
@@ -256,8 +233,7 @@ void VoxelChunk::CalculateMesh() {
 
 std::vector<TypedFace>
 VoxelChunk::CalculateFaces() {
-  LOG(DEBUG) << __PRETTY_FUNCTION__;
-  FUNCTION_TIMER();
+  /* FUNCTION_TIMER(); */
   // We iterate over z and creating the greatest chunks we can.
   std::vector<ExpandedVoxel> expanded_voxels = ExpandVoxels();
 
@@ -269,7 +245,7 @@ VoxelChunk::CalculateFaces() {
 
 std::vector<ExpandedVoxel>
 VoxelChunk::ExpandVoxels() {
-  FUNCTION_TIMER();
+  /* FUNCTION_TIMER(); */
   constexpr int side = kVoxelChunkSize;
 
   // Look over which voxels are there and create one big mask 3D matrix.
@@ -297,7 +273,7 @@ VoxelChunk::ExpandVoxels() {
       for (int z = 0; z < side; z++) {
         for (int x = 0; x < side; x++) {
           int index = Coord3ToArrayIndex(side, x, y, z);
-          auto& voxel_element = GetVoxelElement(index);
+          auto& voxel_element = GetVoxel(index);
           if (mask[index] && voxel_element.type == voxel_type) {
             // We found a quad, we see how big of a grouping we can do.
             mask[index] = false;
@@ -308,7 +284,7 @@ VoxelChunk::ExpandVoxels() {
             // We look over the X-axis to see how big this chunk is.
             for (int ix = x + 1; ix < side; ix++) {
               int new_index = Coord3ToArrayIndex(side, ix, y, z);
-              auto& new_voxel_elem = GetVoxelElement(new_index);
+              auto& new_voxel_elem = GetVoxel(new_index);
               if (!mask[new_index] || new_voxel_elem.type != voxel_type)
                 break;
 
@@ -322,7 +298,7 @@ VoxelChunk::ExpandVoxels() {
               // If any in this row doesn't match, this quad is not extensible.
               for (int ix = x; ix <= quad.max.x; ix++) {
                 int new_index = Coord3ToArrayIndex(side, ix, y, iz);
-                auto& new_voxel_elem = GetVoxelElement(new_index);
+                auto& new_voxel_elem = GetVoxel(new_index);
                 if (!mask[new_index] || new_voxel_elem.type != voxel_type) {
                   found_z_extension = false;
                   break;
@@ -351,7 +327,7 @@ VoxelChunk::ExpandVoxels() {
                   // We see if in this current x row we could extend all the
                   // way.
                   int new_index = Coord3ToArrayIndex(side, ix, iy, iz);
-                  auto& new_voxel_elem = GetVoxelElement(new_index);
+                  auto& new_voxel_elem = GetVoxel(new_index);
                   if (!mask[new_index] || new_voxel_elem.type != voxel_type) {
                     found_y_extension = false;
                     break;
@@ -395,13 +371,18 @@ VoxelChunk::ExpandVoxels() {
 }
 
 void
-VoxelChunk::Render(Shader* shader) {
+VoxelChunk::Render(Shader* shader, Vec3 offset) {
   // TODO(donosoc): Do this only when needed.
   shader->SetMat4(Shader::Uniform::kModel, glm::mat4(1.0f));
 
   GL_CALL(glBindVertexArray, vao_.value);
+  glm::vec3 v{offset.x, offset.y, offset.z};
+  shader->SetMat4(Shader::Uniform::kModel, glm::translate(glm::mat4(1.0f), v));
   GL_CALL(glDrawElements,
-          GL_TRIANGLES, 6 * faces_.size(), GL_UNSIGNED_INT, (void*)0);
+          GL_TRIANGLES,
+          6 * faces_.size(),
+          GL_UNSIGNED_INT,
+          (void*)0);
 }
 
 namespace {
