@@ -37,6 +37,7 @@
 #include "src/utils/glm_impl.h"
 #include "src/utils/macros.h"
 #include "src/voxel_terrain.h"
+#include "src/voxel_utils.h"
 
 /**
  * Simple OpenGL experiments to understand how to build a renderer.
@@ -307,6 +308,13 @@ int main() {
     exit(1);
   }
 
+  SetupSphere(&terrain, {}, 10);
+
+  /* SetupSphere(&terrain, {10, 10, 10}, 7); */
+
+  terrain.Update();
+
+
   // Camera --------------------------------------------------------------------
 
   float camera_speed = 5.0f;
@@ -327,8 +335,8 @@ int main() {
 
   LOG(INFO) << "Going to draw";
 
-  Pair3<int> indices = {};
-  float current_time = sdl_context.seconds();
+  /* Pair3<int> indices = {}; */
+  /* float current_time = sdl_context.seconds(); */
 
   bool running = true;
   while (running) {
@@ -401,25 +409,25 @@ int main() {
     if (camera_changed)
       camera.UpdateView();
 
-    static int limit = 6;
+    /* static int limit = 6; */
 
-    float t = sdl_context.seconds();
-    if (t - current_time > 0.1f) {
-      current_time = t;
-      terrain.SetVoxel({indices.x, indices.y, indices.z},
-                       VoxelElement::Type::kGrassDirt);
-      terrain.Update();
-      LOG(DEBUG) << "Added voxel: " << indices.ToString();
-      indices.x++;
-      if (indices.x >= limit) {
-        indices.x = 0;
-        indices.z++;
-        if (indices.z >= limit) {
-          indices.z = 0;
-          indices.y++;
-        }
-      }
-    }
+    /* float t = sdl_context.seconds(); */
+    /* if (t - current_time > 1.0f) { */
+    /*   current_time = t; */
+    /*   terrain.SetVoxel({indices.x, indices.y, indices.z}, */
+    /*                    VoxelElement::Type::kGrassDirt); */
+    /*   terrain.Update(); */
+    /*   LOG(DEBUG) << "Added voxel: " << indices.ToString(); */
+    /*   indices.x++; */
+    /*   if (indices.x >= limit) { */
+    /*     indices.x = 0; */
+    /*     indices.z++; */
+    /*     if (indices.z >= limit) { */
+    /*       indices.z = 0; */
+    /*       indices.y++; */
+    /*     } */
+    /*   } */
+    /* } */
 
     // Drawing -----------------------------------------------------------------
 

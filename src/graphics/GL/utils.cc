@@ -134,27 +134,44 @@ GLEnumToSize(GLenum type) {
 template <>
 void GLHandle<GL_VERTEX_SHADER>::InternalClear() {
   if (handle)
-    glDeleteShader(handle);
+    GL_CALL(glDeleteShader, handle);
 }
 
 template <>
 void GLHandle<GL_FRAGMENT_SHADER>::InternalClear() {
   if (handle)
-    glDeleteShader(handle);
+    GL_CALL(glDeleteShader, handle);
 }
 
 template <>
 void GLHandle<GL_PROGRAM>::InternalClear() {
   if (handle)
-    glDeleteProgram(handle);
+    GL_CALL(glDeleteProgram, handle);
 }
 
 template <>
 void GLHandle<GL_TEXTURE_2D_ARRAY>::InternalClear() {
   if (handle)
-    glDeleteTextures(1, &handle);
+    GL_CALL(glDeleteTextures, 1, &handle);
 }
 
+template <>
+void GLHandle<GL_VERTEX_ARRAY>::InternalClear() {
+  if (handle)
+    GL_CALL(glDeleteVertexArrays, 1, &handle);
+}
+
+template <>
+void GLHandle<GL_ARRAY_BUFFER>::InternalClear() {
+  if (handle)
+    GL_CALL(glDeleteBuffers, 1, &handle);
+}
+
+template <>
+void GLHandle<GL_ELEMENT_ARRAY_BUFFER>::InternalClear() {
+  if (handle)
+    GL_CALL(glDeleteBuffers, 1, &handle);
+}
 
 const char*
 GLEnumToString(GLenum type) {

@@ -8,6 +8,7 @@
 
 #include "src/atlas_data.h"
 #include "src/math/vec.h"
+#include "src/mesh.h"
 #include "src/utils/clear_on_move.h"
 #include "src/utils/glm.h"
 #include "src/utils/macros.h"
@@ -82,10 +83,6 @@ class VoxelChunk {
   VoxelElement& GetVoxel(int x, int y, int z);
   VoxelElement& GetVoxel(int index);
 
-  uint32_t vao() const { return vao_.value; }
-  uint32_t vbo() const { return vbo_.value; }
-  uint32_t ebo() const { return ebo_.value; }
-
   const std::vector<bool>& mask() const { return mask_; }
 
   bool initialized() const { return initialized_; }
@@ -101,11 +98,7 @@ class VoxelChunk {
   std::vector<TypedFace> faces_;
   std::vector<bool> mask_;
 
-  // TODO(Cristian): Stop leaking these.
-  // TODO(Cristian): This should belong to a mesh class.
-  ClearOnMove<uint32_t> vao_;
-  ClearOnMove<uint32_t> vbo_;
-  ClearOnMove<uint32_t> ebo_;
+  Mesh mesh_;
 
   bool initialized_ = false;
 };

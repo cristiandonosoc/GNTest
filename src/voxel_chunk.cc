@@ -82,24 +82,8 @@ VoxelElement::GetFaceTexIndices(Type type) {
 VoxelChunk::VoxelChunk() = default;
 
 bool VoxelChunk::Init() {
-  GL_CALL(glGenVertexArrays, 1, &vao_.value);
-  GL_CALL(glBindVertexArray, vao_.value);
-
-  uint32_t buffers[2];
-  GL_CALL(glGenBuffers, ARRAY_SIZE(buffers), buffers);
-  vbo_ = buffers[0];
-  ebo_ = buffers[1];
-
-  // Vertices.
-  GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, vbo_.value);
-
-  // Indices
-  GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, ebo_.value);
-
-  GL_CALL(glBindVertexArray, NULL);
-  GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, NULL);
-  GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, NULL);
-
+  if (!mesh_.Init())
+    return false;
   initialized_ = true;
   return true;
 }
@@ -125,6 +109,21 @@ VoxelElement& VoxelChunk::GetVoxel(int x, int y, int z) {
 
 VoxelElement& VoxelChunk::GetVoxel(int index) {
   return (*this)[index];
+}
+
+void
+VoxelChunk::Render(Shader* shader, Vec3 offset) {
+  // TODO(donosoc): Do this only when needed.
+  shader->SetMat4(Shader::Uniform::kModel, glm::mat4(1.0f));
+
+  mesh_.Bind();
+
+  glm::vec3 v{offset.x, offset.y, offset.z};
+  shader->SetMat4(Shader::Uniform::kModel, glm::translate(glm::mat4(1.0f), v));
+  GL_CALL(glDrawElements, GL_TRIANGLES,
+                          6 * faces_.size(),
+                          GL_UNSIGNED_INT,
+                          (void*)0);
 }
 
 // CalculateMesh ---------------------------------------------------------------
@@ -160,55 +159,34 @@ void VoxelChunk::CalculateMesh() {
   }
 
   size_t face_color_start = vbo_data.size();
-  for (auto& face : faces_) {
-    for (size_t i = 0; i < 4; i++) {
-      vbo_data.emplace_back(face.face_color[0]);
-      vbo_data.emplace_back(face.face_color[1]);
-      vbo_data.emplace_back(face.face_color[2]);
-    }
-  }
-
-  GL_CALL(glBindVertexArray, vao_.value);
+  /* for (auto& face : faces_) { */
+  /*   for (size_t i = 0; i < 4; i++) { */
+  /*     vbo_data.emplace_back(face.face_color[0]); */
+  /*     vbo_data.emplace_back(face.face_color[1]); */
+  /*     vbo_data.emplace_back(face.face_color[2]); */
+  /*   } */
+  /* } */
 
   {
     /* TIMER("Send data over to GPU"); */
 
-    // Send the data over to the GPU.
-    GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, vbo_.value);
+    std::vector<AttributeFormat> formats;
+    formats.emplace_back(AttributeFormat{0, 3, 3 * sizeof(float), 0});
 
-    GL_CALL(glBufferData, GL_ARRAY_BUFFER,
-                          vbo_data.size() * sizeof(float),
-                          vbo_data.data(),
-                          GL_STATIC_DRAW);
-
-    // Vertices start at the beginning of the buffer.
-    GL_CALL(glVertexAttribPointer,
-            0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    GL_CALL(glEnableVertexAttribArray, 0);
     // UVs start right after.
-    size_t uv_offset = uvs_start * sizeof(float);
-    GL_CALL(glVertexAttribPointer,
-            1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(uv_offset));
-    GL_CALL(glEnableVertexAttribArray, 1);
-
+    uint32_t uv_offset = uvs_start * sizeof(float);
+    formats.emplace_back(AttributeFormat{1, 2, 2 * sizeof(float), uv_offset});
 
     // Tex index
-    size_t tex_index_offset = tex_index_start * sizeof(float);
-    GL_CALL(glVertexAttribPointer, 2, 1, GL_FLOAT, GL_FALSE,
-                                   1 * sizeof(float),
-                                   (void*)(tex_index_offset));
-    GL_CALL(glEnableVertexAttribArray, 2);
+    uint32_t tex_index_offset = tex_index_start * sizeof(float);
+    formats.emplace_back(
+        AttributeFormat{2, 1, 1 * sizeof(float), tex_index_offset});
 
-    size_t face_color_offset = face_color_start * sizeof(float);
-    (void)face_color_offset;
-    /* GL_CALL(glVertexAttribPointer, 3, 3, GL_FLOAT, GL_FALSE, */
-    /*                                3 * sizeof(float), */
-    /*                                (void*)(face_color_offset)); */
-    /* GL_CALL(glEnableVertexAttribArray, 3); */
-  }
+    uint32_t face_color_offset = face_color_start * sizeof(float);
+    formats.emplace_back(
+        AttributeFormat{3, 3, 3 * sizeof(float), face_color_offset});
 
-  {
-    /* TIMER("Indices"); */
+    mesh_.BufferData(std::move(vbo_data), std::move(formats));
 
     // Calculate the indices
     std::vector<uint32_t> indices;
@@ -223,11 +201,7 @@ void VoxelChunk::CalculateMesh() {
       index_base += 4;
     }
 
-    GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, ebo_.value);
-    GL_CALL(glBufferData, GL_ELEMENT_ARRAY_BUFFER,
-                          indices.size() * sizeof(uint32_t),
-                          indices.data(),
-                          GL_STATIC_DRAW);
+    mesh_.BufferIndices(std::move(indices));
   }
 }
 
@@ -370,34 +344,19 @@ VoxelChunk::ExpandVoxels() {
   return expanded_voxels;
 }
 
-void
-VoxelChunk::Render(Shader* shader, Vec3 offset) {
-  // TODO(donosoc): Do this only when needed.
-  shader->SetMat4(Shader::Uniform::kModel, glm::mat4(1.0f));
-
-  GL_CALL(glBindVertexArray, vao_.value);
-  glm::vec3 v{offset.x, offset.y, offset.z};
-  shader->SetMat4(Shader::Uniform::kModel, glm::translate(glm::mat4(1.0f), v));
-  GL_CALL(glDrawElements,
-          GL_TRIANGLES,
-          6 * faces_.size(),
-          GL_UNSIGNED_INT,
-          (void*)0);
-}
-
 namespace {
 
 std::vector<TypedFace>
 CalculateFacesX(const ExpandedVoxel& voxel, const std::vector<bool>& mask,
-                int x, int x_to_check, int x_offset);
+                int x, int x_to_check, bool min_face);
 
 std::vector<TypedFace>
 CalculateFacesY(const ExpandedVoxel& voxel, const std::vector<bool>& mask,
-                int y, int y_to_check, int y_offset);
+                int y, int y_to_check, bool min_face);
 
 std::vector<TypedFace>
 CalculateFacesZ(const ExpandedVoxel& voxel, const std::vector<bool>& mask,
-                int z, int z_to_check, int z_offset);
+                int z, int z_to_check, bool min_face);
 
 
 std::vector<TypedFace>
@@ -409,27 +368,27 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels,
     std::vector<TypedFace> new_faces;
 
     auto x_min = voxel.quad.min.x;
-    new_faces = CalculateFacesX(voxel, mask, x_min, x_min - 1, 0);
+    new_faces = CalculateFacesX(voxel, mask, x_min, x_min - 1, true);
     faces.insert(faces.end(), new_faces.begin(), new_faces.end());
 
     auto x_max = voxel.quad.max.x;
-    new_faces = CalculateFacesX(voxel, mask, x_max, x_max + 1, 1);
+    new_faces = CalculateFacesX(voxel, mask, x_max, x_max + 1, false);
     faces.insert(faces.end(), new_faces.begin(), new_faces.end());
 
     auto y_min = voxel.quad.min.y;
-    new_faces = CalculateFacesY(voxel, mask, y_min, y_min -1, 0);
+    new_faces = CalculateFacesY(voxel, mask, y_min, y_min -1, true);
     faces.insert(faces.end(), new_faces.begin(), new_faces.end());
 
     auto y_max = voxel.quad.max.y;
-    new_faces = CalculateFacesY(voxel, mask, y_max, y_max + 1, 1);
+    new_faces = CalculateFacesY(voxel, mask, y_max, y_max + 1, false);
     faces.insert(faces.end(), new_faces.begin(), new_faces.end());
 
     auto z_min = voxel.quad.min.z;
-    new_faces = CalculateFacesZ(voxel, mask, z_min, z_min - 1, 0);
+    new_faces = CalculateFacesZ(voxel, mask, z_min, z_min - 1, true);
     faces.insert(faces.end(), new_faces.begin(), new_faces.end());
 
     auto z_max = voxel.quad.max.z;
-    new_faces = CalculateFacesZ(voxel, mask, z_max, z_max + 1, 1);
+    new_faces = CalculateFacesZ(voxel, mask, z_max, z_max + 1, false);
     faces.insert(faces.end(), new_faces.begin(), new_faces.end());
   }
 
@@ -439,7 +398,7 @@ CalculateFacesFromVoxels(const std::vector<ExpandedVoxel>& voxels,
 std::vector<TypedFace>
 CalculateFacesX(const ExpandedVoxel& voxel,
                 const std::vector<bool>& mask,
-                int x, int x_to_check, int x_offset) {
+                int x, int x_to_check, bool min_face) {
   std::vector<TypedFace> faces;
   auto& quad = voxel.quad;
   auto& face_tex_indices = VoxelElement::GetFaceTexIndices(voxel.type);
@@ -516,8 +475,8 @@ CalculateFacesX(const ExpandedVoxel& voxel,
                (float)(face_quad.max.z)};
 
       // We offset where this plane should be.
-      min.x += x_offset;
-      max.x += x_offset;
+      min.x += min_face ? 0 : 1;
+      max.x += min_face ? 0 : 1;
       max.y += 1;
       max.z += 1;
 
@@ -529,7 +488,8 @@ CalculateFacesX(const ExpandedVoxel& voxel,
       uvs_ptr = AddToContainer(uvs_ptr, {max.z, min.y});
       uvs_ptr = AddToContainer(uvs_ptr, {min.z, max.y});
       uvs_ptr = AddToContainer(uvs_ptr, {max.z, max.y});
-      face.tex_index = face_tex_indices.x_min;
+      face.tex_index = min_face ? face_tex_indices.x_min
+                                : face_tex_indices.x_max;
 
       static int face_count = 0;
       face_count++;
@@ -547,7 +507,7 @@ CalculateFacesX(const ExpandedVoxel& voxel,
 std::vector<TypedFace>
 CalculateFacesY(const ExpandedVoxel& voxel,
                 const std::vector<bool>& mask,
-                int y_cur, int y_to_check, int y_offset) {
+                int y_cur, int y_to_check, bool min_face) {
   std::vector<TypedFace> faces;
 
   auto& quad = voxel.quad;
@@ -627,8 +587,8 @@ CalculateFacesY(const ExpandedVoxel& voxel,
 
       // We offset where this plane should be.
       max.x += 1;
-      min.y += y_offset;
-      max.y += y_offset;
+      min.y += min_face ? 0 : 1;
+      max.y += min_face ? 0 : 1;
       max.z += 1;
 
       vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, max.z});
@@ -639,7 +599,8 @@ CalculateFacesY(const ExpandedVoxel& voxel,
       uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.z});
       uvs_ptr = AddToContainer(uvs_ptr, {min.x, min.z});
       uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.z});
-      face.tex_index = face_tex_indices.y_min;
+      face.tex_index = min_face ? face_tex_indices.y_min
+                                : face_tex_indices.y_max;
 
       static int face_count = 0;
       face_count++;
@@ -657,7 +618,7 @@ CalculateFacesY(const ExpandedVoxel& voxel,
 std::vector<TypedFace>
 CalculateFacesZ(const ExpandedVoxel& voxel,
                 const std::vector<bool>& mask,
-                int z_cur, int z_to_check, int z_offset) {
+                int z_cur, int z_to_check, bool min_face) {
   std::vector<TypedFace> faces;
 
   auto& quad = voxel.quad;
@@ -738,8 +699,8 @@ CalculateFacesZ(const ExpandedVoxel& voxel,
       // We offset where this plane should be.
       max.x += 1;
       max.y += 1;
-      min.z += z_offset;
-      max.z += z_offset;
+      min.z += min_face ? 0 : 1;
+      max.z += min_face ? 0 : 1;
 
       vert_ptr = AddToContainer(vert_ptr, {min.x, min.y, max.z});
       vert_ptr = AddToContainer(vert_ptr, {max.x, min.y, max.z});
@@ -749,7 +710,8 @@ CalculateFacesZ(const ExpandedVoxel& voxel,
       uvs_ptr = AddToContainer(uvs_ptr, {max.x, min.y});
       uvs_ptr = AddToContainer(uvs_ptr, {min.x, max.y});
       uvs_ptr = AddToContainer(uvs_ptr, {max.x, max.y});
-      face.tex_index = face_tex_indices.z_max;
+      face.tex_index = min_face ? face_tex_indices.z_min
+                                : face_tex_indices.z_max;
 
       static int face_count = 0;
       face_count++;

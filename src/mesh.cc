@@ -9,75 +9,68 @@
 
 namespace warhol {
 
+Mesh::Mesh() = default;
+
 bool Mesh::Init() {
   assert(!initialized_);
 
-  glGenVertexArrays(1, &vao.value);
+  GL_CALL(glGenVertexArrays, 1, &vao_.handle);
 
   uint32_t buffers[2];
-  glGenBuffers(ARRAY_SIZE(buffers), buffers);
-  vbo.value = buffers[0];
-  ebo.value = buffers[1];
-
-  if (CHECK_GL_ERRORS(__PRETTY_FUNCTION__))
-    exit(1);
+  GL_CALL(glGenBuffers, ARRAY_SIZE(buffers), buffers);
+  vbo_.handle = buffers[0];
+  ebo_.handle = buffers[1];
 
   initialized_ = true;
   return true;
 }
 
-Mesh::~Mesh() {
-  if (vao.value) {
-    glDeleteVertexArrays(1, &vao.value);
-    vao.clear();
-  }
-  if (vbo.value) {
-    glDeleteBuffers(1, &vbo.value);
-    vbo.clear();
-  }
-  if (ebo.value) {
-    glDeleteBuffers(1, &ebo.value);
-    ebo.clear();
-  }
-
-  if (CHECK_GL_ERRORS(__PRETTY_FUNCTION__))
-    exit(1);
-}
-
-void Mesh::BindData() {
+void
+Mesh::BufferData(std::vector<float> in_data,
+                 std::vector<AttributeFormat> in_formats) {
   assert(initialized_);
-  assert(!data.empty());
-  // Do the GL instantiation.
-  glBindVertexArray(vao.value);
+  data = std::move(in_data);
+  formats = std::move(in_formats);
 
-  glBindBuffer(GL_ARRAY_BUFFER, vbo.value);
+  GL_CALL(glBindVertexArray, vao_.handle);
+  GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, vbo_.handle);
   // TODO(Cristian): Pass in the storage type.
-  glBufferData(GL_ARRAY_BUFFER, data.size(), data.data(), GL_STATIC_DRAW);
-
-  if (CHECK_GL_ERRORS(__PRETTY_FUNCTION__))
-    exit(1);
-
-  BindFormats();
-}
-
-void Mesh::BindFormats() {
-  assert(initialized_);
-  assert(!formats.empty());
-
-  glBindVertexArray(vao.value);
-
-  // Only one data array per mesh.
-  glBindBuffer(GL_ARRAY_BUFFER, vbo.value);
+  GL_CALL(glBufferData, GL_ARRAY_BUFFER,
+                        data.size() * sizeof(float), data.data(),
+                        GL_STATIC_DRAW);
 
   for (const AttributeFormat& format : formats) {
-    glVertexAttribPointer(format.index,
-                          format.size,
-                          GL_FLOAT,     // TODO(Cristian): Abstract data type?
-                          GL_FALSE,     // Normalized.
-                          format.stride,
-                          (void*)(size_t)format.offset);
-    glEnableVertexAttribArray(format.index);
+    GL_CALL(glVertexAttribPointer, format.index,
+                                   format.size,
+                                   GL_FLOAT,
+                                   GL_FALSE,  // Normalized.
+                                   format.stride,
+                                   (void*)(size_t)format.offset);
+    GL_CALL(glEnableVertexAttribArray, format.index);
   }
+
+  GL_CALL(glBindVertexArray, NULL);
+  GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, NULL);
+}
+
+void Mesh::BufferIndices(std::vector<uint32_t> in_indices) {
+  assert(initialized_);
+  indices = std::move(in_indices);
+
+  GL_CALL(glBindVertexArray, vao_.handle);
+  GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, ebo_.handle);
+  GL_CALL(glBufferData, GL_ELEMENT_ARRAY_BUFFER,
+                        indices.size() * sizeof(uint32_t), indices.data(),
+                        GL_STATIC_DRAW);
+
+  GL_CALL(glBindVertexArray, NULL);
+  GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, NULL);
+}
+
+void
+Mesh::Bind() {
+  assert(initialized_);
+  GL_CALL(glBindVertexArray, vao_.handle);
 }
 
 }  // namespace warhol

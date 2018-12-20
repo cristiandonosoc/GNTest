@@ -50,7 +50,7 @@ class TimeLogger {
   void EndEvent(uint64_t id);
 
  private:
-  static constexpr size_t kMaxEventQueue = 1024;
+  static constexpr size_t kMaxEventQueue = 4096;
   Event events_[kMaxEventQueue];
   size_t event_count_ = 0;
   size_t thread_id_;

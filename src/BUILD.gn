@@ -7,6 +7,8 @@ source_set("warhol_lib") {
     "assets.h",
     "camera.cc",
     "camera.h",
+    "mesh.cc",
+    "mesh.h",
     "shader.cc",
     "shader.h",
     "texture.cc",
@@ -19,6 +21,8 @@ source_set("warhol_lib") {
     "voxel_chunk.h",
     "voxel_terrain.cc",
     "voxel_terrain.h",
+    "voxel_utils.cc",
+    "voxel_utils.h",
   ]
   deps = [
     "//src/input",

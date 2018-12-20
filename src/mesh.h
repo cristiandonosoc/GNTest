@@ -10,6 +10,8 @@
 #include "src/utils/clear_on_move.h"
 #include "src/utils/macros.h"
 
+#include "src/graphics/GL/utils.h"
+
 namespace warhol {
 
 // TODO(Cristian): Do we want to diminish the size of this?
@@ -25,22 +27,26 @@ struct AttributeFormat {
 // before rendering.
 class Mesh {
  public:
-   ~Mesh();
+  Mesh();
   DELETE_COPY_AND_ASSIGN(Mesh);
 
   bool Init();
   // IMPORTANT: Both data and formats must be given when calling these.
-  void BindData();
-  void BindFormats();
-
-  ClearOnMove<uint32_t> vao;
-  ClearOnMove<uint32_t> vbo;
-  ClearOnMove<uint32_t> ebo;
+  void BufferData(std::vector<float> data, std::vector<AttributeFormat>);
+  void BufferIndices(std::vector<uint32_t>);
+  void Bind();
 
   std::vector<AttributeFormat> formats;
   std::vector<float> data;
   std::vector<uint32_t> indices;
+
+  bool initialized() const { return initialized_; }
+
+ private:
   bool initialized_ = false;
+  GLHandle<GL_VERTEX_ARRAY> vao_;
+  GLHandle<GL_ARRAY_BUFFER> vbo_;
+  GLHandle<GL_ELEMENT_ARRAY_BUFFER> ebo_;
 };
 
 }  // namespace warhol
