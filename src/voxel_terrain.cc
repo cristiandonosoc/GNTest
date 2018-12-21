@@ -7,6 +7,8 @@
 #include "src/texture_atlas.h"
 #include "src/utils/log.h"
 
+#include "src/debug/volumes.h"
+
 namespace warhol {
 
 namespace {
@@ -65,18 +67,35 @@ void VoxelTerrain::Update() {
   temp_metadata_.clear();
 }
 
-void VoxelTerrain::Render(Shader* shader) {
+void VoxelTerrain::Render(Shader* shader, bool debug) {
   GL_CALL(glActiveTexture, GL_TEXTURE0);
   GL_CALL(glBindTexture, GL_TEXTURE_2D_ARRAY, tex_array_->handle());
 
   auto [unit_index, unit_name] = TextureUnitToUniform(GL_TEXTURE0);
   shader->SetInt(unit_name, unit_index);
 
+      static bool a = true;
   for (auto& [coord, voxel_chunk] : voxel_chunks_) {
     Vec3 fcoord{coord.x, coord.y, coord.z};
     fcoord *= kVoxelChunkSize;
     voxel_chunk.Render(shader, fcoord);
+
+    if (debug) {
+      auto c = coord;
+      c *= (int)kVoxelChunkSize;
+      DrawChunkVolume(c);
+    }
   }
+  a = false;
+}
+
+
+void VoxelTerrain::DrawChunkVolume(Pair3<int> coord, Vec3 color) {
+  float s = kVoxelChunkSize / 2;
+  Vec3 c = {coord.x, coord.y, coord.z};
+  Vec3 size = {s, s, s};
+  c += size;
+  DebugVolumes::AABB(c, size, color);
 }
 
 }  // namespace warhol

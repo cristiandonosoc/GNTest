@@ -7,9 +7,12 @@ source_set("debug") {
     "timer.h",
     "time_logger.cc",
     "time_logger,h",
+    "volumes.cc",
+    "volumes.h",
   ]
 
   deps = [
+    "//src/graphics/GL",
     "//src/sdl2",
     "//src/utils",
   ]

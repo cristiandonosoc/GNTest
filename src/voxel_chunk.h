@@ -20,7 +20,7 @@ class TextureArray2D;
 class TextureAtlas;
 
 // How many voxels a voxel chunk is. Voxel chunks are assumed to be a cube.
-constexpr size_t kVoxelChunkSize = 4;
+constexpr size_t kVoxelChunkSize = 8;
 constexpr size_t kVoxelChunkVoxelCount = kVoxelChunkSize *
                                          kVoxelChunkSize *
                                          kVoxelChunkSize;

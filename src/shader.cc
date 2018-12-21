@@ -22,6 +22,7 @@ ShaderString Shader::Attribute::kTexIndex = {"a_tex_index"};
 ShaderString Shader::Uniform::kModel = {"u_model"};
 ShaderString Shader::Uniform::kView = {"u_view"};
 ShaderString Shader::Uniform::kProjection = {"u_projection"};
+ShaderString Shader::Uniform::kColor = {"u_color"};
 ShaderString Shader::Uniform::kTexSampler0 = {"u_tex_sampler0"};
 ShaderString Shader::Uniform::kTexSampler1 = {"u_tex_sampler1"};
 ShaderString Shader::Uniform::kTexSampler2 = {"u_tex_sampler2"};
@@ -223,6 +224,15 @@ bool Shader::SetFloat(ShaderString name, float val) {
     return false;
 
   GL_CALL(glUniform1f, uniform->location, val);
+  return true;
+}
+
+bool Shader::SetFloat3(ShaderString name, Vec3 val) {
+  const Uniform* uniform = GetUniform(name);
+  if (!uniform)
+    return false;
+
+  GL_CALL(glUniform3f, uniform->location, val.x, val.y, val.z);
   return true;
 }
 

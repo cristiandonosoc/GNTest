@@ -27,7 +27,8 @@ class VoxelTerrain {
   // This will update all the chucks that have changed since the last update.
   void Update();
 
-  void Render(Shader*);
+  void DrawChunkVolume(Pair3<int>, Vec3 color = {1, 1, 1});
+  void Render(Shader*, bool debug = false);
 
   VoxelChunkHash& voxel_chunks() { return voxel_chunks_; }
 

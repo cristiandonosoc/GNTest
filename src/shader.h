@@ -7,6 +7,7 @@
 #include <string>
 
 #include "src/graphics/GL/utils.h"
+#include "src/math/vec.h"
 #include "src/utils/location.h"
 #include "src/utils/macros.h"
 #include "src/utils/glm.h"
@@ -47,6 +48,7 @@ class Shader {
     static ShaderString kModel;
     static ShaderString kView;
     static ShaderString kProjection;
+    static ShaderString kColor;
     static ShaderString kTexSampler0;
     static ShaderString kTexSampler1;
     static ShaderString kTexSampler2;
@@ -96,6 +98,7 @@ class Shader {
 
   bool SetInt(ShaderString name, int);
   bool SetFloat(ShaderString name, float);
+  bool SetFloat3(ShaderString name, Vec3);
   bool SetMat4(ShaderString, const glm::mat4&);
 
   const std::string& name() const { return name_; }

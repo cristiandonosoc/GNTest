@@ -100,9 +100,18 @@ struct Pair3 {
     return *this > rhs || *this == rhs;
   }
 
+  void operator*=(T v) {
+    x *= v;
+    y *= v;
+    z *= v;
+  }
+
+
+
   std::string ToString() const {
     return StringPrintf("X: %f, Y: %f, Z: %f", (float)x, (float)y, (float)z);
   }
+
 };
 
 template<typename T>

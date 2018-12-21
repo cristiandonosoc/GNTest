@@ -17,6 +17,7 @@
 #include "src/camera.h"
 #include "src/debug/time_logger.h"
 #include "src/debug/timer.h"
+#include "src/debug/volumes.h"
 #include "src/imgui/imgui_context.h"
 #include "src/input/input.h"
 #include "src/graphics/GL/def.h"
@@ -38,6 +39,7 @@
 #include "src/utils/macros.h"
 #include "src/voxel_terrain.h"
 #include "src/voxel_utils.h"
+
 
 /**
  * Simple OpenGL experiments to understand how to build a renderer.
@@ -308,7 +310,11 @@ int main() {
     exit(1);
   }
 
-  SetupSphere(&terrain, {}, 10);
+  SetupSphere(&terrain, {}, 12);
+  /* for (int i = 0; i < (int)kVoxelChunkSize; i++) { */
+  /*   terrain.SetVoxel({-i - 1, -i - 1, -i - 1}, VoxelElement::Type::kGrassDirt); */
+  /*   terrain.SetVoxel({i, i, i}, VoxelElement::Type::kGrassDirt); */
+  /* } */
 
   /* SetupSphere(&terrain, {10, 10, 10}, 7); */
 
@@ -348,6 +354,7 @@ int main() {
       break;
 
     imgui_context.NewFrame(sdl_context, &input);
+    DebugVolumes::NewFrame();
 
     if (input.keys_up[GET_KEY(Escape)])
       break;
@@ -445,66 +452,66 @@ int main() {
     camera.SetProjection(&simple_shader);
     camera.SetView(&simple_shader);
 
-    // Draw the cubes.
-    GL_CALL(glBindVertexArray, cube_vao);
-    // Set the cube textures.
-		wall.Set(&simple_shader, GL_TEXTURE0);
-    face.Set(&simple_shader, GL_TEXTURE1);
-    simple_shader.SetMat4(Shader::Uniform::kModel,
-                          glm::translate(glm::mat4(1.0f), {5.0f, 0.0, 0.0f}));
-    GL_CALL(glDrawArrays, GL_TRIANGLES, 0, 36);
+    /* // Draw the cubes. */
+    /* GL_CALL(glBindVertexArray, cube_vao); */
+    /* // Set the cube textures. */
+		/* wall.Set(&simple_shader, GL_TEXTURE0); */
+    /* face.Set(&simple_shader, GL_TEXTURE1); */
+    /* simple_shader.SetMat4(Shader::Uniform::kModel, */
+    /*                       glm::translate(glm::mat4(1.0f), {5.0f, 0.0, 0.0f})); */
+    /* GL_CALL(glDrawArrays, GL_TRIANGLES, 0, 36); */
 
-    glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f),
-                                  glm::vec3(2.0f, 5.0f, -15.0f),
-                                  glm::vec3(-1.5f, -2.2f, -2.5f),
-                                  glm::vec3(-3.8f, -2.0f, -12.3f),
-                                  glm::vec3(2.4f, -0.4f, -3.5f),
-                                  glm::vec3(-1.7f, 3.0f, -7.5f),
-                                  glm::vec3(1.3f, -2.0f, -2.5f),
-                                  glm::vec3(1.5f, 2.0f, -2.5f),
-                                  glm::vec3(1.5f, 0.2f, -1.5f),
-                                  glm::vec3(-1.3f, 1.0f, -1.5f)};
+    /* glm::vec3 cube_positions[] = {glm::vec3(0.0f, 0.0f, 0.0f), */
+    /*                               glm::vec3(2.0f, 5.0f, -15.0f), */
+    /*                               glm::vec3(-1.5f, -2.2f, -2.5f), */
+    /*                               glm::vec3(-3.8f, -2.0f, -12.3f), */
+    /*                               glm::vec3(2.4f, -0.4f, -3.5f), */
+    /*                               glm::vec3(-1.7f, 3.0f, -7.5f), */
+    /*                               glm::vec3(1.3f, -2.0f, -2.5f), */
+    /*                               glm::vec3(1.5f, 2.0f, -2.5f), */
+    /*                               glm::vec3(1.5f, 0.2f, -1.5f), */
+    /*                               glm::vec3(-1.3f, 1.0f, -1.5f)}; */
 
-    for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) {
-      glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]);
-      float angle = sdl_context.seconds() * glm::radians(20.0f * i);
-      model =
-          glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
-      simple_shader.SetMat4(Shader::Uniform::kModel, model);
+    /* for (size_t i = 0; i < ARRAY_SIZE(cube_positions); i++) { */
+    /*   glm::mat4 model = glm::translate(glm::mat4(1.0f), cube_positions[i]); */
+    /*   float angle = sdl_context.seconds() * glm::radians(20.0f * i); */
+    /*   model = */
+    /*       glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f)); */
+    /*   simple_shader.SetMat4(Shader::Uniform::kModel, model); */
 
-      glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
+    /*   glDrawArrays(GL_TRIANGLES, 0, 36); */
+    /* } */
 
     Timer tex_array_timer = Timer::ManualTimer();
     tex_array_timer.Init();
 
 
-    tex_array_shader.Use();
-    camera.SetProjection(&tex_array_shader);
-    camera.SetView(&tex_array_shader);
-    auto [unit_index, unit_name] = TextureUnitToUniform(GL_TEXTURE0);
-    tex_array_shader.SetInt(unit_name, unit_index);
-    /* simple_shader.SetFloat({"u_interpolation"}, ui_state.interpolation); */
+    /* tex_array_shader.Use(); */
+    /* camera.SetProjection(&tex_array_shader); */
+    /* camera.SetView(&tex_array_shader); */
+    /* auto [unit_index, unit_name] = TextureUnitToUniform(GL_TEXTURE0); */
+    /* tex_array_shader.SetInt(unit_name, unit_index); */
+    /* /1* simple_shader.SetFloat({"u_interpolation"}, ui_state.interpolation); *1/ */
 
-    GL_CALL(glActiveTexture, GL_TEXTURE0);
-    GL_CALL(glBindTexture, GL_TEXTURE_2D_ARRAY, tex_array.handle());
+    /* GL_CALL(glActiveTexture, GL_TEXTURE0); */
+    /* GL_CALL(glBindTexture, GL_TEXTURE_2D_ARRAY, tex_array.handle()); */
 
-    /* one_texture.Use(); */
-    GL_CALL(glBindVertexArray, face_vao);
+    /* /1* one_texture.Use(); *1/ */
+    /* GL_CALL(glBindVertexArray, face_vao); */
 
-    for (int i = 0; i < tex_array.size().z; i++) {
-      auto coord = ArrayIndexToCoord2(side_count, i);
-      /* LOG(DEBUG) << "INDEX: " << i << ", COORD: " << coord.ToString(); */
-      auto model =
-          glm::translate(glm::mat4(1.0f),
-              glm::vec3(20.0f, coord.y * 4.1f, coord.x * 4.1f));
+    /* for (int i = 0; i < tex_array.size().z; i++) { */
+    /*   auto coord = ArrayIndexToCoord2(side_count, i); */
+    /*   /1* LOG(DEBUG) << "INDEX: " << i << ", COORD: " << coord.ToString(); *1/ */
+    /*   auto model = */
+    /*       glm::translate(glm::mat4(1.0f), */
+    /*           glm::vec3(20.0f, coord.y * 4.1f, coord.x * 4.1f)); */
 
-      tex_array_shader.SetFloat({"u_texture_index"}, i);
+    /*   tex_array_shader.SetFloat({"u_texture_index"}, i); */
 
-      /* GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]); */
-      tex_array_shader.SetMat4(Shader::Uniform::kModel, model);
-      glDrawArrays(GL_TRIANGLES, 0, 6);
-    }
+    /*   /1* GL_CALL(glBindTexture, GL_TEXTURE_2D, cut_textures[i]); *1/ */
+    /*   tex_array_shader.SetMat4(Shader::Uniform::kModel, model); */
+    /*   glDrawArrays(GL_TRIANGLES, 0, 6); */
+    /* } */
 
 
     float tex_array_time = tex_array_timer.End();
@@ -527,7 +534,12 @@ int main() {
     voxel_shader.Use();
     camera.SetProjection(&voxel_shader);
     camera.SetView(&voxel_shader);
-    terrain.Render(&voxel_shader);
+    terrain.Render(&voxel_shader, true);
+
+    /* terrain.DrawChunkVolume({0, 0, 0}); */
+
+    /* DebugVolumes::AABB({5, 5, 5}, {5, 5, 5}, {1, 0, 0}); */
+    DebugVolumes::RenderVolumes(&camera);
 
     float frame_time = frame_timer.End();
 

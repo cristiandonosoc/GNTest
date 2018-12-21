@@ -7,6 +7,8 @@
 
 namespace warhol {
 
+class Camera;
+
 // Set of debug primitives we can add to draw elements to draw.
 class DebugVolumes {
  public:
@@ -15,7 +17,7 @@ class DebugVolumes {
   static void AABB(Vec3 center, Vec3 radius, Vec3 color = {1, 0, 0});
 
   static void NewFrame();
-  static void RenderVolumes();
+  static void RenderVolumes(Camera*);
 
 };
 
