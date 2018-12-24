@@ -1,0 +1,13 @@
+# Copyright 2018, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+executable("work_queue") {
+  sources = [
+    "work_queue.cc",
+  ]
+
+  deps = [
+    "//src:warhol_lib",
+    "//src/multithreading",
+  ]
+}

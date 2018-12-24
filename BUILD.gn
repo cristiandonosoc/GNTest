@@ -2,7 +2,6 @@ declare_args() {
   extra_includes = ""
 }
 
-
 config("default_include_dirs") {
   include_dirs = [
     "${root_build_dir}",
@@ -28,6 +27,7 @@ config("default_include_dirs") {
 group("default") {
   deps = [
     "//src:opengl_example",
+    "//experiments:work_queue",
   ]
 }
 

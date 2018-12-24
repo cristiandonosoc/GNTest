@@ -2,8 +2,8 @@
 # This code has a BSD license. See LICENSE.
 
 declare_args() {
-  sdl2_include_path = getenv("sdl2_sdk") + "/include"
-  sdl2_lib_path = getenv("sdl2_sdk") + "/lib"
+  sdl2_include_path = getenv("SDL2_SDK")
+  sdl2_lib_path = getenv("SDL2_SDK")
 }
 
 config("sdl2_config") {
@@ -13,8 +13,11 @@ config("sdl2_config") {
     libs = [ "${sdl2_lib_path}/SDL2/SDL2.lib" ]
     handled = true
   } else if (target_os == "mac" && compiler == "clang") {
+    # NOTE: In OSX, the headers nornally are in:
+    # /Library/Frameworks/SDL2.framework/Headers/
+    # TODO(Cristian): Should this be enforced always here?
     # NOTE: SDL2 should be installed as a framework in /Library/Frameworks
-    ldflags = [ "-framework", "SDL2" ]
+    ldflags = [ "-framework", "SDL2", "-F/Library/Frameworks", ]
     handled = true
   } else if (target_os == "linux") {
     if (compiler == "clang") {
@@ -39,9 +42,11 @@ source_set("sdl2") {
     # "utils.cc",
     # "utils.h",
   ]
+
   public_configs = [
     ":sdl2_config",
   ]
+
   deps = [
     "//src/input",
     "//src/graphics/GL",

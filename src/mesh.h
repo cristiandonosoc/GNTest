@@ -44,9 +44,9 @@ class Mesh {
 
  private:
   bool initialized_ = false;
-  GLHandle<GL_VERTEX_ARRAY> vao_;
-  GLHandle<GL_ARRAY_BUFFER> vbo_;
-  GLHandle<GL_ELEMENT_ARRAY_BUFFER> ebo_;
+  GLHandle<GL_VERTEX_ARRAY> vao_ = {};
+  GLHandle<GL_ARRAY_BUFFER> vbo_ = {};
+  GLHandle<GL_ELEMENT_ARRAY_BUFFER> ebo_ = {};
 };
 
 }  // namespace warhol

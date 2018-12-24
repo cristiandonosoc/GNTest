@@ -1,0 +1,11 @@
+# Copyright 2018, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+source_set("multithreading") {
+  sources = [
+    "semaphore.cc",
+    "semaphore.h",
+    "work_queue.cc",
+    "work_queue.h",
+  ]
+}
