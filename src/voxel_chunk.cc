@@ -134,6 +134,8 @@ void VoxelChunk::CalculateMesh() {
   // Get the calculated faces.
   faces_ = CalculateFaces();
 
+  return;
+
   // Put them into separate buckets so we can but them separatedly into the
   // OpenGL buffers.
   std::vector<float> vbo_data;

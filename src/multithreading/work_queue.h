@@ -25,7 +25,7 @@ inline bool IsValidTask(const Task& task) { return task.task_func != nullptr; }
 // WorkQueue -------------------------------------------------------------------
 
 struct WorkQueue {
-  static constexpr size_t kMaxTasks = 256;
+  static constexpr size_t kMaxTasks = 4096;
 
   Task tasks[kMaxTasks];
   std::atomic<int> next_task_index = 0;
@@ -34,6 +34,7 @@ struct WorkQueue {
 
   Semaphore semaphore;
   std::mutex mutex;
+  bool running = true;
 
   DELETE_COPY_AND_ASSIGN(WorkQueue);
 };

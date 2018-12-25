@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <map>
 #include <unordered_map>
 
 #include "src/math/vec.h"
@@ -13,6 +14,7 @@ namespace warhol {
 
 class Shader;
 class TextureAtlas;
+struct WorkQueue;
 
 class VoxelTerrain {
  public:
@@ -26,6 +28,7 @@ class VoxelTerrain {
   void SetVoxel(Pair3<int> coord, VoxelElement::Type);
   // This will update all the chucks that have changed since the last update.
   void Update();
+  void UpdateMT(WorkQueue*);
 
   void DrawChunkVolume(Pair3<int>, Vec3 color = {1, 1, 1});
   void Render(Shader*, bool debug = false);
@@ -41,7 +44,7 @@ class VoxelTerrain {
     bool dirty = false;
   };
   VoxelChunkHash voxel_chunks_;
-  std::vector<VoxelChunkMetadata> temp_metadata_;
+  std::unordered_map<Pair3<int>, VoxelChunkMetadata, HashPair3<int>> temp_metadata_;
 
   TextureArray2D* tex_array_;   // Not owning. Must outlive.
   bool initialized_ = false;

@@ -9,6 +9,7 @@
 #include <thread>
 
 #include <debug/timer.h>
+#include <debug/time_logger.h>
 #include <utils/log.h>
 #include <voxel_terrain.h>
 #include <voxel_utils.h>
@@ -18,10 +19,12 @@
 using namespace warhol;
 
 void ThreadFunc(WorkQueue* queue) {
-  while (true) {
+  while (queue->running) {
     GoDoWork(queue);
     // We wait until more work is present.
+    /* LOG(DEBUG) << "Thread: " << std::this_thread::get_id() << " sleeping!"; */
     queue->semaphore.Wait();
+    /* LOG(DEBUG) << "Thread: " << std::this_thread::get_id() << " work up!"; */
   }
 }
 
@@ -34,11 +37,12 @@ int main() {
   LOG(INFO) << "Starting";
 
   WorkQueue queue = {};
-
-  constexpr int kThreadCount = 10;
+  constexpr int kThreadCount = 0;
   std::thread threads[kThreadCount];
   for (size_t i = 0; i < kThreadCount; i++)
     threads[i] = std::thread(ThreadFunc, &queue);
+
+#if 0
 
   PushTask(&queue, {PrintStringTask, (void*)"Task 0"});
   PushTask(&queue, {PrintStringTask, (void*)"Task 1"});
@@ -70,23 +74,40 @@ int main() {
     GoDoWork(&queue);
   }
 
-
   LOG(DEBUG) << "Done with work";
 
   for (size_t i = 0; i < kThreadCount; i++)
     threads[i].join();
 
-  /* auto timer = Timer::ManualTimer(); */
-  /* timer.Init(); */
+#endif
 
-  /* VoxelTerrain terrain(nullptr); */
+  auto timer = Timer::ManualTimer();
+  timer.Init();
+
+  VoxelTerrain terrain(nullptr);
+  SetupSphere(&terrain, {}, 50);
+  terrain.UpdateMT(&queue);
+
+  while (!AllTasksCompleted(queue)) {
+    GoDoWork(&queue);
+  }
+
+  auto time = timer.End();
+  printf("Timing: %.3f ms\n", time);
+
+  LOG(DEBUG) << "Ending queue.";
+  queue.running = false;
+  queue.semaphore.NotifyAll();
+
+
+  for (size_t i = 0; i < kThreadCount; i++)
+    threads[i].join();
+
   /* if (!terrain.Init()) { */
   /*   LOG(ERROR) << "Could not initialize terrain."; */
   /*   exit(1); */
   /* } */
 
-  /* SetupSphere(&terrain, {}, 10); */
 
-  /* auto time = timer.End(); */
-  /* printf("Timing: %.3f ms", time); */
 }
+

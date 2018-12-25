@@ -3,6 +3,10 @@
 
 #include "src/multithreading/work_queue.h"
 
+#include "src/utils/log.h"
+
+#include <thread>
+
 namespace warhol {
 
 void PushTask(WorkQueue* queue, Task task) {
@@ -57,5 +61,6 @@ void DoTask(WorkQueue* queue, const Task& task) {
   task.task_func(task.user_data);
   queue->completed_tasks++;
 }
+
 
 }  // namespace warhol

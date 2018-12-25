@@ -11,16 +11,24 @@ void Semaphore::Wait() {
   while (!count_) {
     // The condition variable takes ownership of the lock. During this
     // command, the lock is freed.
+    threads_waiting_++;
     condition_.wait(lock);
     // At this point the lock is acquired again.
   }
-  --count_;
+  threads_waiting_--;
+  count_--;
 }
 
 void Semaphore::Notify() {
   std::lock_guard<std::mutex> lock(mutex_);
   count_++;
   condition_.notify_one();
+}
+
+void Semaphore::NotifyAll() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  count_ += threads_waiting_;
+  condition_.notify_all();
 }
 
 }  // namespace warhol

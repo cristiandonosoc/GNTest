@@ -9,6 +9,10 @@
 
 #include "src/debug/volumes.h"
 
+#include "src/multithreading/work_queue.h"
+
+#include <thread>
+
 namespace warhol {
 
 namespace {
@@ -51,18 +55,60 @@ void VoxelTerrain::SetVoxel(Pair3<int> coord, VoxelElement::Type type) {
   VoxelChunkMetadata metadata = {};
   metadata.chunk_coord = tiered_coord.chunk_coord;
   metadata.dirty = true;
-  temp_metadata_.push_back(std::move(metadata));
+  temp_metadata_[metadata.chunk_coord] = std::move(metadata);
 }
 
 void VoxelTerrain::Update() {
-  for (auto& metadata : temp_metadata_) {
+  for (auto& [coord, metadata] : temp_metadata_) {
+    auto it = voxel_chunks_.find(coord);
+    assert(it != voxel_chunks_.end());
+    VoxelChunk& chunk = it->second;
+    /* if (!chunk.initialized()) */
+    /*   chunk.Init(); */
+    chunk.CalculateMesh();
+  }
+
+  temp_metadata_.clear();
+}
+
+namespace {
+
+struct WorkData {
+  VoxelChunk* chunk;
+  int id;
+};
+
+void CalculateMeshInWorker(void* data) {
+  WorkData* wd = (WorkData*)data;
+  /* LOG(DEBUG) << "Chunk " << wd->id << " done by thread " << std::this_thread::get_id(); */
+  wd->chunk->CalculateMesh();
+}
+
+}  // namespace
+
+void VoxelTerrain::UpdateMT(WorkQueue* queue) {
+  (void)queue;
+  static WorkData work_data[1024];
+  int i = 0;
+  for (auto& [coord, metadata] : temp_metadata_) {
     auto it = voxel_chunks_.find(metadata.chunk_coord);
     assert(it != voxel_chunks_.end());
     VoxelChunk& chunk = it->second;
-    if (!chunk.initialized())
-      chunk.Init();
-    chunk.CalculateMesh();
+    /* if (!chunk.initialized()) */
+    /*   chunk.Init(); */
+
+    /* LOG(DEBUG) << "Pushing chunk: " << metadata.chunk_coord.ToString(); */
+
+
+    work_data[i] = {&chunk, i};
+
+    PushTask(queue, {CalculateMeshInWorker, work_data + i});
+    i++;
+
+    /* chunk.CalculateMesh(); */
   }
+
+  LOG(DEBUG) << "Pushed " << i << " chunks";
 
   temp_metadata_.clear();
 }

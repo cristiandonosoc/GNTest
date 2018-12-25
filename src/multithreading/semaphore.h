@@ -19,6 +19,7 @@ class Semaphore {
     // waiting, the next time a thread calls Wait, it won't sleep but rather
     // decrease the notification count.
     void Notify();
+    void NotifyAll();
 
   private:
     std::mutex mutex_;
@@ -26,6 +27,7 @@ class Semaphore {
 
     // Tracks how many notifications are currently "waiting".
     uint32_t count_ = 0;
+    uint32_t threads_waiting_ = 0;
 };
 
 }  // namespace warhol
