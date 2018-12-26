@@ -23,8 +23,6 @@ class LogEntry {
   LogEntry();
   LogEntry(LogLevel);
   LogEntry(LogLevel, const Location&);
-
-
   ~LogEntry();
 
   std::ostream& stream() { return os_; }
@@ -33,13 +31,7 @@ class LogEntry {
   std::ostringstream os_;
 };
 
-#define LOG(level) \
-  ::warhol::LogEntry(::warhol::LOG_##level, {__FILE__, __LINE__}).stream()
-
-#define CONTEXTUAL_LOG(level)                              \
-  ::warhol::LogEntry(::warhol::LOG_##level,                \
-                     Location::GetThreadCurrentLocation()) \
-      .stream()
+#define LOG(level) ::warhol::LogEntry(::warhol::LOG_##level, FROM_HERE).stream()
 
 }  // namespace warhol
 

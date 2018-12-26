@@ -10,6 +10,9 @@
 #include "warhol/platform/platform.h"
 #include "warhol/utils/log.h"
 
+// TODO(Cristian): When providing a way to print and swap these values,
+//                 remember to do a atomic swap, so we don't lose any values.
+
 namespace warhol {
 
 #define TIMED_BLOCK()                                         \

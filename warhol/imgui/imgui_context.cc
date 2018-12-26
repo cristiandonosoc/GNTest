@@ -8,6 +8,7 @@
 #include "warhol/input/input.h"
 #include "warhol/sdl2/def.h"
 #include "warhol/sdl2/sdl_context.h"
+#include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
@@ -81,8 +82,8 @@ bool ImguiContext::Init() {
 
 void
 ImguiContext::NewFrame(const SDLContext& sdl_context, InputState* input) {
-  assert(init_);
-  assert(io_->Fonts->IsBuilt());  // See imgui_impl_sdl.cpp
+  ASSERT(init_);
+  ASSERT(io_->Fonts->IsBuilt());  // See imgui_impl_sdl.cpp
 
   // Setup display size (every frame to accommodate for window resizing)
   /* int w, h; */
@@ -136,7 +137,7 @@ ImguiContext::NewFrame(const SDLContext& sdl_context, InputState* input) {
   if (io_->MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None) {
     SDL_ShowCursor(SDL_FALSE);
   } else {
-    assert((uint32_t)imgui_cursor < cursors_.size());
+    ASSERT((uint32_t)imgui_cursor < cursors_.size());
     // If the cursor is available, draw it. Otherwise show an arrow.
     SDL_SetCursor(cursors_[imgui_cursor] ? cursors_[imgui_cursor]
                                          : cursors_[ImGuiMouseCursor_Arrow]);
@@ -147,7 +148,7 @@ ImguiContext::NewFrame(const SDLContext& sdl_context, InputState* input) {
 }
 
 void ImguiContext::Render() {
-  assert(init_);
+  ASSERT(init_);
   // Construct all the draw orders.
   ImGui::Render();
   renderer_.Render(io_, ImGui::GetDrawData());

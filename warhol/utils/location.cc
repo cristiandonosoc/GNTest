@@ -4,41 +4,46 @@
 #include "warhol/utils/location.h"
 
 #include <assert.h>
-
 #include <stdio.h>
 
 #include <utility>
 #include <vector>
 
-namespace warhol {
+#include "warhol/utils/assert.h"
+#include "warhol/utils/log.h"
 
+namespace warhol {
 namespace {
 
-std::vector<Location>& GetLocations() {
-  thread_local std::vector<Location> locations;
-  return locations;
+LocationStack* GetPerThreadLocationStack() {
+  thread_local LocationStack stack;
+  return &stack;
 }
 
 }  // namespace
 
-Location Location::GetThreadCurrentLocation(const Location& call_site) {
-  auto& locations = GetLocations();
-  if (locations.empty())
-    return call_site;
-  return locations.back();
+void PushLocation(Location location) {
+  LocationStack* stack = GetPerThreadLocationStack();
+  ASSERT(stack->size < (int)LocationStack::kMaxLocationStackSize - 1);
+  stack->locations[stack->size++] = std::move(location);
 }
 
-LocationTrigger::LocationTrigger(Location location)
-    : location_(std::move(location)) {
-  GetLocations().push_back(location_);
-  printf("%s\n", __PRETTY_FUNCTION__);
+void PopLocation() {
+  LocationStack* stack = GetPerThreadLocationStack();
+  ASSERT(stack->size > 0);
+  stack->size--;
 }
 
-LocationTrigger::~LocationTrigger() {
-  auto& locations = GetLocations();
-  assert(!locations.empty());
-  locations.pop_back();
-  printf("%s\n", __PRETTY_FUNCTION__);
+LocationStack* GetLocationStack() {
+  return GetPerThreadLocationStack();
+}
+
+void PrintLocationStack(const LocationStack& stack) {
+  for (int i = stack.size - 1; i >= 0; i--) {
+    const Location& loc = stack.locations[i];
+    printf("%.2d. %s [%s:%d]\n", i, loc.function, loc.file, loc.line);
+  }
+  fflush(stdout);
 }
 
 }  // namespace warhol

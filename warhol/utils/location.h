@@ -3,39 +3,46 @@
 
 #pragma once
 
-#include "warhol/utils/clear_on_move.h"
 #include "warhol/utils/macros.h"
+
+#include <utility>
 
 namespace warhol {
 
-#define FROM_HERE ::warhol::Location{__FILE__, __LINE__}
-
-#define FROM_HERE_SCOPE() \
-  ::warhol::LocationTrigger loc_trigger##__LINE__(FROM_HERE)
+#define FROM_HERE ::warhol::Location{__FILE__, __LINE__, __PRETTY_FUNCTION__}
 
 // Location is meant to provide a thread local context about where the code
 // is being called. Many logging operations will be scoped to this object.
 struct Location {
-  // If the thread-local location it is returned. Otherwise return the given
-  // one.
-  static Location GetThreadCurrentLocation(const Location&);
-
-  bool valid() const { return !!file; }
-
   const char* file;
   int line;
+  const char* function;
 };
 
-class LocationTrigger {
- public:
-  LocationTrigger(Location);
-  ~LocationTrigger();
+// Thread local location stacks.
+struct LocationStack {
+  static constexpr size_t kMaxLocationStackSize = 16;
 
-  DELETE_COPY_AND_ASSIGN(LocationTrigger);
-  DELETE_MOVE_AND_ASSIGN(LocationTrigger);
+  Location locations[kMaxLocationStackSize];
+  int size = 0;
+};
 
- private:
-  Location location_;
+void PushLocation(Location);
+void PopLocation();
+LocationStack* GetLocationStack();
+void PrintLocationStack(const LocationStack&);
+
+#define SCOPE_LOCATION()                             \
+  ::warhol::LocationBlock scope_location_##__LINE__( \
+      {__FILE__, __LINE__, __PRETTY_FUNCTION__})
+
+struct LocationBlock {
+  LocationBlock(Location location) {
+    PushLocation(std::move(location));
+  }
+  ~LocationBlock() {
+    PopLocation();
+  }
 };
 
 }  // namespace warhol

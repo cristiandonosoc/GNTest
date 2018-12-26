@@ -3,15 +3,14 @@
 
 #include "warhol/input/input.h"
 
-#include <assert.h>
+#include "warhol/utils/assert.h"
 
 namespace warhol {
 
 InputState InputState::Create() {
   InputState state;
-  assert((uint8_t)Keys::kLAST < InputState::kInputSize);
+  ASSERT((uint8_t)Keys::kLAST < InputState::kInputSize);
   return state;
-
 }
 
 void InputState::InitFrame(InputState* input) {

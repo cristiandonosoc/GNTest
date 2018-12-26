@@ -23,13 +23,6 @@ namespace warhol {
 #define GL_CALL(func, ...) \
   ::warhol::GL::Call(func, #func, FROM_HERE, __VA_ARGS__)
 
-// Will query the set contextual thread-local location.
-#define CTX_GL_CALL(func, ...)                                                 \
-  ::warhol::GL::Call(func,                                                     \
-                     #func,                                                    \
-                     Location::GetThreadCurrentLocation({__FILE__, __LINE__}), \
-                     __VA_ARGS__)
-
 struct GL {
   static bool Init();
 
