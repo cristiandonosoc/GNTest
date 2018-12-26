@@ -61,8 +61,8 @@ void VoxelTerrain::Update() {
     auto it = voxel_chunks_.find(coord);
     assert(it != voxel_chunks_.end());
     VoxelChunk& chunk = it->second;
-    /* if (!chunk.initialized()) */
-    /*   chunk.Init(); */
+    if (!chunk.initialized())
+      chunk.Init();
     chunk.CalculateMesh();
   }
 

@@ -8,4 +8,8 @@ source_set("multithreading") {
     "work_queue.cc",
     "work_queue.h",
   ]
+
+  if (target_os == "linux") {
+    libs = [ "-lpthread" ]
+  }
 }

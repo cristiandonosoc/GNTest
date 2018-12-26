@@ -8,7 +8,9 @@ declare_args() {
 
 config("sdl2_config") {
   handled = false
-  include_dirs = [ "$sdl2_include_path" ]
+  if ("$sdl2_include_path" != "") {
+    include_dirs = [ "$sdl2_include_path" ]
+  }
   if (target_os == "win" && compiler == "msvc") {
     libs = [ "${sdl2_lib_path}/SDL2/SDL2.lib" ]
     handled = true
