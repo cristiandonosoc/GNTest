@@ -8,11 +8,13 @@
 #include <mutex>
 #include <thread>
 
+#include <debug/timed_block.h>
 #include <debug/timer.h>
 #include <debug/time_logger.h>
 #include <utils/log.h>
 #include <voxel_terrain.h>
 #include <voxel_utils.h>
+
 
 #include <multithreading/work_queue.h>
 
@@ -84,6 +86,10 @@ int main() {
   auto timer = Timer::ManualTimer();
   timer.Init();
 
+  {
+    for (size_t  i = 0; i < 10; i++) {
+    TIMED_BLOCK();
+
   VoxelTerrain terrain(nullptr);
   SetupSphere(&terrain, {}, 50);
   terrain.UpdateMT(&queue);
@@ -91,9 +97,23 @@ int main() {
   while (!AllTasksCompleted(queue)) {
     GoDoWork(&queue);
   }
+    }
+
+  }
 
   auto time = timer.End();
   printf("Timing: %.3f ms\n", time);
+
+  auto& record = g_time_record_array[0];
+  uint64_t cycle_hit_count = record.hit_and_cycle_count;
+  uint32_t cycles = cycle_hit_count & 0xFFFFFFFF;
+  uint32_t hit_count = cycle_hit_count >> 32;
+  printf("[%s:%d][%s]: %u cycles, %u hits (%u cycles/hit)\n",
+         record.filename,
+         record.line,
+         record.function,
+         cycles,
+         hit_count, cycles / hit_count);
 
   LOG(DEBUG) << "Ending queue.";
   queue.running = false;
@@ -107,7 +127,5 @@ int main() {
   /*   LOG(ERROR) << "Could not initialize terrain."; */
   /*   exit(1); */
   /* } */
-
-
 }
 

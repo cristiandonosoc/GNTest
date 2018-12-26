@@ -2,17 +2,18 @@
 # This code has a BSD license. See LICENSE.
 
 source_set("platform") {
-  public = [
+  sources = [
     "platform.cc",
     "platform.h",
   ]
   if (is_windows) {
-    sources = [ "windows_platform.cc" ]
+    sources += [ "windows_platform.cc" ]
   } else if (is_linux) {
-    sources = [ "linux_platform.cc" ]
+    sources += [ "linux_platform.cc" ]
   } else if (is_osx) {
-    sources = [ "osx_platform.cc" ]
+    sources += [ "osx_platform.cc" ]
   } else {
     assert(false, "Unhandled arch: $target_os")
   }
 }
+

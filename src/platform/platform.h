@@ -17,6 +17,9 @@ class Platform {
 
    // Returns the path to base of the project.
    static std::string GetBasePath();
+
+   static uint64_t GetHighPerformanceCounter();
 };
+
 
 }  // namespace warhol

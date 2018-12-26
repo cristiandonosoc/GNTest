@@ -3,12 +3,18 @@
 
 source_set("debug") {
   sources = [
+    "timed_block.cc",
+    "timed_block.h",
     "timer.cc",
     "timer.h",
     "time_logger.cc",
     "time_logger,h",
     "volumes.cc",
     "volumes.h",
+  ]
+
+  public_deps = [
+    "//src/platform",
   ]
 
   deps = [
