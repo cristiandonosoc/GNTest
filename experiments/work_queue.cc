@@ -8,15 +8,14 @@
 #include <mutex>
 #include <thread>
 
-#include <debug/timed_block.h>
-#include <debug/timer.h>
-#include <debug/time_logger.h>
-#include <utils/log.h>
-#include <voxel_terrain.h>
-#include <voxel_utils.h>
+#include <warhol/debug/timed_block.h>
+#include <warhol/debug/timer.h>
+#include <warhol/debug/time_logger.h>
+#include <warhol/multithreading/work_queue.h>
+#include <warhol/utils/log.h>
 
-
-#include <multithreading/work_queue.h>
+#include "voxel/voxel_terrain.h"
+#include "voxel/voxel_utils.h"
 
 using namespace warhol;
 
@@ -104,7 +103,7 @@ int main() {
   auto time = timer.End();
   printf("Timing: %.3f ms\n", time);
 
-  auto& record = g_time_record_array[0];
+  auto& record = TimedBlockRecord::gTimeBlockRecordArray[0];
   uint64_t cycle_hit_count = record.hit_and_cycle_count;
   uint32_t cycles = cycle_hit_count & 0xFFFFFFFF;
   uint32_t hit_count = cycle_hit_count >> 32;

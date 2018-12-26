@@ -1,0 +1,36 @@
+# Copyright 2018, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+source_set("warhol") {
+  sources = [
+    "assets.cc",
+    "assets.h",
+    "camera.cc",
+    "camera.h",
+    "mesh.cc",
+    "mesh.h",
+    "shader.cc",
+    "shader.h",
+    "texture.cc",
+    "texture.h",
+    "texture_atlas.cc",
+    "texture_atlas.h",
+    "texture_array.cc",
+    "texture_array.h",
+  ]
+
+  deps = [
+    "//warhol/input",
+    "//warhol/math",
+    "//warhol/model",
+    "//warhol/multithreading",
+    "//warhol/utils",
+  ]
+
+  public_deps = [
+    "//warhol/debug",
+    "//warhol/graphics/GL",
+    "//warhol/imgui",
+    "//warhol/sdl2",
+  ]
+}

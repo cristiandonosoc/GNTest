@@ -11,7 +11,7 @@ source_set("tests_lib") {
     "//third_party/catch2",
   ]
   deps = [
-    "//src/math",
+    "//warhol/math",
   ]
 }
 
@@ -22,7 +22,7 @@ executable("tests") {
   ]
   deps = [
     ":tests_lib",
-    "//src/utils",
+    "//warhol/utils",
   ]
 
 

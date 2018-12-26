@@ -6,7 +6,6 @@ config("default_include_dirs") {
   include_dirs = [
     "${root_build_dir}",
     "//",
-    "//src",
     root_gen_dir,
   ]
 
@@ -26,8 +25,10 @@ config("default_include_dirs") {
 
 group("default") {
   deps = [
-    "//src:opengl_example",
+    "//experiments:voxel_renderer",
     "//experiments:work_queue",
+    "//experiments:osx",
+
   ]
 }
 

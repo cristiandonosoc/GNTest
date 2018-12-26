@@ -1,18 +1,18 @@
 # Copyright 2018, Cristián Donoso.
 # This code has a BSD license. See LICENSE.
 
-executable("imgui_example") {
+source_set("imgui") {
   sources = [
-    "imgui_impl_opengl3.cpp",
-    "imgui_impl_opengl3.h",
-    "imgui_impl_sdl.cpp",
-    "imgui_impl_sdl.h",
-    "main.cpp",
+    "imgui_context.cc",
+    "imgui_context.h",
+    "imgui_renderer.cc",
+    "imgui_renderer.h",
   ]
-
   deps = [
     "//warhol/graphics/GL",
     "//warhol/sdl2",
+  ]
+  public_deps = [
     "//third_party/imgui",
   ]
 }
