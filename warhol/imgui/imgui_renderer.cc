@@ -46,6 +46,7 @@ ImguiRenderer::~ImguiRenderer() {
 }
 
 bool ImguiRenderer::Init(ImGuiIO* io) {
+  SCOPE_LOCATION();
   if (auto [ok, vert_src, frag_src] = ReadShaders("imgui.vert", "imgui.frag");
       ok) {
     shader_ = Shader("imgui", vert_src.data(), frag_src.data());

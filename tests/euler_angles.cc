@@ -1,12 +1,11 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include "warhol/math/math.h"
-
 #include <third_party/catch2/catch.hpp>
 
-#include "warhol/math/vec.h"
-#include "warhol/utils/log.h"
+#include <warhol/math/math.h>
+#include <warhol/math/vec.h>
+#include <warhol/utils/log.h>
 
 namespace warhol {
 

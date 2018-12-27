@@ -17,8 +17,18 @@ namespace warhol {
       ::warhol::AssertionFailed(FROM_HERE, #condition); \
     }                                                   \
   } while (false)
+
+#define NOT_IMPLEMENTED()                                    \
+  do {                                                       \
+    ::warhol::AssertionFailed(FROM_HERE, "Not implemented"); \
+  } while (false)
+
 #else
+
 #define ASSERT(condition) \
+  do {                    \
+  } while (false)
+#define NOT_IMPLEMENTED() \
   do {                    \
   } while (false)
 #endif

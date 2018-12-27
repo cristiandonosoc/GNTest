@@ -22,6 +22,7 @@ ImguiContext::~ImguiContext() {
 }
 
 bool ImguiContext::Init() {
+  SCOPE_LOCATION();
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   io_ = &ImGui::GetIO();

@@ -3,9 +3,10 @@
 
 #pragma once
 
-#include "warhol/utils/macros.h"
-
+#include <stdlib.h>
 #include <utility>
+
+#include "warhol/utils/macros.h"
 
 namespace warhol {
 

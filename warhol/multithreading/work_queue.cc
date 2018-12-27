@@ -18,7 +18,6 @@ void PushTask(WorkQueue* queue, Task task) {
 
   // We publish the result out.
   queue->last_task_index++;
-
   queue->semaphore.Notify();
 }
 
@@ -31,8 +30,7 @@ Task DequeueTask(WorkQueue* queue) {
     // is still equal to |current_index| at this point, add 1 to it.
     // This returns whether there was an exchange to be done.
     bool exchanged = queue->next_task_index.compare_exchange_strong(
-        current_index, current_index + 1,
-        std::memory_order_release, std::memory_order_relaxed);
+        current_index, current_index + 1);
 
     if (!exchanged) {
       // Someone else beat us to this task. We continue to check for a next

@@ -10,7 +10,6 @@ executable("voxel_renderer") {
     "voxel:lib",
     "//warhol",
   ]
-
 }
 
 executable("work_queue") {
@@ -32,5 +31,15 @@ executable("osx") {
 
   deps = [
     "//warhol",
+  ]
+}
+
+executable("memory_blocks") {
+  sources = [
+    "memory_blocks.cc",
+  ]
+
+  deps = [
+    "//warhol/memory",
   ]
 }

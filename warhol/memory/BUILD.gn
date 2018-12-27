@@ -1,0 +1,17 @@
+# Copyright 2018, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+source_set("memory") {
+  public = [
+    "array_heap.h",
+    "types.h",
+  ]
+
+  if (target_os == "linux") {
+    libs = [ "-lpthread" ]
+  }
+
+  deps = [
+    "//warhol/utils",
+  ]
+}

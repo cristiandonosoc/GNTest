@@ -1,6 +1,8 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
+#pragma once
+
 // Tell the compiler a function is using a printf-style format string.
 // |format_param| is the one-based index of the format string parameter;
 // |dots_param| is the one-based index of the "..." parameter.
@@ -29,6 +31,10 @@
   #define __PRETTY_FUNCTION__ __FUNCTION__
 #endif
 
+#define DECLARE_CONSTRUCTOR(class_name) class_name();
+#define DELETE_CONSTRUCTOR(class_name) class_name() = delete;
+#define DEFAULT_CONSTRUCTOR(class_name) class_name() = delete;
+
 #define DECLARE_COPY_AND_ASSIGN(class_name) \
   class_name(const class_name&);            \
   class_name& operator=(const class_name&);
@@ -53,4 +59,4 @@
   class_name(class_name&&) = delete;       \
   class_name& operator=(class_name&&) = delete;
 
-#define ARRAY_SIZE(array) (sizeof((array)) / sizeof((array)[0]))
+#define ARRAY_SIZE(array) (int)(sizeof((array)) / sizeof((array)[0]))

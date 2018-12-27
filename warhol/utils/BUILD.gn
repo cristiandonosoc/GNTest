@@ -25,7 +25,6 @@ source_set("utils") {
     "path.h",
   ]
   deps = [
-    "//warhol/platform",
     "//third_party/stb",
   ]
 }
