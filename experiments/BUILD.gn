@@ -43,3 +43,13 @@ executable("memory_blocks") {
     "//warhol/memory",
   ]
 }
+
+executable("vulkan_test") {
+  sources = [
+    "vulkan_test.cc",
+  ]
+
+  deps = [
+    "//warhol/graphics/vulkan:lib",
+  ]
+}

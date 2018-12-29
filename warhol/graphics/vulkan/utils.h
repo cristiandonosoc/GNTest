@@ -7,7 +7,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "utils/status.h"
+#include "warhol/utils/log.h"
 
 namespace warhol {
 
@@ -16,16 +16,17 @@ namespace warhol {
 // This macro permits to rewrite the common pattern of getting the proc address
 // and calling it with the correct semantic.
 
-#define CREATE_VK_EXT_CALL(ext_name)                                           \
-  template <typename... Args>                                                  \
-  Status ext_name(VkInstance instance, Args &&... args) {                      \
-    auto func =                                                                \
-        (PFN_vk##ext_name)vkGetInstanceProcAddr(instance, "vk" #ext_name);     \
-    if (!func) {                                                               \
-      return Status("Extension " #ext_name " not present");                    \
-    }                                                                          \
-    func(instance, std::forward<Args>(args)...);                               \
-    return Status();                                                           \
+#define CREATE_VK_EXT_CALL(ext_name)                                       \
+  template <typename... Args>                                              \
+  bool ext_name(VkInstance instance, Args&&... args) {                     \
+    auto func =                                                            \
+        (PFN_vk##ext_name)vkGetInstanceProcAddr(instance, "vk" #ext_name); \
+    if (!func) {                                                           \
+      LOG(WARNING) << "Extension " << #ext_name << " not present";         \
+      return false;                                                        \
+    }                                                                      \
+    func(instance, std::forward<Args>(args)...);                           \
+    return true;                                                           \
   }
 
 CREATE_VK_EXT_CALL(CreateDebugUtilsMessengerEXT);
@@ -49,13 +50,6 @@ CREATE_VK_EXT_CALL(DestroyDebugUtilsMessengerEXT);
     func(&count, nullptr);                    \
     (container).resize(count);                \
     func(&count, (container).data());         \
-  }
-
-// Misc. -----------------------------------------------------------------------
-
-#define VK_RETURN_IF_ERROR(result)                                 \
-  if (result != VK_SUCCESS) {                                      \
-    return Status("Vulkan Error: %s", VulkanEnumToString(result)); \
   }
 
 // Enum stringifying -----------------------------------------------------------

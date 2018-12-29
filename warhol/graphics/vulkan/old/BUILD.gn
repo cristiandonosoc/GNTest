@@ -2,17 +2,13 @@
 # This code has a BSD license. See LICENSE.
 
 declare_args() {
-  vulkan_include_path = getenv("VULKAN_SDK")
+  vulkan_include_path = getenv("VULKAN_SDK") + "/include"
   vulkan_lib_path = getenv("VULKAN_SDK") + "/lib"
 }
 
-config("config") {
+config("vulkan_config") {
   handled = false
-
-  include_dirs = [
-    "${vulkan_include_path}"
-  ]
-
+  include_dirs = [ "${vulkan_include_path}" ]
   if (target_os == "win" && compiler == "msvc") {
     libs = [ "${vulkan_include_path}/vulkan/vulkan-1.lib" ]
     handled = true
@@ -44,48 +40,32 @@ config("config") {
   }
 }
 
-source_set("lib") {
+source_set("vulkan_lib") {
   sources = [
-    "utils.cc",
-    "utils.h",
+    "vulkan_context.cc",
+    "vulkan_context.h",
+    "vulkan_utils.cc",
+    "vulkan_utils.h",
   ]
-
-  # We need to pass through the include files and linking info.
-  public_configs = [
-    ":config",
-  ]
-
-  deps = [
-    "//warhol/utils",
+  configs += [
+    # TODO(donosoc): Abstract the SDL2 dependencies for vulkan so this config
+    #                dependency can be avoided.
+    "//src/sdl2:sdl2_config",
+    ":vulkan_config",
   ]
 }
 
-# source_set("vulkan_lib") {
-#   sources = [
-#     "vulkan_context.cc",
-#     "vulkan_context.h",
-#     "vulkan_utils.cc",
-#     "vulkan_utils.h",
-#   ]
-#   configs += [
-#     # TODO(donosoc): Abstract the SDL2 dependencies for vulkan so this config
-#     #                dependency can be avoided.
-#     "//src/sdl2:sdl2_config",
-#     ":vulkan_config",
-#   ]
-# }
-
-# executable("vulkan_test") {
-#   sources = [
-#     "vulkan_test.cc"
-#   ]
-#   deps = [
-#     ":vulkan_lib",
-#     "//src/utils",
-#   ]
-#   configs += [
-#     ":vulkan_config",
-#   ]
-# }
+executable("vulkan_test") {
+  sources = [
+    "vulkan_test.cc"
+  ]
+  deps = [
+    ":vulkan_lib",
+    "//src/utils",
+  ]
+  configs += [
+    ":vulkan_config",
+  ]
+}
 
 
