@@ -17,6 +17,7 @@ source_set("utils") {
     "log.cc",
     "log.h",
     "macros.h",
+    "optional.h",
     "status.cc",
     "status.h",
     "string.cc",

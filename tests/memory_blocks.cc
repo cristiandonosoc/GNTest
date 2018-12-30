@@ -2,7 +2,6 @@
 // This code has a BSD license. See LICENSE.
 
 #include <third_party/catch2/catch.hpp>
-
 #include <warhol/memory/array_heap.h>
 
 using namespace warhol;
