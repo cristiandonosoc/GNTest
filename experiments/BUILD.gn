@@ -51,5 +51,6 @@ executable("vulkan_test") {
 
   deps = [
     "//warhol/graphics/vulkan:lib",
+    "//warhol/sdl2",
   ]
 }

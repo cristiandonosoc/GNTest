@@ -1,15 +1,63 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include <assert.h>
-
 #include "warhol/graphics/vulkan/utils.h"
 
+#include "warhol/utils/assert.h"
+
 namespace warhol {
+namespace vulkan {
+
+bool CheckExtensions(const std::vector<const char*>& extensions) {
+  std::vector<VkExtensionProperties> properties;
+  VK_GET_PROPERTIES(vkEnumerateInstanceExtensionProperties, nullptr, properties);
+
+  for (const char* extension : extensions) {
+    bool found = false;
+    for (const VkExtensionProperties& property : properties) {
+      if (strcmp(extension, property.extensionName) == 0) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      LOG(ERROR) << "Could not find extension " << extension;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+void AddDebugExtensions(std::vector<const char*>* out) {
+  out->push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+}
+
+bool CheckValidationLayers(const std::vector<const char*>& layers) {
+  std::vector<VkLayerProperties> properties;
+  VK_GET_PROPERTIES_NC(vkEnumerateInstanceLayerProperties, properties);
+
+  for (const char* layer : layers) {
+    bool found = false;
+    for (const VkLayerProperties& property : properties) {
+      if (strcmp(layer, property.layerName) == 0) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      LOG(ERROR) << "Could not find layer " << layer;
+      return false;
+    }
+  }
+
+  return true;
+}
 
 template <>
-const char*
-VulkanEnumToString(VkResult res) {
+const char* EnumToString(VkResult res) {
   switch (res) {
     case VK_SUCCESS: return "SUCCESS";
     case VK_NOT_READY: return "NOT_READY";
@@ -51,13 +99,12 @@ VulkanEnumToString(VkResult res) {
     default: break;
   }
 
-  assert(!"Unknown option");
+  ASSERT(!"Unknown option");
   return "";
 }
 
 template <>
-const char*
-VulkanEnumToString(VkPhysicalDeviceType type) {
+const char* EnumToString(VkPhysicalDeviceType type) {
   switch (type) {
     case VK_PHYSICAL_DEVICE_TYPE_OTHER: return "OTHER";
     case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return "INTEGRATED_GPU";
@@ -67,8 +114,40 @@ VulkanEnumToString(VkPhysicalDeviceType type) {
     default: break;
   }
 
-  assert(!"Unknown option");
-  return "";
+  ASSERT(!"Unknown option");
+  return nullptr;
 }
 
+template <>
+const char* EnumToString(VkDebugUtilsMessageSeverityFlagBitsEXT severity) {
+  switch (severity) {
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+      return "Verbose";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+      return "Info";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+      return "Warning";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+      return "Error";
+    default: break;
+  }
+
+  ASSERT("Unknown severity");
+  return nullptr;
+}
+
+template <>
+const char* EnumToString(VkDebugUtilsMessageTypeFlagsEXT type) {
+  switch (type) {
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT: return "General";
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT: return "Validation";
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT: return "Performance";
+    default: break;
+  }
+
+  ASSERT("Unknown");
+  return nullptr;
+}
+
+}  // namespace vulkan
 }  // namespace warhol

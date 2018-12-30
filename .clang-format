@@ -11,7 +11,7 @@ AlignTrailingComments: true
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: Inline
-AlwaysBreakAfterReturnType: TopLevel
+# AlwaysBreakAfterReturnType: TopLevel
 AllowShortIfStatementsOnASingleLine: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 # FixNamespaceComments: true

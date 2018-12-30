@@ -10,6 +10,11 @@
 #include "warhol/utils/log.h"
 
 namespace warhol {
+namespace vulkan {
+
+bool CheckExtensions(const std::vector<const char*>& extensions);
+void AddDebugExtensions(std::vector<const char*>*);
+bool CheckValidationLayers(const std::vector<const char*>& layers);
 
 // GetInstanceProcAddr calls ---------------------------------------------------
 
@@ -44,6 +49,7 @@ CREATE_VK_EXT_CALL(DestroyDebugUtilsMessengerEXT);
     func((context), &count, container.data());      \
   }
 
+// This are for properties that don't need a particular context pointer.
 #define VK_GET_PROPERTIES_NC(func, container) \
   {                                           \
     uint32_t count = 0;                       \
@@ -57,10 +63,17 @@ CREATE_VK_EXT_CALL(DestroyDebugUtilsMessengerEXT);
 // Will be explicitly specialized in the .cc
 // NOTE: If not defined, this will be a linker error. Watch out for those.
 template <typename VulkanEnum>
-const char* VulkanEnumToString(VulkanEnum);
+const char* EnumToString(VulkanEnum);
 
 // Specializations. These are important because the definition is in the .cc
-template<> const char* VulkanEnumToString(VkResult);
-template<> const char* VulkanEnumToString(VkPhysicalDeviceType);
+template<> const char* EnumToString(VkResult);
+template<> const char* EnumToString(VkPhysicalDeviceType);
+template<> const char* EnumToString(VkDebugUtilsMessageSeverityFlagBitsEXT);
+template<> const char* EnumToString(VkDebugUtilsMessageTypeFlagBitsEXT);
 
+
+const char* DebugMessageSeverityToString(VkDebugUtilsMessageSeverityFlagBitsEXT);
+const char* DebugMessageTypeToString(VkDebugUtilsMessageTypeFlagsEXT);
+
+}  // namespace vulkan
 }  // namespace warhol

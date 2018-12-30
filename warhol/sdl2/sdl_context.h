@@ -31,7 +31,9 @@ class SDLContext {
 
   // If init is not success, the instance should not be used and should be
   // destroyed.
-  bool Init();
+  bool InitOpenGL(uint32_t sdl_flags);  // SDL_WINDOW_VULKAN will be OR'ed
+  bool InitVulkan(uint32_t sdl_flags);  // SDL_WINDOW_OPENGL will be OR'ed
+
   void Clear();
   // TODO(Cristian): Perhaps later we're going to need an array of actions.
   //                 EventAction should also be separated from SDL.

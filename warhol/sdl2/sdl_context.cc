@@ -3,12 +3,11 @@
 
 #include "warhol/sdl2/sdl_context.h"
 
-#include <assert.h>
-
 #include <limits>
 
 #include "warhol/sdl2/input.h"
 #include "warhol/sdl2/def.h"
+#include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
@@ -45,8 +44,8 @@ SDLContext::~SDLContext() {
   Clear();
 }
 
-bool SDLContext::Init() {
-  assert(impl_ == nullptr);
+bool SDLContext::InitOpenGL(uint32_t flags) {
+  ASSERT(impl_ == nullptr);
   impl_ = std::make_unique<SDLContextImpl>();
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
@@ -57,15 +56,16 @@ bool SDLContext::Init() {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
   impl_->window = SDL_CreateWindow("Warhol",
-                            SDL_WINDOWPOS_CENTERED,
-                            SDL_WINDOWPOS_CENTERED,
-                            1280,
-                            720,
-                            SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+                                   SDL_WINDOWPOS_CENTERED,
+                                   SDL_WINDOWPOS_CENTERED,
+                                   1280,
+                                   720,
+                                   SDL_WINDOW_OPENGL | flags);
   if (!impl_->window) {
     LOG(ERROR) << "Error creating window: " << SDL_GetError();
     return false;
   }
+  SDL_GetWindowSize(impl_->window, &impl_->width, &impl_->height);
 
   // Setup an OpenGL context.
   LOG(DEBUG) << "Going to create GL context";
@@ -75,9 +75,32 @@ bool SDLContext::Init() {
     return false;
   }
 
+  LOG(DEBUG) << "Created SDL OpenGL context.";
+  return true;
+}
+
+bool SDLContext::InitVulkan(uint32_t flags) {
+  ASSERT(impl_ == nullptr);
+  impl_ = std::make_unique<SDLContextImpl>();
+
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
+    LOG(ERROR) << "Error loading SDL: " << SDL_GetError();
+    return false;
+  }
+
+  impl_->window = SDL_CreateWindow("Warhol",
+                                   SDL_WINDOWPOS_CENTERED,
+                                   SDL_WINDOWPOS_CENTERED,
+                                   1280,
+                                   720,
+                                   SDL_WINDOW_VULKAN | flags);
+  if (!impl_->window) {
+    LOG(ERROR) << "Error creating window: " << SDL_GetError();
+    return false;
+  }
   SDL_GetWindowSize(impl_->window, &impl_->width, &impl_->height);
 
-  LOG(DEBUG) << "Created GL context";
+  LOG(DEBUG) << "Created SDL Vulkan context.";
   return true;
 }
 

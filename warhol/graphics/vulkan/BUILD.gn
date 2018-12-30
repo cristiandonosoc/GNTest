@@ -46,6 +46,8 @@ config("config") {
 
 source_set("lib") {
   sources = [
+    "context.cc",
+    "context.h",
     "utils.cc",
     "utils.h",
   ]

@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "warhol/utils/assert.h"
-#include "warhol/utils/log.h"
 
 // This optional works exactly as std::optional except that it will actually
 // clear the value as a move (which normal optional for some insane reason
@@ -29,8 +28,16 @@ class Optional {
    }
    T& value() { return *(*this); }
 
-   bool has_value() const { return has_value_; }
+   bool has_value() const {
+     return has_value_;
+   }
    operator bool() const { return has_value_; }
+
+   void Clear() {
+    if (has_value_)
+      value_.t_.~T();
+     has_value_ = false;
+   }
 
   // Constructors --------------------------------------------------------------
 
@@ -60,7 +67,7 @@ class Optional {
 
   // Move constructor.
   Optional(Optional&& rhs) : has_value_(rhs.has_value_) {
-    if (has_value_)
+    if (rhs.has_value_)
       value_.t_ = std::move(rhs.value_.t_);
     rhs.has_value_ = false;
   }
@@ -75,12 +82,11 @@ class Optional {
   }
 
   ~Optional() {
-    if (has_value_)
-      value_.t_.~T();
+    Clear();
   }
 
  private:
-  bool has_value_ = {};
+  bool has_value_ = false;
   union Value {
     Value() {}
     ~Value() {}
