@@ -15,6 +15,9 @@ namespace vulkan {
 bool CheckExtensions(const std::vector<const char*>& extensions);
 void AddDebugExtensions(std::vector<const char*>*);
 bool CheckValidationLayers(const std::vector<const char*>& layers);
+bool CheckPhysicalDeviceExtensions(
+    const VkPhysicalDevice&,
+    const std::vector<const char*>& required_extensions);
 
 // GetInstanceProcAddr calls ---------------------------------------------------
 
@@ -34,7 +37,7 @@ bool CheckValidationLayers(const std::vector<const char*>& layers);
     return true;                                                           \
   }
 
-CREATE_VK_EXT_CALL(CreateDebugUtilsMessengerEXT);
+    CREATE_VK_EXT_CALL(CreateDebugUtilsMessengerEXT);
 CREATE_VK_EXT_CALL(DestroyDebugUtilsMessengerEXT);
 
 // Property getter -------------------------------------------------------------
@@ -46,7 +49,15 @@ CREATE_VK_EXT_CALL(DestroyDebugUtilsMessengerEXT);
     uint32_t count = 0;                             \
     func((context), &count, nullptr);               \
     (container).resize(count);                      \
-    func((context), &count, container.data());      \
+    func((context), &count, (container).data());      \
+  }
+
+#define VK_GET_PROPERTIES4(func, context1, context2, container) \
+  {                                                             \
+    uint32_t count = 0;                                         \
+    func((context1), (context2), &count, nullptr);              \
+    (container).resize(count);                                  \
+    func((context1), (context2), &count, (container).data());   \
   }
 
 // This are for properties that don't need a particular context pointer.
@@ -70,10 +81,9 @@ template<> const char* EnumToString(VkResult);
 template<> const char* EnumToString(VkPhysicalDeviceType);
 template<> const char* EnumToString(VkDebugUtilsMessageSeverityFlagBitsEXT);
 template<> const char* EnumToString(VkDebugUtilsMessageTypeFlagBitsEXT);
-
-
-const char* DebugMessageSeverityToString(VkDebugUtilsMessageSeverityFlagBitsEXT);
-const char* DebugMessageTypeToString(VkDebugUtilsMessageTypeFlagsEXT);
+template<> const char* EnumToString(VkFormat);
+template<> const char* EnumToString(VkColorSpaceKHR);
+template<> const char* EnumToString(VkPresentModeKHR);
 
 }  // namespace vulkan
 }  // namespace warhol

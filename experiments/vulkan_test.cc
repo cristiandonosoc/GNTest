@@ -39,26 +39,27 @@ int main() {
   SDLContext sdl_context;
   if (!sdl_context.InitVulkan(0))
     return 1;
+  LOG(INFO) << "Created SDL context.";
 
-  std::vector<const char*> extensions = {};
-  VK_GET_PROPERTIES(SDL_Vulkan_GetInstanceExtensions,
-                    sdl_context.get_window(),
-                    extensions);
-#ifndef NDEBUG
-  vulkan::AddDebugExtensions(&extensions);
-#endif
-  if (!vulkan::CheckExtensions(extensions))
-    return 1;
-
-  std::vector<const char*> layers = {};
-#ifndef NDEBUG
-  layers.push_back("VK_LAYER_LUNARG_standard_validation");
-#endif
-  if (!vulkan::CheckValidationLayers(layers))
-    return 1;
 
   vulkan::Context context;
-  if (!vulkan::CreateContext(extensions, layers, &context))
+
+  VK_GET_PROPERTIES(SDL_Vulkan_GetInstanceExtensions,
+                    sdl_context.get_window(),
+                    context.extensions);
+#ifndef NDEBUG
+  vulkan::AddDebugExtensions(&context.extensions);
+#endif
+  if (!vulkan::CheckExtensions(context.extensions))
+    return 1;
+
+#ifndef NDEBUG
+  context.validation_layers.push_back("VK_LAYER_LUNARG_standard_validation");
+#endif
+  if (!vulkan::CheckValidationLayers(context.validation_layers))
+    return 1;
+
+  if (!vulkan::CreateContext(&context))
     return 1;
   LOG(INFO) << "Created context.";
 
@@ -74,6 +75,10 @@ int main() {
   context.surface = surface;
   LOG(INFO) << "Created a surface.";
 
+  context.device_extensions = {
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+  };
+
   if (!vulkan::PickPhysicalDevice(&context))
     return 1;
   VkPhysicalDeviceProperties properties;
@@ -83,4 +88,8 @@ int main() {
   if (!vulkan::CreateLogicalDevice(&context))
     return 1;
   LOG(INFO) << "Created a logical device.";
+
+  if (!vulkan::CreateSwapChain(&context))
+    return 1;
+  LOG(INFO) << "Created a swap chain.";
 }

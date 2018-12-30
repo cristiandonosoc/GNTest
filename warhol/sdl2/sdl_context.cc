@@ -68,14 +68,12 @@ bool SDLContext::InitOpenGL(uint32_t flags) {
   SDL_GetWindowSize(impl_->window, &impl_->width, &impl_->height);
 
   // Setup an OpenGL context.
-  LOG(DEBUG) << "Going to create GL context";
   impl_->gl_context = SDL_GL_CreateContext(impl_->window);
   if (!impl_->gl_context) {
     LOG(ERROR) << "Error creating OpenGL context: " << SDL_GetError();
     return false;
   }
 
-  LOG(DEBUG) << "Created SDL OpenGL context.";
   return true;
 }
 
@@ -100,7 +98,6 @@ bool SDLContext::InitVulkan(uint32_t flags) {
   }
   SDL_GetWindowSize(impl_->window, &impl_->width, &impl_->height);
 
-  LOG(DEBUG) << "Created SDL Vulkan context.";
   return true;
 }
 

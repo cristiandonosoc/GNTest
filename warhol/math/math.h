@@ -41,4 +41,13 @@ Vec3 DirectionFromEulerDeg(float pitch, float yaw);
 Pair<float> EulerFromDirection(const Vec3& direction);
 Pair<float> EulerFromDirectionDeg(const Vec3& direction);
 
+template <typename T>
+T Clamp(T val, T min, T max) {
+  if (val < min)
+    val = min;
+  if (val > max)
+    val = max;
+  return val;
+}
+
 }  // namespace warhol
