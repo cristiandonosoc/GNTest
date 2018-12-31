@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <vulkan/vulkan.h>
+#include <warhol/assets/assets.h>
 #include <warhol/utils/log.h>
 #include <warhol/graphics/vulkan/context.h>
 #include <warhol/graphics/vulkan/utils.h>
@@ -89,7 +90,17 @@ int main() {
     return 1;
   LOG(INFO) << "Created a logical device.";
 
-  if (!vulkan::CreateSwapChain(&context))
+  Pair<uint32_t> screen_size = {(uint32_t)sdl_context.width(),
+                                (uint32_t)sdl_context.height()};
+  if (!vulkan::CreateSwapChain(&context, screen_size))
     return 1;
   LOG(INFO) << "Created a swap chain.";
+
+  if (!vulkan::CreateGraphicsPipeline(
+          &context,
+          Assets::VulkanShaderPath("demo.vert.spv"),
+          Assets::VulkanShaderPath("demo.frag.spv"))) {
+    return 1;
+  }
+  LOG(INFO) << "Created a graphics pipeline.";
 }

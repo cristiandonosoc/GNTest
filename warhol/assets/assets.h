@@ -11,6 +11,7 @@ namespace warhol {
 class Assets {
  public:
   static std::string ShaderPath(std::string shader_name);
+  static std::string VulkanShaderPath(std::string shader_name);
   static std::string TexturePath(std::string texture_name);
 };
 

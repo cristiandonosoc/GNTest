@@ -5,22 +5,38 @@
 
 #include <vector>
 
-#include <warhol/utils/macros.h>
-#include <warhol/utils/optional.h>
 #include <vulkan/vulkan.h>
+
+#include "warhol/math/math.h"
+#include "warhol/utils/macros.h"
+#include "warhol/utils/optional.h"
 
 namespace warhol {
 namespace vulkan {
 
+// The indices for given queues families within a particular physical device.
 struct QueueFamilyIndices {
   int graphics = -1;
   int present = -1;
 };
 
-struct SwapChainDetails {
+// Represents the capabilities a physical device can have for swap chains.
+struct SwapChainCapabilities {
   VkSurfaceCapabilitiesKHR capabilities;
   std::vector<VkSurfaceFormatKHR> formats;
   std::vector<VkPresentModeKHR> present_modes;
+};
+
+struct PhysicalDeviceInfo {
+  QueueFamilyIndices queue_family_indices;
+  SwapChainCapabilities swap_chain_capabilities;
+};
+
+// The actual formats used by a particular swap chain.
+struct SwapChainDetails {
+  VkSurfaceFormatKHR format;
+  VkPresentModeKHR present_mode;
+  VkExtent2D extent;
 };
 
 struct Context {
@@ -40,16 +56,16 @@ struct Context {
 
   std::vector<const char*> device_extensions;
   VkPhysicalDevice physical_device = VK_NULL_HANDLE; // Freed with |instance|.
-  struct PhysicalDeviceInfo {
-    QueueFamilyIndices queue_family_indices;
-    SwapChainDetails swap_chain_details;
-  } device_info;
+  PhysicalDeviceInfo device_info;
 
   Optional<VkDevice> device = {};
   VkQueue graphics_queue = VK_NULL_HANDLE;  // Freed with |device|.
   VkQueue present_queue = VK_NULL_HANDLE;   // Freed with |device|.
 
   Optional<VkSwapchainKHR> swap_chain = {};
+  SwapChainDetails swap_chain_details = {};
+  std::vector<VkImage> images;    // Freed with |swap_chain|.
+  std::vector<VkImageView> image_views;
 };
 
 bool IsValid(const Context&);
@@ -69,7 +85,13 @@ bool PickPhysicalDevice(Context*);
 bool CreateLogicalDevice(Context*);
 
 // A |device| must be created already.
-bool CreateSwapChain(Context*);
+bool CreateSwapChain(Context*, Pair<uint32_t> screen_size);
+
+bool CreateImageViews(Context*);
+
+bool CreateGraphicsPipeline(Context*,
+                            const std::string& vert_path,
+                            const std::string& frag_path);
 
 }  // namespace vulkan
 }  // namespace warhol

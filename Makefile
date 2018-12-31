@@ -12,8 +12,8 @@ win: FORCE
 	ninja.exe -C out opengl_example
 
 shaders: FORCE
-	glslangValidator -V shaders/simple.vert -o out/simple.vert.spv
-	glslangValidator -V shaders/simple.frag -o out/simple.frag.spv
+	glslangValidator -V assets/shaders/vulkan/demo.vert -o out/assets/shaders/vulkan/demo.vert.spv
+	glslangValidator -V assets/shaders/vulkan/demo.frag -o out/assets/shaders/vulkan/demo.frag.spv
 
 win_shaders: FORCE
 	glslangValidator.exe -I${WARHOL_BASE} -V shaders/simple.vert -o out/simple.vert.spv

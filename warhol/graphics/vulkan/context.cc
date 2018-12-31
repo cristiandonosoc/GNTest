@@ -8,9 +8,10 @@
 #include <set>
 
 #include "warhol/graphics/vulkan/utils.h"
-#include "warhol/math/math.h"
 #include "warhol/math/vec.h"
+#include "warhol/utils/file.h"
 #include "warhol/utils/log.h"
+#include "warhol/utils/scope_trigger.h"
 
 namespace warhol {
 namespace vulkan {
@@ -50,6 +51,8 @@ bool CreateContext(Context* context) {
 // ~Context --------------------------------------------------------------------
 
 Context::~Context() {
+  for (auto image_view : image_views)
+    vkDestroyImageView(*device, image_view, nullptr);
   if (swap_chain)
     vkDestroySwapchainKHR(*device, *swap_chain, nullptr);
   if (device)
@@ -122,9 +125,9 @@ QueueFamilyIndices FindQueueFamilyIndices(const VkPhysicalDevice& device,
   return indices;
 }
 
-SwapChainDetails QuerySwapChainSupport(const VkPhysicalDevice& device,
+SwapChainCapabilities QuerySwapChainSupport(const VkPhysicalDevice& device,
                                               const VkSurfaceKHR& surface) {
-  SwapChainDetails details;
+  SwapChainCapabilities details;
   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
                                             &details.capabilities);
 
@@ -147,7 +150,7 @@ SwapChainDetails QuerySwapChainSupport(const VkPhysicalDevice& device,
 bool IsSuitableDevice(const VkPhysicalDevice& device,
                       const VkSurfaceKHR& surface,
                       const std::vector<const char*>& required_extensions,
-                      Context::PhysicalDeviceInfo* out) {
+                      PhysicalDeviceInfo* out) {
   VkPhysicalDeviceProperties properties;
   vkGetPhysicalDeviceProperties(device, &properties);
 
@@ -163,12 +166,12 @@ bool IsSuitableDevice(const VkPhysicalDevice& device,
   if (!CheckPhysicalDeviceExtensions(device, required_extensions))
     return false;
 
-  SwapChainDetails details = QuerySwapChainSupport(device, surface);
+  SwapChainCapabilities details = QuerySwapChainSupport(device, surface);
   if (details.formats.empty() || details.present_modes.empty())
     return false;
 
   out->queue_family_indices = indices;
-  out->swap_chain_details = details;
+  out->swap_chain_capabilities = details;
   return true;
 }
 
@@ -182,10 +185,9 @@ bool PickPhysicalDevice(Context* context) {
     return false;
   }
 
-  std::vector<std::pair<VkPhysicalDevice, Context::PhysicalDeviceInfo>>
-      suitable_devices;
+  std::vector<std::pair<VkPhysicalDevice, PhysicalDeviceInfo>> suitable_devices;
   for (const VkPhysicalDevice& device : devices) {
-    Context::PhysicalDeviceInfo device_info;
+    PhysicalDeviceInfo device_info;
     if (IsSuitableDevice(device,
                          *context->surface,
                          context->device_extensions,
@@ -311,19 +313,18 @@ VkExtent2D ChooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& cap,
 
 }  // namespace
 
-bool CreateSwapChain(Context* context) {
-  auto& details = context->device_info.swap_chain_details;
+bool CreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
+  auto& capabilities = context->device_info.swap_chain_capabilities;
   VkSurfaceFormatKHR format =
-      ChooseSwapChainSurfaceFormat(details.formats);
+      ChooseSwapChainSurfaceFormat(capabilities.formats);
   VkPresentModeKHR present_mode =
-      ChooseSwapChainPresentMode(details.present_modes);
+      ChooseSwapChainPresentMode(capabilities.present_modes);
 
-  Pair<uint32_t> screen_size = {800, 600};
   VkExtent2D extent =
-      ChooseSwapChainExtent(details.capabilities, screen_size);
+      ChooseSwapChainExtent(capabilities.capabilities, screen_size);
 
-  uint32_t min_image_count = details.capabilities.minImageCount;
-  uint32_t max_image_count = details.capabilities.maxImageCount;
+  uint32_t min_image_count = capabilities.capabilities.minImageCount;
+  uint32_t max_image_count = capabilities.capabilities.maxImageCount;
   uint32_t image_count = min_image_count + 1;
   // We clamp the value if necessary. max == 0 means no limit in image count.
   if (max_image_count > 0 && image_count > max_image_count)
@@ -354,7 +355,7 @@ bool CreateSwapChain(Context* context) {
     create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   }
 
-  create_info.preTransform = details.capabilities.currentTransform;
+  create_info.preTransform = capabilities.capabilities.currentTransform;
 
   // We ingore the alpha for blending with the window system.
   create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -373,7 +374,118 @@ bool CreateSwapChain(Context* context) {
   }
 
   context->swap_chain = swap_chain;
+  context->swap_chain_details.format = format;
+  context->swap_chain_details.present_mode = present_mode;
+  context->swap_chain_details.extent = extent;
+
+  // Retrieve the images.
+  VK_GET_PROPERTIES4(vkGetSwapchainImagesKHR,
+                     *context->device, swap_chain, context->images);
   return true;
+}
+
+// CreateImageViews ------------------------------------------------------------
+
+bool CreateImageViews(Context* context) {
+  context->image_views.clear();
+  for (size_t i = 0; i < context->images.size(); i++) {
+    VkImageViewCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    create_info.image = context->images[i];
+    create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    create_info.format = context->swap_chain_details.format.format;
+
+    create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+    // This is an image (color texture).
+    create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    create_info.subresourceRange.baseMipLevel = 0;
+    create_info.subresourceRange.levelCount = 1;
+    create_info.subresourceRange.baseArrayLayer = 0;
+    create_info.subresourceRange.layerCount = 1;
+
+    VkImageView image_view;
+    if (auto res = vkCreateImageView(
+            *context->device, &create_info, nullptr, &image_view);
+        res != VK_SUCCESS) {
+      LOG(ERROR) << "Could not create image view: " << EnumToString(res);
+      return false;
+    }
+    context->image_views.push_back(std::move(image_view));
+  }
+
+  return true;
+}
+
+// CreateGraphicsPipeline ------------------------------------------------------
+
+namespace {
+
+VkShaderModule CreateShaderModule(const VkDevice& device,
+                                  const std::vector<char>& data) {
+  VkShaderModuleCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  create_info.codeSize = data.size();
+  create_info.pCode = (const uint32_t*)(data.data());
+
+  VkShaderModule shader;
+  if (auto res = vkCreateShaderModule(device, &create_info, nullptr, &shader);
+      res != VK_SUCCESS) {
+    LOG(ERROR) << "Could not create shader module: " << EnumToString(res);
+    return VK_NULL_HANDLE;
+  }
+  return shader;
+}
+
+}  // namespace
+
+bool CreateGraphicsPipeline(Context* context,
+                            const std::string& vert_path,
+                            const std::string& frag_path) {
+  std::vector<char> vert_data, frag_data;
+  if (!ReadWholeFile(vert_path, &vert_data, false) ||
+      !ReadWholeFile(frag_path, &frag_data, false)) {
+    return false;
+  }
+
+  LOG(DEBUG) << "Vert data size: " << vert_data.size();
+  LOG(DEBUG) << "Frag data size: " << frag_data.size();
+
+  VkShaderModule vert_module = CreateShaderModule(*context->device, vert_data);
+  ScopeTrigger vert_trigger([&vert_module, &device = *context->device]() {
+    if (vert_module != VK_NULL_HANDLE)
+      vkDestroyShaderModule(device, vert_module, nullptr);
+  });
+
+  VkShaderModule frag_module = CreateShaderModule(*context->device, frag_data);
+  ScopeTrigger frag_trigger([&frag_module, &device = *context->device]() {
+    if (frag_module != VK_NULL_HANDLE)
+      vkDestroyShaderModule(device, frag_module, nullptr);
+  });
+
+  if (vert_module == VK_NULL_HANDLE || frag_module == VK_NULL_HANDLE)
+    return false;
+
+  VkPipelineShaderStageCreateInfo vert_create_info = {};
+  vert_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  vert_create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+  vert_create_info.module = vert_module;
+  vert_create_info.pName = "main";
+
+  VkPipelineShaderStageCreateInfo frag_create_info = {};
+  frag_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  frag_create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+  frag_create_info.module = frag_module;
+  frag_create_info.pName = "main";
+
+  /* VkPipelineShaderStageCreateInfo shader_stages[] = {vert_create_info, */
+  /*                                                    frag_create_info}; */
+
+  LOG(WARNING) << "Not implemented.";
+  return false;
 }
 
 }  // namespace vulkan

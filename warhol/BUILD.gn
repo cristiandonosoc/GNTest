@@ -3,8 +3,6 @@
 
 source_set("warhol") {
   sources = [
-    "assets.cc",
-    "assets.h",
     "camera.cc",
     "camera.h",
     "mesh.cc",

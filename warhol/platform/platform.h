@@ -14,6 +14,7 @@ class Platform {
  public:
    // Returns the path of the current link. Empty on error.
    static std::string GetCurrentExecutablePath();
+   static std::string GetCurrentExecutableDirectory();
 
    // Returns the path to base of the project.
    static std::string GetBasePath();
