@@ -96,6 +96,14 @@ int main() {
     return 1;
   LOG(INFO) << "Created a swap chain.";
 
+  if (!vulkan::CreateRenderPass(&context))
+    return 1;
+  LOG(INFO) << "Created a render pass.";
+
+  if (!vulkan::CreatePipelineLayout(&context))
+    return 1;
+  LOG(INFO) << "Created the pipeline layout.";
+
   if (!vulkan::CreateGraphicsPipeline(
           &context,
           Assets::VulkanShaderPath("demo.vert.spv"),

@@ -66,6 +66,13 @@ struct Context {
   SwapChainDetails swap_chain_details = {};
   std::vector<VkImage> images;    // Freed with |swap_chain|.
   std::vector<VkImageView> image_views;
+
+  Optional<VkRenderPass> render_pass;
+  // Uniforms need to be stated on pipeline creation. The pipeline layout is the
+  // one that defines those declarations.
+  Optional<VkPipelineLayout> pipeline_layout;
+
+  Optional<VkPipeline> pipeline;
 };
 
 bool IsValid(const Context&);
@@ -88,6 +95,10 @@ bool CreateLogicalDevice(Context*);
 bool CreateSwapChain(Context*, Pair<uint32_t> screen_size);
 
 bool CreateImageViews(Context*);
+
+bool CreateRenderPass(Context*);
+
+bool CreatePipelineLayout(Context*);
 
 bool CreateGraphicsPipeline(Context*,
                             const std::string& vert_path,

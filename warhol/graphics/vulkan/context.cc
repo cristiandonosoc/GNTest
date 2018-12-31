@@ -51,6 +51,12 @@ bool CreateContext(Context* context) {
 // ~Context --------------------------------------------------------------------
 
 Context::~Context() {
+  if (pipeline)
+    vkDestroyPipeline(*device, *pipeline, nullptr);
+  if (pipeline_layout)
+    vkDestroyPipelineLayout(*device, *pipeline_layout, nullptr);
+  if (render_pass)
+    vkDestroyRenderPass(*device, *render_pass, nullptr);
   for (auto image_view : image_views)
     vkDestroyImageView(*device, image_view, nullptr);
   if (swap_chain)
@@ -420,6 +426,72 @@ bool CreateImageViews(Context* context) {
   return true;
 }
 
+// CreateRenderPass ------------------------------------------------------------
+
+bool CreateRenderPass(Context* context) {
+  // Represents how our buffer will relte from/to the frame buffers.
+  VkAttachmentDescription color_attachment = {};
+  color_attachment.format = context->swap_chain_details.format.format;
+  color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+  color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  // What layouts the data has to be before and after using the render target.
+  color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+  // References are used by sub-render passes.
+  VkAttachmentReference color_attachment_ref = {};
+  // Index into the attachment description array.
+  color_attachment_ref.attachment = 0;
+  color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+  VkSubpassDescription subpass = {};
+  // This is a graphics subpass.
+  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments = &color_attachment_ref;
+
+  VkRenderPassCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  create_info.attachmentCount = 1;
+  create_info.pAttachments = &color_attachment;
+  create_info.subpassCount = 1;
+  create_info.pSubpasses = &subpass;
+
+  VkRenderPass render_pass;
+  if (auto res = vkCreateRenderPass(
+          *context->device, &create_info, nullptr, &render_pass);
+      res != VK_SUCCESS) {
+    LOG(ERROR) << "Could not create render pass: " << EnumToString(res);
+    return false;
+  }
+  context->render_pass = render_pass;
+  return true;
+}
+
+// CreatePipelineLayout --------------------------------------------------------
+
+bool CreatePipelineLayout(Context* context) {
+  VkPipelineLayoutCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  create_info.setLayoutCount = 0; // Optional
+  create_info.pSetLayouts = nullptr; // Optional
+  create_info.pushConstantRangeCount = 0; // Optional
+  create_info.pPushConstantRanges = nullptr; // Optional
+
+  VkPipelineLayout pipeline_layout;
+  if (auto res = vkCreatePipelineLayout(
+          *context->device, &create_info, nullptr, &pipeline_layout);
+      res != VK_SUCCESS) {
+    LOG(ERROR) << "Could not create pipeline layout: " << EnumToString(res);
+    return false;
+  }
+  context->pipeline_layout = pipeline_layout;
+  return true;
+}
+
 // CreateGraphicsPipeline ------------------------------------------------------
 
 namespace {
@@ -451,9 +523,6 @@ bool CreateGraphicsPipeline(Context* context,
     return false;
   }
 
-  LOG(DEBUG) << "Vert data size: " << vert_data.size();
-  LOG(DEBUG) << "Frag data size: " << frag_data.size();
-
   VkShaderModule vert_module = CreateShaderModule(*context->device, vert_data);
   ScopeTrigger vert_trigger([&vert_module, &device = *context->device]() {
     if (vert_module != VK_NULL_HANDLE)
@@ -481,11 +550,198 @@ bool CreateGraphicsPipeline(Context* context,
   frag_create_info.module = frag_module;
   frag_create_info.pName = "main";
 
-  /* VkPipelineShaderStageCreateInfo shader_stages[] = {vert_create_info, */
-  /*                                                    frag_create_info}; */
+  VkPipelineShaderStageCreateInfo shader_stages[] = {vert_create_info,
+                                                     frag_create_info};
 
-  LOG(WARNING) << "Not implemented.";
-  return false;
+  // ******* Vertex input ******
+  //
+  // Describes the format the vertex data will be passed to the vertex shader.
+  // Bindings: Whether the spacing between data and if it's per vertex or per
+  //           instance.
+  // Attribute Descriptions: Information about the attribute locations, etc.
+
+  VkPipelineVertexInputStateCreateInfo vertex_input = {};
+  vertex_input.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  vertex_input.vertexBindingDescriptionCount = 0;
+  vertex_input.pVertexBindingDescriptions = nullptr;
+  vertex_input.vertexAttributeDescriptionCount = 0;
+  vertex_input.pVertexAttributeDescriptions = nullptr;
+
+  // ******  Input Assembly ******
+  //
+  // What kind of primitive to use and if primitive restart is enabled.
+
+  VkPipelineInputAssemblyStateCreateInfo input_assembly = {};
+  input_assembly.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+  input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  input_assembly.primitiveRestartEnable = VK_FALSE;
+
+  // ****** Viewport & Scissor ******
+  //
+  // Viewport: Size of the framebuffer the image will be transformed to.
+  // Scissor: Region of pixels which will be actually stored.
+
+  VkViewport viewport = {};
+  viewport.x = 0.0f;
+  viewport.y = 0.0f;
+  viewport.width = (float)context->swap_chain_details.extent.width;
+  viewport.height = (float)context->swap_chain_details.extent.height;
+  viewport.minDepth = 0.0f;
+  viewport.maxDepth = 1.0f;
+
+  VkRect2D scissor = {};
+  scissor.offset = {0, 0};
+
+  // The actual vulkan structure that holds the viewport & scissor info.
+  // Using multiple viewports/scissors requires enabling a GPU feature.
+
+  VkPipelineViewportStateCreateInfo viewport_state = {};
+  viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+  viewport_state.viewportCount = 1;
+  viewport_state.pViewports = &viewport;
+  viewport_state.scissorCount = 1;
+  viewport_state.pScissors = &scissor;
+
+  // ****** Rasterizer ******
+  //
+  // Rasterizing is the process of taking geometry and tarnsforming into screen
+  // fragments that can be evaluated by a fragment shader. It performs depth
+  // testing, face culling, scissor test, wireframe rendering, etc.
+
+  VkPipelineRasterizationStateCreateInfo rasterizer = {};
+  rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+  // Whether to clamp instead of discard for depth test. Requires GPU feature.
+  rasterizer.depthClampEnable = VK_FALSE;
+  // Disable the rasterizer stage. Basically discard output to the framebuffer.
+  rasterizer.rasterizerDiscardEnable = VK_FALSE;
+  // Any other mode than fill requires a GPU feature.
+  rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+  // Requires enabling the "wideLines" GPU feature.
+  rasterizer.lineWidth = 1.0f;
+  rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;  // Cull back faces.
+  rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+  // Useful for solving z-fighting.
+  rasterizer.depthBiasEnable = VK_FALSE;
+  rasterizer.depthBiasConstantFactor = 0.0f; // Optional
+  rasterizer.depthBiasClamp = 0.0f; // Optional
+  rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+
+  // ****** Multisampling ******
+  //
+  // Combines the fragment shader results of many polygons that affect the same
+  // fragment. Useful for fighting anti-aliasing. Requires a GPU feature.
+
+  // Disabled for now.
+  VkPipelineMultisampleStateCreateInfo multisampling = {};
+  multisampling.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+  multisampling.sampleShadingEnable = VK_FALSE;
+  multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+  multisampling.minSampleShading = 1.0f; // Optional
+  multisampling.pSampleMask = nullptr; // Optional
+  multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
+  multisampling.alphaToOneEnable = VK_FALSE; // Optional
+
+  // ****** Color Blending ******
+  //
+  // Determines how the color of a new fragment combines with the existing one
+  // in the framebuffer. There are two ways:
+  //
+  // 1. Mix the old and new.
+  // 2. Combine old and new with bitwise operation.
+
+
+  // A Color Blend Attachment describes blending *per* framebuffer.
+
+  VkPipelineColorBlendAttachmentState color_attachment = {};
+  color_attachment.colorWriteMask =
+      VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+  // blendEnable means that the blending equation parametized in the factors
+  // will be used. If not the color will be overwritten according to the
+  // colorWriteMask.
+  color_attachment.blendEnable = VK_FALSE;
+  color_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
+  color_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
+  color_attachment.colorBlendOp = VK_BLEND_OP_ADD;              // Optional
+  color_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
+  color_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
+  color_attachment.alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
+
+  // Color Blend State represents the global state that is used and overwritten
+  // by the blend attachments.
+
+  VkPipelineColorBlendStateCreateInfo color_blend_state = {};
+  color_blend_state.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+  color_blend_state.logicOpEnable = VK_FALSE;
+  color_blend_state.logicOp = VK_LOGIC_OP_COPY;  // Optional
+  color_blend_state.attachmentCount = 1;
+  color_blend_state.pAttachments = &color_attachment;
+  color_blend_state.blendConstants[0] = 0.0f; // Optional
+  color_blend_state.blendConstants[1] = 0.0f; // Optional
+  color_blend_state.blendConstants[2] = 0.0f; // Optional
+  color_blend_state.blendConstants[3] = 0.0f; // Optional
+
+  // ****** Dynamic State ******
+  //
+  // Represents which aspects of the graphics pipeline can be changed without
+  // re-constructing the pipeline again.
+  // Setting these means that the configuration for these will be ignored and
+  // will be required to be set on drawing time.
+
+  VkDynamicState dynamic_states[] = {
+    VK_DYNAMIC_STATE_VIEWPORT,
+    VK_DYNAMIC_STATE_LINE_WIDTH,
+  };
+  VkPipelineDynamicStateCreateInfo dynamic_state = {};
+  dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+  dynamic_state.dynamicStateCount = ARRAY_SIZE(dynamic_states);
+  dynamic_state.pDynamicStates = dynamic_states;
+
+  // ----------------------
+  // Create the actual pipeline object.
+
+  VkGraphicsPipelineCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+
+  // Shader stages.
+  create_info.stageCount = 2;
+  create_info.pStages = shader_stages;
+
+  // Fixed function configuration.
+  create_info.pVertexInputState = &vertex_input;
+  create_info.pInputAssemblyState = &input_assembly;
+  create_info.pViewportState = &viewport_state;
+  create_info.pRasterizationState = &rasterizer;
+  create_info.pMultisampleState = &multisampling;
+  create_info.pDepthStencilState = nullptr; // Optional
+  create_info.pColorBlendState = &color_blend_state;
+  create_info.pDynamicState = nullptr; // Optional
+
+  // Pipeline layout.
+  create_info.layout = *context->pipeline_layout;
+
+  // Render pass.
+  create_info.renderPass = *context->render_pass;
+  create_info.subpass = 0;  // Index of the subpass to use.
+
+  // These are used to create pipelines from previous ones.
+  create_info.basePipelineHandle = VK_NULL_HANDLE;  // Optional
+  create_info.basePipelineIndex = -1;  // Optional
+
+  VkPipeline pipeline;
+  VkResult res = vkCreateGraphicsPipelines(
+      *context->device, VK_NULL_HANDLE, 1, &create_info, nullptr, &pipeline);
+  if (res != VK_SUCCESS) {
+    LOG(ERROR) << "Creating graphics pipeline: " << EnumToString(res);
+    return false;
+  }
+
+  context->pipeline = pipeline;
+  return true;
 }
 
 }  // namespace vulkan
