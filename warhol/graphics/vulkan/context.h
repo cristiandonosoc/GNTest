@@ -73,6 +73,14 @@ struct Context {
   Optional<VkPipelineLayout> pipeline_layout;
 
   Optional<VkPipeline> pipeline;
+
+  std::vector<VkFramebuffer> frame_buffers;
+
+  Optional<VkCommandPool> command_pool;
+  std::vector<VkCommandBuffer> command_buffers;   // Freed with |command_pool|.
+
+  Optional<VkSemaphore> image_available;
+  Optional<VkSemaphore> render_finished;
 };
 
 bool IsValid(const Context&);
@@ -103,6 +111,13 @@ bool CreatePipelineLayout(Context*);
 bool CreateGraphicsPipeline(Context*,
                             const std::string& vert_path,
                             const std::string& frag_path);
+
+bool CreateFrameBuffers(Context*);
+
+bool CreateCommandPool(Context*);
+bool CreateCommandBuffers(Context*);
+
+bool CreateSemaphores(Context*);
 
 }  // namespace vulkan
 }  // namespace warhol

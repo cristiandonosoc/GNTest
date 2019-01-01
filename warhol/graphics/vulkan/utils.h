@@ -12,6 +12,8 @@
 namespace warhol {
 namespace vulkan {
 
+
+
 bool CheckExtensions(const std::vector<const char*>& extensions);
 void AddDebugExtensions(std::vector<const char*>*);
 bool CheckValidationLayers(const std::vector<const char*>& layers);
@@ -84,6 +86,34 @@ template<> const char* EnumToString(VkDebugUtilsMessageTypeFlagBitsEXT);
 template<> const char* EnumToString(VkFormat);
 template<> const char* EnumToString(VkColorSpaceKHR);
 template<> const char* EnumToString(VkPresentModeKHR);
+
+
+// Checked Vulkan Call ---------------------------------------------------------
+
+// This wraps the call into a call that checks and logs any errors.
+
+#define VK_CALL(func, ...) \
+  ::warhol::vulkan::CheckedCall(func, #func, FROM_HERE, __VA_ARGS__)
+
+template <typename Func, typename... Args>
+inline bool CheckedCall(Func func,
+                        const char* func_str,
+                        const Location& location,
+                        Args&&... args) {
+  VkResult result = func(std::forward<Args>(args)...);
+  if (result != VK_SUCCESS) {
+    fprintf(stderr,
+            "[ERROR][%s:%d] When calling %s: %s\n",
+            location.file,
+            location.line,
+            func_str,
+            EnumToString(result));
+    fflush(stderr);
+    return false;
+  }
+
+  return true;
+}
 
 }  // namespace vulkan
 }  // namespace warhol

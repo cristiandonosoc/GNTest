@@ -51,6 +51,15 @@ bool CreateContext(Context* context) {
 // ~Context --------------------------------------------------------------------
 
 Context::~Context() {
+  if (image_available)
+    vkDestroySemaphore(*device, *image_available, nullptr);
+  if (render_finished)
+    vkDestroySemaphore(*device, *render_finished, nullptr);
+
+  if (command_pool)
+    vkDestroyCommandPool(*device, *command_pool, nullptr);
+  for (const VkFramebuffer& frame_buffer : frame_buffers)
+    vkDestroyFramebuffer(*device, frame_buffer, nullptr);
   if (pipeline)
     vkDestroyPipeline(*device, *pipeline, nullptr);
   if (pipeline_layout)
@@ -140,15 +149,15 @@ SwapChainCapabilities QuerySwapChainSupport(const VkPhysicalDevice& device,
   VK_GET_PROPERTIES4(vkGetPhysicalDeviceSurfaceFormatsKHR,
                      device, surface, details.formats);
 
-  LOG(DEBUG) << "  Got device properties: ";
+  LOG(INFO) << "  Got device properties: ";
   for (const auto& format : details.formats)
-    LOG(DEBUG) << "  - Format: " << EnumToString(format.format)
+    LOG(INFO) << "  - Format: " << EnumToString(format.format)
                << ", Color Space: " << EnumToString(format.colorSpace);
 
   VK_GET_PROPERTIES4(vkGetPhysicalDeviceSurfacePresentModesKHR,
                      device, surface, details.present_modes);
   for (const auto& present_mode : details.present_modes)
-    LOG(DEBUG) << "  - Present Mode: " << EnumToString(present_mode);
+    LOG(INFO) << "  - Present Mode: " << EnumToString(present_mode);
 
   return details;
 }
@@ -414,10 +423,8 @@ bool CreateImageViews(Context* context) {
     create_info.subresourceRange.layerCount = 1;
 
     VkImageView image_view;
-    if (auto res = vkCreateImageView(
-            *context->device, &create_info, nullptr, &image_view);
-        res != VK_SUCCESS) {
-      LOG(ERROR) << "Could not create image view: " << EnumToString(res);
+    if (!VK_CALL(vkCreateImageView, *context->device, &create_info, nullptr,
+                 &image_view)) {
       return false;
     }
     context->image_views.push_back(std::move(image_view));
@@ -453,18 +460,29 @@ bool CreateRenderPass(Context* context) {
   subpass.colorAttachmentCount = 1;
   subpass.pColorAttachments = &color_attachment_ref;
 
+  // Create a dependency for this render pass.
+  VkSubpassDependency dependency = {};
+  dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+  dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependency.srcAccessMask = 0;
+
+  dependency.dstSubpass = 0;
+  dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
   VkRenderPassCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
   create_info.attachmentCount = 1;
   create_info.pAttachments = &color_attachment;
   create_info.subpassCount = 1;
   create_info.pSubpasses = &subpass;
+  create_info.dependencyCount = 1;
+  create_info.pDependencies = &dependency;
 
   VkRenderPass render_pass;
-  if (auto res = vkCreateRenderPass(
-          *context->device, &create_info, nullptr, &render_pass);
-      res != VK_SUCCESS) {
-    LOG(ERROR) << "Could not create render pass: " << EnumToString(res);
+  if (!VK_CALL(vkCreateRenderPass, *context->device, &create_info, nullptr,
+               &render_pass)) {
     return false;
   }
   context->render_pass = render_pass;
@@ -593,6 +611,7 @@ bool CreateGraphicsPipeline(Context* context,
 
   VkRect2D scissor = {};
   scissor.offset = {0, 0};
+  scissor.extent = context->swap_chain_details.extent;
 
   // The actual vulkan structure that holds the viewport & scissor info.
   // Using multiple viewports/scissors requires enabling a GPU feature.
@@ -741,6 +760,134 @@ bool CreateGraphicsPipeline(Context* context,
   }
 
   context->pipeline = pipeline;
+  return true;
+}
+
+// CreateFrameBuffers ----------------------------------------------------------
+
+bool CreateFrameBuffers(Context* context) {
+  context->frame_buffers.reserve(context->image_views.size());
+  for (size_t i = 0; i < context->image_views.size(); i++) {
+    // A framebuffer references image views for input data.
+    VkImageView attachments[] = { context->image_views[i] };
+
+    VkFramebufferCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    create_info.renderPass = *context->render_pass;
+    create_info.attachmentCount = 1;
+    create_info.pAttachments = attachments;
+    create_info.width = context->swap_chain_details.extent.width;
+    create_info.height = context->swap_chain_details.extent.height;
+    create_info.layers = 1;
+
+    VkFramebuffer frame_buffer;
+    if (auto res = vkCreateFramebuffer(
+            *context->device, &create_info, nullptr, &frame_buffer);
+        res != VK_SUCCESS) {
+      LOG(ERROR) << "Could not create frame buffer: " << EnumToString(res);
+      return false;
+    }
+    context->frame_buffers.emplace_back(std::move(frame_buffer));
+  }
+
+  return true;
+}
+
+// CreateCommandPool -----------------------------------------------------------
+
+bool CreateCommandPool(Context* context) {
+  VkCommandPoolCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  // Each command pool can only allocate commands for one particular queue
+  // family.
+  create_info.queueFamilyIndex =
+      context->device_info.queue_family_indices.graphics;
+  create_info.flags = 0;  // Optional
+
+  VkCommandPool command_pool;
+  if (auto res = vkCreateCommandPool(
+          *context->device, &create_info, nullptr, &command_pool);
+      res != VK_SUCCESS) {
+    LOG(ERROR) << "Could not create command pool: " << EnumToString(res);
+    return false;
+  }
+
+  context->command_pool = std::move(command_pool);
+  return true;
+}
+
+// CreateCommandBuffers --------------------------------------------------------
+
+bool CreateCommandBuffers(Context* context) {
+  context->command_buffers.resize(context->frame_buffers.size());
+
+  // Command buffers can get multiple allocated at once with one call.
+  VkCommandBufferAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  alloc_info.commandPool = *context->command_pool;
+  alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  alloc_info.commandBufferCount = (uint32_t)context->command_buffers.size();
+
+  if (!VK_CALL(vkAllocateCommandBuffers, *context->device, &alloc_info,
+                   context->command_buffers.data())) {
+    return false;
+  }
+
+  // Start a command buffer recording.
+  for (size_t i = 0; i < context->command_buffers.size(); i++) {
+    VkCommandBuffer& command_buffer = context->command_buffers[i];
+
+    VkCommandBufferBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    begin_info.pInheritanceInfo = nullptr;  // Optional
+
+    if (!VK_CALL(vkBeginCommandBuffer, command_buffer, &begin_info))
+      return false;
+
+    VkRenderPassBeginInfo render_pass_begin = {};
+    render_pass_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    render_pass_begin.renderPass = *context->render_pass;
+    render_pass_begin.framebuffer = context->frame_buffers[i];
+    render_pass_begin.renderArea.offset = {0, 0};
+    render_pass_begin.renderArea.extent = context->swap_chain_details.extent;
+    VkClearValue clear_value = {{{0.7f, 0.3f, 0.5f, 1.0f}}};
+    render_pass_begin.clearValueCount = 1;
+    render_pass_begin.pClearValues = &clear_value;
+
+    vkCmdBeginRenderPass(command_buffer,
+                         &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);
+    {
+      vkCmdBindPipeline(command_buffer,
+                        VK_PIPELINE_BIND_POINT_GRAPHICS, *context->pipeline);
+      vkCmdDraw(command_buffer, 3, 1, 0, 0);
+    }
+    vkCmdEndRenderPass(command_buffer);
+
+    if (!VK_CALL(vkEndCommandBuffer, command_buffer))
+      return false;
+  }
+
+  return true;
+}
+
+// CreateSemaphores ------------------------------------------------------------
+
+bool CreateSemaphores(Context* context) {
+  VkSemaphoreCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+  VkSemaphore semaphores[2];
+  if (!VK_CALL(vkCreateSemaphore, *context->device, &create_info, nullptr,
+                   &semaphores[0]) ||
+      !VK_CALL(vkCreateSemaphore, *context->device, &create_info, nullptr,
+                   &semaphores[1])) {
+    return false;
+  }
+
+  context->image_available = semaphores[0];
+  context->render_finished = semaphores[1];
+
   return true;
 }
 
