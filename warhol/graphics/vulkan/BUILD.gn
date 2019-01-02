@@ -48,6 +48,8 @@ source_set("lib") {
   sources = [
     "context.cc",
     "context.h",
+    "handle.cc",
+    "handle.h",
     "utils.cc",
     "utils.h",
   ]

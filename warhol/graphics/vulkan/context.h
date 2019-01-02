@@ -3,13 +3,17 @@
 
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include <vulkan/vulkan.h>
 
+#include "warhol/graphics/vulkan/handle.h"
+
 #include "warhol/math/math.h"
 #include "warhol/utils/macros.h"
 #include "warhol/utils/optional.h"
+
 
 namespace warhol {
 namespace vulkan {
@@ -40,47 +44,53 @@ struct SwapChainDetails {
 };
 
 struct Context {
-  Context() = default;
-  ~Context();
+  Context();
+
+  // How many frames we can be processing concurrently.
+  int max_frames_in_flight = 2;
+  int current_frame = 0;
 
   DELETE_COPY_AND_ASSIGN(Context);
   DEFAULT_MOVE_AND_ASSIGN(Context);
 
-  Optional<VkDebugUtilsMessengerEXT> debug_messenger = {};
-
-  Optional<VkInstance> instance = {};
+  Handle<VkInstance> instance = {};
   std::vector<const char*> extensions;
   std::vector<const char*> validation_layers;
 
-  Optional<VkSurfaceKHR> surface = {};
+  Handle<VkDebugUtilsMessengerEXT> debug_messenger = {};
+
+  Handle<VkSurfaceKHR> surface = {};
 
   std::vector<const char*> device_extensions;
   VkPhysicalDevice physical_device = VK_NULL_HANDLE; // Freed with |instance|.
   PhysicalDeviceInfo device_info;
 
-  Optional<VkDevice> device = {};
+  Handle<VkDevice> device = {};
   VkQueue graphics_queue = VK_NULL_HANDLE;  // Freed with |device|.
   VkQueue present_queue = VK_NULL_HANDLE;   // Freed with |device|.
 
-  Optional<VkSwapchainKHR> swap_chain = {};
+  Handle<VkSwapchainKHR> swap_chain = {};
   SwapChainDetails swap_chain_details = {};
   std::vector<VkImage> images;    // Freed with |swap_chain|.
-  std::vector<VkImageView> image_views;
+  std::vector<Handle<VkImageView>> image_views;
 
-  Optional<VkRenderPass> render_pass;
+  Handle<VkRenderPass> render_pass = {};
   // Uniforms need to be stated on pipeline creation. The pipeline layout is the
   // one that defines those declarations.
-  Optional<VkPipelineLayout> pipeline_layout;
+  Handle<VkPipelineLayout> pipeline_layout = {};
 
-  Optional<VkPipeline> pipeline;
+  std::string vert_shader_path;
+  std::string frag_shader_path;
+  Handle<VkPipeline> pipeline = {};
 
-  std::vector<VkFramebuffer> frame_buffers;
+  std::vector<Handle<VkFramebuffer>> frame_buffers;
 
-  Optional<VkCommandPool> command_pool;
+  Handle<VkCommandPool> command_pool = {};
   std::vector<VkCommandBuffer> command_buffers;   // Freed with |command_pool|.
 
-  Optional<VkSemaphore> image_available;
-  Optional<VkSemaphore> render_finished;
+  std::vector<Handle<VkSemaphore>> image_available_semaphores;
+  std::vector<Handle<VkSemaphore>> render_finished_semaphores;
+  std::vector<Handle<VkFence>> in_flight_fences;
 };
 
 bool IsValid(const Context&);
@@ -99,6 +109,9 @@ bool SetupDebugCall(Context*, PFN_vkDebugUtilsMessengerCallbackEXT callback);
 bool PickPhysicalDevice(Context*);
 bool CreateLogicalDevice(Context*);
 
+
+bool RecreateSwapChain(Context*, Pair<uint32_t> screen_size);
+
 // A |device| must be created already.
 bool CreateSwapChain(Context*, Pair<uint32_t> screen_size);
 
@@ -108,16 +121,15 @@ bool CreateRenderPass(Context*);
 
 bool CreatePipelineLayout(Context*);
 
-bool CreateGraphicsPipeline(Context*,
-                            const std::string& vert_path,
-                            const std::string& frag_path);
+// |vert_shader_path| and |frag_shader_path| must be set at this call.
+bool CreateGraphicsPipeline(Context*);
 
 bool CreateFrameBuffers(Context*);
 
 bool CreateCommandPool(Context*);
 bool CreateCommandBuffers(Context*);
 
-bool CreateSemaphores(Context*);
+bool CreateSyncObjects(Context*);
 
 }  // namespace vulkan
 }  // namespace warhol

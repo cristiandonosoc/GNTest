@@ -481,6 +481,4 @@ GLEnumToString(GLenum type) {
   }
 }
 
-
-
 }  // namespace warhol

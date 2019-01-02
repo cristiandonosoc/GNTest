@@ -3,15 +3,18 @@
 
 #include <iostream>
 
-#include <vulkan/vulkan.h>
-#include <warhol/assets/assets.h>
-#include <warhol/utils/log.h>
-#include <warhol/graphics/vulkan/context.h>
-#include <warhol/graphics/vulkan/utils.h>
-#include <warhol/sdl2/sdl_context.h>
 
 #include <SDL2/SDL_vulkan.h>
 #include <SDL2/SDL.h>
+
+#include <vulkan/vulkan.h>
+
+#include <warhol/assets/assets.h>
+#include <warhol/graphics/vulkan/context.h>
+#include <warhol/graphics/vulkan/utils.h>
+#include <warhol/sdl2/sdl_context.h>
+#include <warhol/utils/log.h>
+#include <warhol/utils/types.h>
 
 using namespace warhol;
 
@@ -65,7 +68,7 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
           sdl_context.get_window(), *context->instance, &surface)) {
     LOG(ERROR) << "Could not create surface: " << SDL_GetError();
   }
-  context->surface = surface;
+  context->surface.Set(context, surface);
   LOG(INFO) << "Created a surface.";
 
   context->device_extensions = {
@@ -100,12 +103,10 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
     return false;
   LOG(INFO) << "Created the pipeline layout.";
 
-  if (!vulkan::CreateGraphicsPipeline(
-          context,
-          Assets::VulkanShaderPath("demo.vert.spv"),
-          Assets::VulkanShaderPath("demo.frag.spv"))) {
+  context->vert_shader_path = Assets::VulkanShaderPath("demo.vert.spv");
+  context->frag_shader_path = Assets::VulkanShaderPath("demo.frag.spv");
+  if (!vulkan::CreateGraphicsPipeline(context))
     return false;
-  }
   LOG(INFO) << "Created a graphics pipeline.";
 
   if (!vulkan::CreateFrameBuffers(context))
@@ -120,9 +121,9 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
     return false;
   LOG(INFO) << "Created some command buffers.";
 
-  if (!vulkan::CreateSemaphores(context))
+  if (!vulkan::CreateSyncObjects(context))
     return false;
-  LOG(INFO) << "Created the semaphores.";
+  LOG(INFO) << "Created synchronization objects.";
 
   return true;
 }
@@ -132,31 +133,50 @@ bool SubmitCommandBuffer(vulkan::Context* context, uint32_t image_index) {
   submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
   // Which semaphores to wait for.
-  submit_info.waitSemaphoreCount = 1;
-  submit_info.pWaitSemaphores = &context->image_available.value();
+  VkSemaphore wait_semaphores[] = {
+    *context->image_available_semaphores[context->current_frame],
+  };
+  submit_info.waitSemaphoreCount = ARRAY_SIZE(wait_semaphores);
+  submit_info.pWaitSemaphores = wait_semaphores;
   VkPipelineStageFlags wait_stages[] = {
       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
   };
   submit_info.pWaitDstStageMask = wait_stages;
 
-  submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &context->command_buffers[image_index];
+  VkCommandBuffer command_buffers[] = {
+    context->command_buffers[image_index],
+  };
+  submit_info.commandBufferCount = ARRAY_SIZE(command_buffers);
+  submit_info.pCommandBuffers = command_buffers;
 
   // Which semaphores to signal after we're done.
-  submit_info.signalSemaphoreCount = 1;
-  submit_info.pSignalSemaphores = &context->render_finished.value();
+  VkSemaphore signal_semaphores[] = {
+    *context->render_finished_semaphores[context->current_frame],
+  };
+  submit_info.signalSemaphoreCount = ARRAY_SIZE(signal_semaphores);
+  submit_info.pSignalSemaphores = signal_semaphores;
 
   return VK_CALL(vkQueueSubmit, context->graphics_queue, 1, &submit_info,
-                 nullptr);
+                 *context->in_flight_fences[context->current_frame]);
 }
 
 bool DrawFrame(vulkan::Context* context) {
+  if (!VK_CALL(vkWaitForFences, *context->device, 1,
+               &context->in_flight_fences[context->current_frame].value(),
+               VK_TRUE, Limits::kUint64Max) ||
+      !VK_CALL(vkResetFences, *context->device, 1,
+               &context->in_flight_fences[context->current_frame].value())) {
+    return false;
+  }
+
   uint32_t image_index = 0;
-  vkAcquireNextImageKHR(*context->device, *context->swap_chain,
-                        std::numeric_limits<uint64_t>::max(),  // No timeout.
-                        *context->image_available,
-                        VK_NULL_HANDLE,
-                        &image_index);
+  vkAcquireNextImageKHR(
+      *context->device,
+      *context->swap_chain,
+      Limits::kUint64Max,  // No timeout.
+      *context->image_available_semaphores[context->current_frame],
+      VK_NULL_HANDLE,
+      &image_index);
 
   if (!SubmitCommandBuffer(context, image_index))
     return false;
@@ -165,8 +185,11 @@ bool DrawFrame(vulkan::Context* context) {
   present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
   // Semaphores to wait for.
-  present_info.waitSemaphoreCount = 1;
-  present_info.pWaitSemaphores = &context->render_finished.value();
+  VkSemaphore wait_semaphores[] = {
+    *context->render_finished_semaphores[context->current_frame],
+  };
+  present_info.waitSemaphoreCount = ARRAY_SIZE(wait_semaphores);
+  present_info.pWaitSemaphores = wait_semaphores;
 
   present_info.swapchainCount = 1;
   present_info.pSwapchains = &context->swap_chain.value();
@@ -177,6 +200,8 @@ bool DrawFrame(vulkan::Context* context) {
   if (!VK_CALL(vkQueuePresentKHR, context->present_queue, &present_info))
     return false;
 
+  context->current_frame++;
+  context->current_frame %= context->max_frames_in_flight;
   return true;
 }
 
@@ -212,7 +237,7 @@ int main() {
       break;
     }
 
-    SDL_Delay(100);
+    SDL_Delay(16);
   }
 
   if (!VK_CALL(vkDeviceWaitIdle, *context.device)) {

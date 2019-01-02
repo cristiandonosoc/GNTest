@@ -12,9 +12,12 @@
 #include "warhol/utils/file.h"
 #include "warhol/utils/log.h"
 #include "warhol/utils/scope_trigger.h"
+#include "warhol/utils/types.h"
 
 namespace warhol {
 namespace vulkan {
+
+Context::Context() = default;
 
 // CreateContext & -------------------------------------------------------------
 
@@ -44,43 +47,46 @@ bool CreateContext(Context* context) {
     return false;
   }
 
-  context->instance = instance;
+  context->instance.Set(context, instance);
   return true;
 }
 
 // ~Context --------------------------------------------------------------------
 
-Context::~Context() {
-  if (image_available)
-    vkDestroySemaphore(*device, *image_available, nullptr);
-  if (render_finished)
-    vkDestroySemaphore(*device, *render_finished, nullptr);
+/* Context::~Context() { */
+/*   // Destroy sync objects. */
+/*   for (const VkSemaphore& semaphore : image_available_semaphores) */
+/*     vkDestroySemaphore(*device, semaphore, nullptr); */
+/*   for (const VkSemaphore& semaphore : render_finished_semaphores) */
+/*     vkDestroySemaphore(*device, semaphore, nullptr); */
+/*   for (const VkFence& fence : in_flight_fences) */
+/*     vkDestroyFence(*device, fence, nullptr); */
 
-  if (command_pool)
-    vkDestroyCommandPool(*device, *command_pool, nullptr);
-  for (const VkFramebuffer& frame_buffer : frame_buffers)
-    vkDestroyFramebuffer(*device, frame_buffer, nullptr);
-  if (pipeline)
-    vkDestroyPipeline(*device, *pipeline, nullptr);
-  if (pipeline_layout)
-    vkDestroyPipelineLayout(*device, *pipeline_layout, nullptr);
-  if (render_pass)
-    vkDestroyRenderPass(*device, *render_pass, nullptr);
-  for (auto image_view : image_views)
-    vkDestroyImageView(*device, image_view, nullptr);
-  if (swap_chain)
-    vkDestroySwapchainKHR(*device, *swap_chain, nullptr);
-  if (device)
-    vkDestroyDevice(*device, nullptr);
-  if (surface)
-    vkDestroySurfaceKHR(*instance, *surface, nullptr);
+/*   if (command_pool) */
+/*     vkDestroyCommandPool(*device, *command_pool, nullptr); */
+/*   for (const VkFramebuffer& frame_buffer : frame_buffers) */
+/*     vkDestroyFramebuffer(*device, frame_buffer, nullptr); */
+/*   if (pipeline) */
+/*     vkDestroyPipeline(*device, *pipeline, nullptr); */
+/*   if (pipeline_layout) */
+/*     vkDestroyPipelineLayout(*device, *pipeline_layout, nullptr); */
+/*   if (render_pass) */
+/*     vkDestroyRenderPass(*device, *render_pass, nullptr); */
+/*   for (auto image_view : image_views) */
+/*     vkDestroyImageView(*device, image_view, nullptr); */
+/*   if (swap_chain) */
+/*     vkDestroySwapchainKHR(*device, *swap_chain, nullptr); */
+/*   if (device) */
+/*     vkDestroyDevice(*device, nullptr); */
+/*   if (surface) */
+/*     vkDestroySurfaceKHR(*instance, *surface, nullptr); */
 
-  if (debug_messenger)
-    DestroyDebugUtilsMessengerEXT(*instance, *debug_messenger, nullptr);
+/*   if (debug_messenger) */
+/*     DestroyDebugUtilsMessengerEXT(*instance, *debug_messenger, nullptr); */
 
-  if (instance)
-    vkDestroyInstance(*instance, nullptr);
-}
+/*   if (instance) */
+/*     vkDestroyInstance(*instance, nullptr); */
+/* } */
 
 // SetupDebugCall --------------------------------------------------------------
 
@@ -105,7 +111,7 @@ bool SetupDebugCall(Context* context,
     return false;
   }
 
-  context->debug_messenger = debug_messenger;
+  context->debug_messenger.Set(context, debug_messenger);
   return true;
 }
 
@@ -267,7 +273,7 @@ bool CreateLogicalDevice(Context* context) {
     return false;
   }
 
-  context->device = device;
+  context->device.Set(context, device);
   vkGetDeviceQueue(device, indices.graphics, 0, &context->graphics_queue);
   vkGetDeviceQueue(device, indices.present, 0, &context->present_queue);
   return true;
@@ -281,8 +287,12 @@ VkSurfaceFormatKHR
 ChooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats) {
   // If vulkan only returns an undefined format, it means that it has no
   // preference and we can choose.
-  if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
-    return {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+  if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED) {
+    VkSurfaceFormatKHR result;
+    result.format = VK_FORMAT_B8G8R8A8_UNORM;
+    result.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    return result;
+  }
 
   for (const VkSurfaceFormatKHR& format : formats) {
     if (format.format == VK_FORMAT_B8G8R8A8_UNORM &&
@@ -297,24 +307,19 @@ ChooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats) {
 VkPresentModeKHR
 ChooseSwapChainPresentMode(std::vector<VkPresentModeKHR>& present_modes) {
   // We search for mailbox (to do triple buffering).
-  // FIFO is assured to exist but apparently is not well supported so we should
-  // prefer IMMEDIATE if available.
-  VkPresentModeKHR best_mode = VK_PRESENT_MODE_FIFO_KHR;
+  // FIFO is assured to exist.
   for (const VkPresentModeKHR& present_mode : present_modes) {
-    if (present_mode == VK_PRESENT_MODE_MAILBOX_KHR) {
+    if (present_mode == VK_PRESENT_MODE_MAILBOX_KHR)
       return present_mode;
-    } else if (present_mode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
-      best_mode = present_mode;
-    }
   }
 
-  return best_mode;
+  return VK_PRESENT_MODE_FIFO_KHR;
 }
 
 VkExtent2D ChooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& cap,
                                  Pair<uint32_t> screen_size) {
   // uint32_t::max means that the window manager lets us pick the extent.
-  if (cap.currentExtent.width != std::numeric_limits<uint32_t>::max())
+  if (cap.currentExtent.width != Limits::kUint32Max)
     return cap.currentExtent;
 
   // We clamp our required extent to the bounds given by the GPU.
@@ -370,25 +375,23 @@ bool CreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
     create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   }
 
+  // Leave the image as it is.
   create_info.preTransform = capabilities.capabilities.currentTransform;
 
   // We ingore the alpha for blending with the window system.
   create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-
 
   create_info.presentMode = present_mode;
   create_info.clipped = VK_TRUE;
   create_info.oldSwapchain = VK_NULL_HANDLE;
 
   VkSwapchainKHR swap_chain;
-  if (auto res = vkCreateSwapchainKHR(
-          *context->device, &create_info, nullptr, &swap_chain);
-      res != VK_SUCCESS) {
-    LOG(ERROR) << "Could not create swap chain: " << EnumToString(res);
+  if (!VK_CALL(vkCreateSwapchainKHR, *context->device, &create_info, nullptr,
+               &swap_chain)) {
     return false;
   }
 
-  context->swap_chain = swap_chain;
+  context->swap_chain.Set(context, swap_chain);
   context->swap_chain_details.format = format;
   context->swap_chain_details.present_mode = present_mode;
   context->swap_chain_details.extent = extent;
@@ -410,6 +413,7 @@ bool CreateImageViews(Context* context) {
     create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     create_info.format = context->swap_chain_details.format.format;
 
+    // We don't need to swizzle (swap around) any of the color channel.
     create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
     create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
     create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -427,7 +431,7 @@ bool CreateImageViews(Context* context) {
                  &image_view)) {
       return false;
     }
-    context->image_views.push_back(std::move(image_view));
+    context->image_views.emplace_back(context, image_view);
   }
 
   return true;
@@ -485,7 +489,7 @@ bool CreateRenderPass(Context* context) {
                &render_pass)) {
     return false;
   }
-  context->render_pass = render_pass;
+  context->render_pass.Set(context, render_pass);
   return true;
 }
 
@@ -506,7 +510,7 @@ bool CreatePipelineLayout(Context* context) {
     LOG(ERROR) << "Could not create pipeline layout: " << EnumToString(res);
     return false;
   }
-  context->pipeline_layout = pipeline_layout;
+  context->pipeline_layout.Set(context, pipeline_layout);
   return true;
 }
 
@@ -532,12 +536,10 @@ VkShaderModule CreateShaderModule(const VkDevice& device,
 
 }  // namespace
 
-bool CreateGraphicsPipeline(Context* context,
-                            const std::string& vert_path,
-                            const std::string& frag_path) {
+bool CreateGraphicsPipeline(Context* context) {
   std::vector<char> vert_data, frag_data;
-  if (!ReadWholeFile(vert_path, &vert_data, false) ||
-      !ReadWholeFile(frag_path, &frag_data, false)) {
+  if (!ReadWholeFile(context->vert_shader_path, &vert_data, false) ||
+      !ReadWholeFile(context->frag_shader_path, &frag_data, false)) {
     return false;
   }
 
@@ -759,7 +761,7 @@ bool CreateGraphicsPipeline(Context* context,
     return false;
   }
 
-  context->pipeline = pipeline;
+  context->pipeline.Set(context, pipeline);
   return true;
 }
 
@@ -769,7 +771,7 @@ bool CreateFrameBuffers(Context* context) {
   context->frame_buffers.reserve(context->image_views.size());
   for (size_t i = 0; i < context->image_views.size(); i++) {
     // A framebuffer references image views for input data.
-    VkImageView attachments[] = { context->image_views[i] };
+    VkImageView attachments[] = { *context->image_views[i] };
 
     VkFramebufferCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -787,7 +789,7 @@ bool CreateFrameBuffers(Context* context) {
       LOG(ERROR) << "Could not create frame buffer: " << EnumToString(res);
       return false;
     }
-    context->frame_buffers.emplace_back(std::move(frame_buffer));
+    context->frame_buffers.emplace_back(context, frame_buffer);
   }
 
   return true;
@@ -812,24 +814,25 @@ bool CreateCommandPool(Context* context) {
     return false;
   }
 
-  context->command_pool = std::move(command_pool);
+  context->command_pool.Set(context, std::move(command_pool));
   return true;
 }
 
 // CreateCommandBuffers --------------------------------------------------------
 
 bool CreateCommandBuffers(Context* context) {
-  context->command_buffers.resize(context->frame_buffers.size());
 
   // Command buffers can get multiple allocated at once with one call.
   VkCommandBufferAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   alloc_info.commandPool = *context->command_pool;
   alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  alloc_info.commandBufferCount = (uint32_t)context->command_buffers.size();
+  alloc_info.commandBufferCount = (uint32_t)context->frame_buffers.size();
 
+  context->command_buffers.clear();
+  context->command_buffers.resize(context->frame_buffers.size());
   if (!VK_CALL(vkAllocateCommandBuffers, *context->device, &alloc_info,
-                   context->command_buffers.data())) {
+               context->command_buffers.data())) {
     return false;
   }
 
@@ -848,7 +851,7 @@ bool CreateCommandBuffers(Context* context) {
     VkRenderPassBeginInfo render_pass_begin = {};
     render_pass_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     render_pass_begin.renderPass = *context->render_pass;
-    render_pass_begin.framebuffer = context->frame_buffers[i];
+    render_pass_begin.framebuffer = *context->frame_buffers[i];
     render_pass_begin.renderArea.offset = {0, 0};
     render_pass_begin.renderArea.extent = context->swap_chain_details.extent;
     VkClearValue clear_value = {{{0.7f, 0.3f, 0.5f, 1.0f}}};
@@ -873,23 +876,53 @@ bool CreateCommandBuffers(Context* context) {
 
 // CreateSemaphores ------------------------------------------------------------
 
-bool CreateSemaphores(Context* context) {
-  VkSemaphoreCreateInfo create_info = {};
-  create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+bool CreateSyncObjects(Context* context) {
+  VkSemaphoreCreateInfo semaphore_create_info = {};
+  semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-  VkSemaphore semaphores[2];
-  if (!VK_CALL(vkCreateSemaphore, *context->device, &create_info, nullptr,
-                   &semaphores[0]) ||
-      !VK_CALL(vkCreateSemaphore, *context->device, &create_info, nullptr,
-                   &semaphores[1])) {
-    return false;
+  VkFenceCreateInfo fence_create_info = {};
+  fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  // Start this fence in the signaled state.
+  fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+  for (int i = 0; i < context->max_frames_in_flight; i++) {
+    VkSemaphore semaphores[2];
+    VkFence fence;
+    if (!VK_CALL(vkCreateSemaphore, *context->device, &semaphore_create_info,
+                 nullptr, &semaphores[0]) ||
+        !VK_CALL(vkCreateSemaphore, *context->device, &semaphore_create_info,
+                 nullptr, &semaphores[1]) ||
+        !VK_CALL(vkCreateFence, *context->device, &fence_create_info, nullptr,
+                               &fence)) {
+      return false;
+    }
+
+    context->image_available_semaphores.emplace_back(context, semaphores[0]);
+    context->render_finished_semaphores.emplace_back(context, semaphores[1]);
+    context->in_flight_fences.emplace_back(context, fence);
   }
-
-  context->image_available = semaphores[0];
-  context->render_finished = semaphores[1];
 
   return true;
 }
+
+// RecreateSwapChain -----------------------------------------------------------
+
+bool RecreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
+  if (!VK_CALL(vkDeviceWaitIdle, *context->device))
+      return false;
+
+  if (!CreateSwapChain(context, screen_size) ||
+      !CreateImageViews(context) ||
+      !CreateRenderPass(context) ||
+      !CreateGraphicsPipeline(context) ||
+      !CreateFrameBuffers(context) ||
+      !CreateCommandBuffers(context)) {
+    return false;
+  }
+
+  return true;
+}
+
 
 }  // namespace vulkan
 }  // namespace warhol
