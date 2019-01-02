@@ -45,10 +45,10 @@ template <>
 std::string Pair<int>::ToString() const;
 
 template <>
+std::string Pair<uint32_t>::ToString() const;
+
+template <>
 std::string Pair<float>::ToString() const;
-
-
-
 
 
 template <typename T>

@@ -20,17 +20,16 @@ struct Handle {
   Handle(Context* context, HandleType handle)
       : context_(context), handle_(handle) {}
 
+  void Clear() {
+    InternalClear();
+    Reset();
+  }
+
   void Set(Context* context, HandleType handle) {
     InternalClear();
     context_ = context;
     handle_ = handle;
   }
-
- /* Handle& operator=(HandleType handle) { */
-  /*   InternalClear(); */
-  /*   handle_ = handle; */
-  /*   return *this; */
-  /* } */
 
   DELETE_COPY_AND_ASSIGN(Handle);
 

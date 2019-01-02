@@ -30,22 +30,19 @@ bool CreateContext(Context* context) {
   app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
   app_info.apiVersion = VK_API_VERSION_1_0;
 
-  VkInstanceCreateInfo instance_create_info = {};
-  instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-  instance_create_info.pApplicationInfo = &app_info;
+  VkInstanceCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+  create_info.pApplicationInfo = &app_info;
 
-  instance_create_info.enabledExtensionCount = context->extensions.size();
-  instance_create_info.ppEnabledExtensionNames = context->extensions.data();
+  create_info.enabledExtensionCount = context->extensions.size();
+  create_info.ppEnabledExtensionNames = context->extensions.data();
 
-  instance_create_info.enabledLayerCount = context->validation_layers.size();
-  instance_create_info.ppEnabledLayerNames = context->validation_layers.data();
+  create_info.enabledLayerCount = context->validation_layers.size();
+  create_info.ppEnabledLayerNames = context->validation_layers.data();
 
   VkInstance instance;
-  if (auto res = vkCreateInstance(&instance_create_info, nullptr, &instance);
-      res != VK_SUCCESS) {
-    LOG(ERROR) << "Could not create instance: " << EnumToString(res);
+  if (!VK_CALL(vkCreateInstance, &create_info, nullptr, &instance))
     return false;
-  }
 
   context->instance.Set(context, instance);
   return true;
@@ -147,7 +144,7 @@ QueueFamilyIndices FindQueueFamilyIndices(const VkPhysicalDevice& device,
 }
 
 SwapChainCapabilities QuerySwapChainSupport(const VkPhysicalDevice& device,
-                                              const VkSurfaceKHR& surface) {
+                                            const VkSurfaceKHR& surface) {
   SwapChainCapabilities details;
   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
                                             &details.capabilities);
@@ -266,10 +263,8 @@ bool CreateLogicalDevice(Context* context) {
   create_info.ppEnabledExtensionNames = context->device_extensions.data();
 
   VkDevice device;
-  if (auto res = vkCreateDevice(
-          context->physical_device, &create_info, nullptr, &device);
-      res != VK_SUCCESS) {
-    LOG(ERROR) << "Could not create logical device: " << EnumToString(res);
+  if (!VK_CALL(vkCreateDevice, context->physical_device, &create_info, nullptr,
+                               &device)) {
     return false;
   }
 
@@ -504,10 +499,8 @@ bool CreatePipelineLayout(Context* context) {
   create_info.pPushConstantRanges = nullptr; // Optional
 
   VkPipelineLayout pipeline_layout;
-  if (auto res = vkCreatePipelineLayout(
-          *context->device, &create_info, nullptr, &pipeline_layout);
-      res != VK_SUCCESS) {
-    LOG(ERROR) << "Could not create pipeline layout: " << EnumToString(res);
+  if (!VK_CALL(vkCreatePipelineLayout, *context->device, &create_info, nullptr,
+                                       &pipeline_layout)) {
     return false;
   }
   context->pipeline_layout.Set(context, pipeline_layout);
@@ -526,11 +519,8 @@ VkShaderModule CreateShaderModule(const VkDevice& device,
   create_info.pCode = (const uint32_t*)(data.data());
 
   VkShaderModule shader;
-  if (auto res = vkCreateShaderModule(device, &create_info, nullptr, &shader);
-      res != VK_SUCCESS) {
-    LOG(ERROR) << "Could not create shader module: " << EnumToString(res);
+  if (!VK_CALL(vkCreateShaderModule, device, &create_info, nullptr, &shader))
     return VK_NULL_HANDLE;
-  }
   return shader;
 }
 
@@ -768,7 +758,7 @@ bool CreateGraphicsPipeline(Context* context) {
 // CreateFrameBuffers ----------------------------------------------------------
 
 bool CreateFrameBuffers(Context* context) {
-  context->frame_buffers.reserve(context->image_views.size());
+  context->frame_buffers.clear();
   for (size_t i = 0; i < context->image_views.size(); i++) {
     // A framebuffer references image views for input data.
     VkImageView attachments[] = { *context->image_views[i] };
@@ -783,12 +773,11 @@ bool CreateFrameBuffers(Context* context) {
     create_info.layers = 1;
 
     VkFramebuffer frame_buffer;
-    if (auto res = vkCreateFramebuffer(
-            *context->device, &create_info, nullptr, &frame_buffer);
-        res != VK_SUCCESS) {
-      LOG(ERROR) << "Could not create frame buffer: " << EnumToString(res);
+    if (!VK_CALL(vkCreateFramebuffer, *context->device, &create_info, nullptr,
+                                      &frame_buffer)) {
       return false;
     }
+
     context->frame_buffers.emplace_back(context, frame_buffer);
   }
 
@@ -807,10 +796,8 @@ bool CreateCommandPool(Context* context) {
   create_info.flags = 0;  // Optional
 
   VkCommandPool command_pool;
-  if (auto res = vkCreateCommandPool(
-          *context->device, &create_info, nullptr, &command_pool);
-      res != VK_SUCCESS) {
-    LOG(ERROR) << "Could not create command pool: " << EnumToString(res);
+  if (!VK_CALL(vkCreateCommandPool, *context->device, &create_info, nullptr,
+                                    &command_pool)) {
     return false;
   }
 
@@ -877,6 +864,10 @@ bool CreateCommandBuffers(Context* context) {
 // CreateSemaphores ------------------------------------------------------------
 
 bool CreateSyncObjects(Context* context) {
+  context->image_available_semaphores.clear();
+  context->render_finished_semaphores.clear();
+  context->in_flight_fences.clear();
+
   VkSemaphoreCreateInfo semaphore_create_info = {};
   semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -907,13 +898,46 @@ bool CreateSyncObjects(Context* context) {
 
 // RecreateSwapChain -----------------------------------------------------------
 
+namespace {
+
+// We free the resources in the right order before recreating.
+void ClearOldSwapChain(Context* context) {
+  context->frame_buffers.clear();
+
+  // We don't recreate the command pool, so we just need to free the command
+  // buffers.
+  vkFreeCommandBuffers(*context->device,
+                       *context->command_pool,
+                       (uint32_t)context->command_buffers.size(),
+                       context->command_buffers.data());
+  context->pipeline.Clear();
+  context->pipeline_layout.Clear();
+  context->render_pass.Clear();
+  context->image_views.clear();
+  context->swap_chain.Clear();
+}
+
+}  // namespace
+
 bool RecreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
   if (!VK_CALL(vkDeviceWaitIdle, *context->device))
       return false;
 
+  ClearOldSwapChain(context);
+
+  // We re-query the swapchain capabilities, as the surface could have changed.
+
+  auto& cap = context->device_info.swap_chain_capabilities.capabilities;
+  if (!VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR,
+               context->physical_device, *context->surface, &cap)) {
+    return false;
+  }
+
+  // Finally we recreate the whole infrastructure again.
   if (!CreateSwapChain(context, screen_size) ||
       !CreateImageViews(context) ||
       !CreateRenderPass(context) ||
+      !CreatePipelineLayout(context) ||
       !CreateGraphicsPipeline(context) ||
       !CreateFrameBuffers(context) ||
       !CreateCommandBuffers(context)) {

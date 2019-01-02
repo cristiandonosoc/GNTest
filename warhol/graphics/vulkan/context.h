@@ -109,9 +109,6 @@ bool SetupDebugCall(Context*, PFN_vkDebugUtilsMessengerCallbackEXT callback);
 bool PickPhysicalDevice(Context*);
 bool CreateLogicalDevice(Context*);
 
-
-bool RecreateSwapChain(Context*, Pair<uint32_t> screen_size);
-
 // A |device| must be created already.
 bool CreateSwapChain(Context*, Pair<uint32_t> screen_size);
 
@@ -130,6 +127,10 @@ bool CreateCommandPool(Context*);
 bool CreateCommandBuffers(Context*);
 
 bool CreateSyncObjects(Context*);
+
+// -----------------------------------------------------------------------------
+
+bool RecreateSwapChain(Context*, Pair<uint32_t> screen_size);
 
 }  // namespace vulkan
 }  // namespace warhol

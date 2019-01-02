@@ -136,8 +136,9 @@ SDL_Window* SDLContext::get_window() const  {
   return impl_->window;
 }
 
-SDLContext::EventAction
+std::pair<SDLContext::Event*, size_t>
 SDLContext::NewFrame(InputState* input) {
+  actions_.clear();
   CalculateFramerate();
 
   // We do the frame flip.
@@ -149,7 +150,7 @@ SDLContext::NewFrame(InputState* input) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     switch (event.type) {
-      case SDL_QUIT: return SDLContext::EventAction::kQuit;
+      case SDL_QUIT: actions_.push_back(Event::kQuit);
       case SDL_KEYUP: HandleKeyUpEvent(event.key, input); break;
       case SDL_WINDOWEVENT: HandleWindowEvent(event.window); break;
       case SDL_MOUSEWHEEL: HandleMouseWheelEvent(event.wheel, input); break;
@@ -167,11 +168,11 @@ SDLContext::NewFrame(InputState* input) {
 
   HandleKeysDown(input);
   HandleMouse(input);
-  return SDLContext::EventAction::kContinue;
+  return {actions_.empty() ? nullptr : actions_.data(),
+          actions_.size()};
 }
 
-
-// Sigh...
+// Sigh... Well done windows.
 #ifdef max
 #undef max
 #endif
@@ -210,10 +211,7 @@ SDLContext::HandleWindowEvent(const SDL_WindowEvent& window_event) {
   if (window_event.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
     impl_->width = window_event.data1;
     impl_->height = window_event.data2;
-
-    // Update viewport
-    // TODO(Cristian): I shouldn't tie SDL and OpenGL like this.
-    /* glViewport(0, 0, width(), height()); */
+    actions_.push_back(Event::kWindowResize);
   }
 }
 

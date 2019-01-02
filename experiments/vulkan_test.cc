@@ -20,6 +20,11 @@ using namespace warhol;
 
 namespace {
 
+struct ApplicationContext {
+  bool running = false;
+  bool window_size_changed = false;
+};
+
 // TODO: Setup a better debug call.
 static VKAPI_ATTR VkBool32 VKAPI_CALL
 VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
@@ -160,79 +165,137 @@ bool SubmitCommandBuffer(vulkan::Context* context, uint32_t image_index) {
                  *context->in_flight_fences[context->current_frame]);
 }
 
-bool DrawFrame(vulkan::Context* context) {
-  if (!VK_CALL(vkWaitForFences, *context->device, 1,
-               &context->in_flight_fences[context->current_frame].value(),
-               VK_TRUE, Limits::kUint64Max) ||
-      !VK_CALL(vkResetFences, *context->device, 1,
-               &context->in_flight_fences[context->current_frame].value())) {
-    return false;
-  }
-
-  uint32_t image_index = 0;
-  vkAcquireNextImageKHR(
-      *context->device,
-      *context->swap_chain,
-      Limits::kUint64Max,  // No timeout.
-      *context->image_available_semaphores[context->current_frame],
-      VK_NULL_HANDLE,
-      &image_index);
-
-  if (!SubmitCommandBuffer(context, image_index))
-    return false;
-
+bool PresentQueue(const SDLContext& sdl_context,
+                  vulkan::Context* vk_context,
+                  uint32_t image_index) {
   VkPresentInfoKHR present_info = {};
   present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
   // Semaphores to wait for.
   VkSemaphore wait_semaphores[] = {
-    *context->render_finished_semaphores[context->current_frame],
+    *vk_context->render_finished_semaphores[vk_context->current_frame],
   };
   present_info.waitSemaphoreCount = ARRAY_SIZE(wait_semaphores);
   present_info.pWaitSemaphores = wait_semaphores;
 
   present_info.swapchainCount = 1;
-  present_info.pSwapchains = &context->swap_chain.value();
+  present_info.pSwapchains = &vk_context->swap_chain.value();
   present_info.pImageIndices = &image_index;
 
   present_info.pResults = nullptr;  // Optional, as we only submit one image.
 
-  if (!VK_CALL(vkQueuePresentKHR, context->present_queue, &present_info))
+  // When presenting a queue, we can be notified that the queue is out of date
+  // (eg. the surface changed size) and we need to recreate the swapchain for
+  // this.
+  VkResult res = vkQueuePresentKHR(vk_context->present_queue, &present_info);
+  if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR) {
+    Pair<uint32_t> screen_size = {(uint32_t)sdl_context.width(),
+                                  (uint32_t)sdl_context.height()};
+
+    LOG(INFO) << "Recreating swap chain to " << screen_size.ToString();
+    return RecreateSwapChain(vk_context, screen_size);
+  } else if (res != VK_SUCCESS) {
+    // Suboptimal is considered a success state, as rendering can continue.
+    LOG(ERROR) << "Error presenting the queue: " << vulkan::EnumToString(res);
+    return false;
+  }
+  return true;
+}
+
+bool DrawFrame(const SDLContext& sdl_context,
+               ApplicationContext* app_context,
+               vulkan::Context* vk_context) {
+  int current_frame = vk_context->current_frame;
+  if (!VK_CALL(vkWaitForFences, *vk_context->device, 1,
+               &vk_context->in_flight_fences[current_frame].value(),
+               VK_TRUE, Limits::kUint64Max)) {
+    return false;
+  }
+
+  uint32_t image_index = 0;
+  VkResult res = vkAcquireNextImageKHR(
+      *vk_context->device,
+      *vk_context->swap_chain,
+      Limits::kUint64Max,  // No timeout.
+      *vk_context->image_available_semaphores[current_frame],
+      VK_NULL_HANDLE,
+      &image_index);
+
+  // If vulkan or our app tells us the window/surface size has changed, we
+  // recreate the swap chain.
+  if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR ||
+      app_context->window_size_changed) {
+    app_context->window_size_changed = false;
+    Pair<uint32_t> screen_size = {(uint32_t)sdl_context.width(),
+                                  (uint32_t)sdl_context.height()};
+    LOG(INFO) << "Recreating swap chain to " << screen_size.ToString();
+    return RecreateSwapChain(vk_context, screen_size);
+  } else if (res != VK_SUCCESS) {
+    // Suboptimal is considered a success state, as rendering can continue.
+    LOG(ERROR) << "Error presenting the queue: " << vulkan::EnumToString(res);
+    return false;
+  }
+
+  if (!VK_CALL(vkResetFences, *vk_context->device, 1,
+              &vk_context->in_flight_fences[current_frame].value())) {
+    return false;
+  }
+
+  if (!SubmitCommandBuffer(vk_context, image_index))
     return false;
 
-  context->current_frame++;
-  context->current_frame %= context->max_frames_in_flight;
+  if (!PresentQueue(sdl_context, vk_context, image_index))
+    return false;
+
+  vk_context->current_frame++;
+  vk_context->current_frame %= vk_context->max_frames_in_flight;
   return true;
+}
+
+void HandleSDLEvents(ApplicationContext* app_context,
+                     vulkan::Context* vk_context,
+                     SDLContext::Event* events,
+                     size_t event_count) {
+  (void)vk_context;
+  for (size_t i = 0; i < event_count; i++) {
+    SDLContext::Event& event = events[i];
+    if (event == SDLContext::Event::kQuit) {
+      app_context->running = false;
+      break;
+    }
+  }
 }
 
 }  // namespace
 
 int main() {
-  SDLContext sdl_context;
-  if (!sdl_context.InitVulkan(0))
+  ApplicationContext app_context = {};
+
+  SDLContext sdl_context = {};
+  if (!sdl_context.InitVulkan(SDL_WINDOW_RESIZABLE))
     return 1;
   LOG(INFO) << "Created SDL context.";
-
   LOG(INFO) << "Window size. WIDTH: " << sdl_context.width()
             << ", HEIGHT: " << sdl_context.height();
 
-  vulkan::Context context;
-  if (!SetupVulkan(sdl_context, &context)) {
+  vulkan::Context vk_context;
+  if (!SetupVulkan(sdl_context, &vk_context)) {
     LOG(ERROR) << "Could not setup vulkan. Exiting.";
     return 1;
   }
 
   InputState input = InputState::Create();
-  bool running = true;
-  while (running) {
-    SDLContext::EventAction action = sdl_context.NewFrame(&input);
-    if (action == SDLContext::EventAction::kQuit)
-      break;
+  app_context.running = true;
+  while (app_context.running) {
+    if (auto [events, event_count] = sdl_context.NewFrame(&input);
+        events != nullptr) {
+      HandleSDLEvents(&app_context, &vk_context, events, event_count);
+    }
 
     if (input.keys_up[GET_KEY(Escape)])
       break;
 
-    if (!DrawFrame(&context)) {
+    if (!DrawFrame(sdl_context, &app_context, &vk_context)) {
       LOG(ERROR) << "Error drawing with vulkan. Exiting.";
       break;
     }
@@ -240,7 +303,7 @@ int main() {
     SDL_Delay(16);
   }
 
-  if (!VK_CALL(vkDeviceWaitIdle, *context.device)) {
+  if (!VK_CALL(vkDeviceWaitIdle, *vk_context.device)) {
     LOG(ERROR) << "Could not wait on device. Aborting.";
     exit(1);
   }

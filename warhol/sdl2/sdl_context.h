@@ -21,9 +21,9 @@ struct SDLContextImpl;
 
 class SDLContext {
  public:
-  enum class EventAction {
-    kContinue,
+  enum class Event {
     kQuit,
+    kWindowResize,
   };
 
   SDLContext();
@@ -35,9 +35,9 @@ class SDLContext {
   bool InitVulkan(uint32_t sdl_flags);  // SDL_WINDOW_OPENGL will be OR'ed
 
   void Clear();
-  // TODO(Cristian): Perhaps later we're going to need an array of actions.
-  //                 EventAction should also be separated from SDL.
-  EventAction NewFrame(InputState*);
+
+  // Returns an array of Event.
+  std::pair<Event*, size_t> NewFrame(InputState*);
 
   bool valid() const { return impl_ != nullptr; }
   // Can be null if !valid().
@@ -65,6 +65,7 @@ class SDLContext {
   // Will be cleared at the beginning of calling NewFrame.
   // The string inside the vector will be null-terminated.
   std::vector<char> utf8_chars_inputted_;
+  std::vector<Event> actions_;
 
   DELETE_COPY_AND_ASSIGN(SDLContext);
 };
