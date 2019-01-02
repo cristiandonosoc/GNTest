@@ -40,9 +40,11 @@ executable("memory_blocks") {
   ]
 
   deps = [
-    "//warhol/memory",
+    "//warhol/memory"
   ]
 }
+
+# Vulkan Test ------------------------------------------------------------------
 
 executable("vulkan_test") {
   sources = [
@@ -54,5 +56,9 @@ executable("vulkan_test") {
     "//warhol/graphics/vulkan:lib",
     "//warhol/math",
     "//warhol/sdl2",
+  ]
+
+  data_deps = [
+    "//assets/shaders/vulkan:shaders",
   ]
 }

@@ -28,7 +28,7 @@ group("default") {
     "//experiments:voxel_renderer",
     "//experiments:work_queue",
     "//experiments:osx",
-
+    "//assets/shaders/vulkan:shaders",
   ]
 }
 

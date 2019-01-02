@@ -1,0 +1,21 @@
+# Copyright 2018, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+# Compile the given shaders and outputs them to the excepted directory in the
+# build.
+action_foreach("shaders") {
+  script = "compile_shader.py"
+  args = [ "{{source}}" ,
+           rebase_path("$target_out_dir/assets/shaders/vulkan/",
+                       target_out_dir),
+  ]
+
+  sources = [
+    "demo.frag",
+    "demo.vert",
+  ]
+
+  outputs = [
+    "$target_out_dir/assets/shaders/vulkan/{{source_file_part}}.spv",
+  ]
+}
