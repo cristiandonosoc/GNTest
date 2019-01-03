@@ -165,31 +165,32 @@ SwapChainCapabilities QuerySwapChainSupport(const VkPhysicalDevice& device,
   return details;
 }
 
+PhysicalDeviceInfo GetPhysicalDeviceInfo(const VkPhysicalDevice& device,
+                           const VkSurfaceKHR& surface) {
+  PhysicalDeviceInfo info;
+  vkGetPhysicalDeviceProperties(device, &info.properties);
+  vkGetPhysicalDeviceFeatures(device, &info.features);
+  vkGetPhysicalDeviceMemoryProperties(device, &info.memory_properties);
+  info.queue_family_indices = FindQueueFamilyIndices(device, surface);
+  info.swap_chain_capabilities = QuerySwapChainSupport(device, surface);
+  return info;
+}
+
 bool IsSuitableDevice(const VkPhysicalDevice& device,
-                      const VkSurfaceKHR& surface,
-                      const std::vector<const char*>& required_extensions,
-                      PhysicalDeviceInfo* out) {
-  VkPhysicalDeviceProperties properties;
-  vkGetPhysicalDeviceProperties(device, &properties);
+                      const PhysicalDeviceInfo& device_info,
+                      const std::vector<const char*>& required_extensions) {
+  LOG(INFO) << "Checking GPU: " << device_info.properties.deviceName;
 
-  LOG(INFO) << "Checking GPU: " << properties.deviceName;
-
-  /* VkPhysicalDeviceFeatures features; */
-  /* vkGetPhysicalDeviceFeatures(device, &features); */
-
-  auto indices = FindQueueFamilyIndices(device, surface);
+  auto& indices = device_info.queue_family_indices;
   if (indices.graphics == -1 || indices.present == -1)
     return false;
 
   if (!CheckPhysicalDeviceExtensions(device, required_extensions))
     return false;
 
-  SwapChainCapabilities details = QuerySwapChainSupport(device, surface);
-  if (details.formats.empty() || details.present_modes.empty())
+  auto& capabilities = device_info.swap_chain_capabilities;
+  if (capabilities.formats.empty() || capabilities.present_modes.empty())
     return false;
-
-  out->queue_family_indices = indices;
-  out->swap_chain_capabilities = details;
   return true;
 }
 
@@ -205,11 +206,9 @@ bool PickPhysicalDevice(Context* context) {
 
   std::vector<std::pair<VkPhysicalDevice, PhysicalDeviceInfo>> suitable_devices;
   for (const VkPhysicalDevice& device : devices) {
-    PhysicalDeviceInfo device_info;
-    if (IsSuitableDevice(device,
-                         *context->surface,
-                         context->device_extensions,
-                         &device_info)) {
+    PhysicalDeviceInfo device_info =
+        GetPhysicalDeviceInfo(device, *context->surface);
+    if (IsSuitableDevice(device, device_info, context->device_extensions)) {
       suitable_devices.push_back({device, device_info});
       LOG(INFO) << "- Suitable!";
     }
@@ -223,7 +222,7 @@ bool PickPhysicalDevice(Context* context) {
   // For now we choose the first device.
   auto& [device, device_info] = suitable_devices.front();
   context->physical_device = device;
-  context->device_info = device_info;
+  context->physical_device_info = device_info;
   return true;
 }
 
@@ -236,7 +235,7 @@ bool CreateLogicalDevice(Context* context) {
 
   // We create one per queue family required. If there are the same, we only
   // create one.
-  auto& indices = context->device_info.queue_family_indices;
+  auto& indices = context->physical_device_info.queue_family_indices;
   int queue_indices[] = { indices.graphics, indices.present };
   VkDeviceQueueCreateInfo queue_create_infos[ARRAY_SIZE(queue_indices)] = {};
 
@@ -329,7 +328,7 @@ VkExtent2D ChooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& cap,
 }  // namespace
 
 bool CreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
-  auto& capabilities = context->device_info.swap_chain_capabilities;
+  auto& capabilities = context->physical_device_info.swap_chain_capabilities;
   VkSurfaceFormatKHR format =
       ChooseSwapChainSurfaceFormat(capabilities.formats);
   VkPresentModeKHR present_mode =
@@ -358,7 +357,7 @@ bool CreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
 
   // If the graphics and present queues are different, we need to establish
   // sharing mode between them.
-  auto& indices = context->device_info.queue_family_indices;
+  auto& indices = context->physical_device_info.queue_family_indices;
   uint32_t indices_array[2] = {(uint32_t)indices.graphics,
                                (uint32_t)indices.present};
   if (indices.graphics != indices.present) {
@@ -524,6 +523,43 @@ VkShaderModule CreateShaderModule(const VkDevice& device,
   return shader;
 }
 
+std::vector<VkVertexInputBindingDescription> GetBindingDescriptions() {
+  std::vector<VkVertexInputBindingDescription> bindings;
+  bindings.reserve(2);
+
+  VkVertexInputBindingDescription binding;
+  binding = {};
+  binding.binding = 0;
+  binding.stride = 3 * sizeof(float);
+  binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+  bindings.push_back(binding);
+
+  binding.binding = 1;
+  bindings.push_back(binding);
+  return bindings;
+}
+
+std::vector<VkVertexInputAttributeDescription> GetAttributeDescriptions() {
+  std::vector<VkVertexInputAttributeDescription> descriptions;
+  descriptions.reserve(2);
+
+  VkVertexInputAttributeDescription pos_desc = {};
+  pos_desc.binding = 0;
+  pos_desc.location = 0;
+  pos_desc.format = VK_FORMAT_R32G32B32_SFLOAT;
+  pos_desc.offset = 0;
+  descriptions.push_back(std::move(pos_desc));
+
+  VkVertexInputAttributeDescription color_desc = {};
+  color_desc.binding = 1;
+  color_desc.location = 1;
+  color_desc.format = VK_FORMAT_R32G32B32_SFLOAT;
+  color_desc.offset = 0;
+  descriptions.push_back(std::move(color_desc));
+
+  return descriptions;
+}
+
 }  // namespace
 
 bool CreateGraphicsPipeline(Context* context) {
@@ -570,13 +606,16 @@ bool CreateGraphicsPipeline(Context* context) {
   //           instance.
   // Attribute Descriptions: Information about the attribute locations, etc.
 
+  auto bindings = GetBindingDescriptions();
+  auto attributes = GetAttributeDescriptions();
+
   VkPipelineVertexInputStateCreateInfo vertex_input = {};
   vertex_input.sType =
       VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertex_input.vertexBindingDescriptionCount = 0;
-  vertex_input.pVertexBindingDescriptions = nullptr;
-  vertex_input.vertexAttributeDescriptionCount = 0;
-  vertex_input.pVertexAttributeDescriptions = nullptr;
+  vertex_input.vertexBindingDescriptionCount = bindings.size();
+  vertex_input.pVertexBindingDescriptions = bindings.data();
+  vertex_input.vertexAttributeDescriptionCount = attributes.size();
+  vertex_input.pVertexAttributeDescriptions = attributes.data();
 
   // ******  Input Assembly ******
   //
@@ -792,7 +831,7 @@ bool CreateCommandPool(Context* context) {
   // Each command pool can only allocate commands for one particular queue
   // family.
   create_info.queueFamilyIndex =
-      context->device_info.queue_family_indices.graphics;
+      context->physical_device_info.queue_family_indices.graphics;
   create_info.flags = 0;  // Optional
 
   VkCommandPool command_pool;
@@ -805,10 +844,102 @@ bool CreateCommandPool(Context* context) {
   return true;
 }
 
+// CreateVertexBuffers ---------------------------------------------------------
+
+namespace {
+
+// |type_filter| comes from the |memoryTypeBits| field in VkMemoryRequirements.
+// That field establishes the index of all the valid memory types within the
+// |memoryTypes| array in VkPhysicalDeviceMemoryProperties.
+bool FindMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& properties,
+                         uint32_t type_filter,
+                         VkMemoryPropertyFlags desired_flags,
+                         uint32_t* memory_type_index) {
+  for (uint32_t i = 0; i < properties.memoryTypeCount; i++) {
+    const VkMemoryType& memory_type = properties.memoryTypes[i];
+    if ((type_filter & (1 << i) &&
+        (memory_type.propertyFlags & desired_flags) == desired_flags)) {
+      *memory_type_index = i;
+      return true;
+    }
+  }
+
+  LOG(ERROR) << "Could not find a valid memory index.";
+  return false;
+}
+
+std::vector<float> vertices = {
+  // Positions
+   0.0f, -0.5f,  0.0f,
+   0.5f,  0.5f,  0.0f,
+  -0.5f,  0.5f,  0.0f,
+  // Colors
+   1.0f,  0.0f,  0.0f,
+   0.0f,  1.0f,  1.0f,
+   0.0f,  0.0f,  1.0f,
+};
+
+}  // namespace
+
+bool CreateVertexBuffers(Context* context) {
+  VkBufferCreateInfo buffer_info = {};
+  buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  buffer_info.size = vertices.size() * sizeof(float);
+  buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  VkBuffer vertex_buffer;
+  if (!VK_CALL(vkCreateBuffer, *context->device, &buffer_info, nullptr,
+                               &vertex_buffer)) {
+    return false;
+  }
+
+  VkMemoryRequirements memory_reqs;
+  vkGetBufferMemoryRequirements(*context->device, vertex_buffer, &memory_reqs);
+
+  VkMemoryPropertyFlags desired_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+  uint32_t memory_type_index;
+  if (!FindMemoryTypeIndex(context->physical_device_info.memory_properties,
+                           memory_reqs.memoryTypeBits,
+                           desired_flags, &memory_type_index)) {
+    return false;
+  }
+
+  VkMemoryAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.allocationSize = memory_reqs.size;
+  alloc_info.memoryTypeIndex = memory_type_index;
+
+  VkDeviceMemory vertex_buffer_memory;
+  if (!VK_CALL(vkAllocateMemory, *context->device, &alloc_info, nullptr,
+                                 &vertex_buffer_memory)) {
+    return false;
+  }
+
+  context->vertex_buffer.Set(context, vertex_buffer);
+  context->vertex_buffer_memory.Set(context, vertex_buffer_memory);
+
+  if (!VK_CALL(vkBindBufferMemory, *context->device, vertex_buffer,
+                                   vertex_buffer_memory, 0)) {
+    return false;
+  }
+
+  // Map the vertex data.
+  void* vertex_memory;
+  if (!VK_CALL(vkMapMemory, *context->device, vertex_buffer_memory, 0,
+                            buffer_info.size, 0, &vertex_memory)) {
+    return false;
+  }
+  memcpy(vertex_memory, vertices.data(), buffer_info.size);
+  vkUnmapMemory(*context->device, vertex_buffer_memory);
+
+  return true;
+}
+
 // CreateCommandBuffers --------------------------------------------------------
 
 bool CreateCommandBuffers(Context* context) {
-
   // Command buffers can get multiple allocated at once with one call.
   VkCommandBufferAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -850,6 +981,14 @@ bool CreateCommandBuffers(Context* context) {
     {
       vkCmdBindPipeline(command_buffer,
                         VK_PIPELINE_BIND_POINT_GRAPHICS, *context->pipeline);
+
+      // We are binding the same buffer in two different points.
+      VkBuffer vertex_buffers[] = {
+          *context->vertex_buffer,
+          *context->vertex_buffer,
+      };
+      VkDeviceSize offsets[] = {0, 9 * sizeof(float)};
+      vkCmdBindVertexBuffers(command_buffer, 0, 2, vertex_buffers, offsets);
       vkCmdDraw(command_buffer, 3, 1, 0, 0);
     }
     vkCmdEndRenderPass(command_buffer);
@@ -927,9 +1066,12 @@ bool RecreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
 
   // We re-query the swapchain capabilities, as the surface could have changed.
 
-  auto& cap = context->device_info.swap_chain_capabilities.capabilities;
+  auto& cap =
+      context->physical_device_info.swap_chain_capabilities.capabilities;
   if (!VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR,
-               context->physical_device, *context->surface, &cap)) {
+               context->physical_device,
+               *context->surface,
+               &cap)) {
     return false;
   }
 
@@ -946,6 +1088,9 @@ bool RecreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
 
   return true;
 }
+
+// Vertex Buffers --------------------------------------------------------------
+
 
 
 }  // namespace vulkan

@@ -87,5 +87,17 @@ void Handle<VkFence>::InternalClear() {
     vkDestroyFence(*context_->device, handle_, nullptr);
 }
 
+template<>
+void Handle<VkBuffer>::InternalClear() {
+  if (has_value() && context_)
+    vkDestroyBuffer(*context_->device, handle_, nullptr);
+}
+
+template<>
+void Handle<VkDeviceMemory>::InternalClear() {
+  if (has_value() && context_)
+    vkFreeMemory(*context_->device, handle_, nullptr);
+}
+
 }  // namespace vulkan
 }  // namespace warhol

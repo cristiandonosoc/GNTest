@@ -32,6 +32,9 @@ struct SwapChainCapabilities {
 };
 
 struct PhysicalDeviceInfo {
+  VkPhysicalDeviceProperties properties;
+  VkPhysicalDeviceFeatures features;
+  VkPhysicalDeviceMemoryProperties memory_properties;
   QueueFamilyIndices queue_family_indices;
   SwapChainCapabilities swap_chain_capabilities;
 };
@@ -63,7 +66,7 @@ struct Context {
 
   std::vector<const char*> device_extensions;
   VkPhysicalDevice physical_device = VK_NULL_HANDLE; // Freed with |instance|.
-  PhysicalDeviceInfo device_info;
+  PhysicalDeviceInfo physical_device_info;
 
   Handle<VkDevice> device = {};
   VkQueue graphics_queue = VK_NULL_HANDLE;  // Freed with |device|.
@@ -87,6 +90,9 @@ struct Context {
 
   Handle<VkCommandPool> command_pool = {};
   std::vector<VkCommandBuffer> command_buffers;   // Freed with |command_pool|.
+
+  Handle<VkDeviceMemory> vertex_buffer_memory;
+  Handle<VkBuffer> vertex_buffer;
 
   std::vector<Handle<VkSemaphore>> image_available_semaphores;
   std::vector<Handle<VkSemaphore>> render_finished_semaphores;
@@ -124,6 +130,9 @@ bool CreateGraphicsPipeline(Context*);
 bool CreateFrameBuffers(Context*);
 
 bool CreateCommandPool(Context*);
+
+bool CreateVertexBuffers(Context*);
+
 bool CreateCommandBuffers(Context*);
 
 bool CreateSyncObjects(Context*);
