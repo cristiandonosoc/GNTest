@@ -76,6 +76,14 @@ void Handle<VkCommandPool>::InternalClear() {
 }
 
 template<>
+void Handle<VkCommandBuffer>::InternalClear() {
+  if (has_value() && context_) {
+    vkFreeCommandBuffers(*context_->device, *context_->command_pool,
+                         1, &handle_);
+  }
+}
+
+template<>
 void Handle<VkSemaphore>::InternalClear() {
   if (has_value() && context_)
     vkDestroySemaphore(*context_->device, handle_, nullptr);

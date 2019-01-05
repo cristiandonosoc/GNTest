@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include <vulkan/vulkan.h>
-
+#include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/handle.h"
+#include "warhol/graphics/vulkan/memory.h"
 
 #include "warhol/math/math.h"
 #include "warhol/utils/macros.h"
@@ -91,8 +91,8 @@ struct Context {
   Handle<VkCommandPool> command_pool = {};
   std::vector<VkCommandBuffer> command_buffers;   // Freed with |command_pool|.
 
-  Handle<VkDeviceMemory> vertex_buffer_memory;
-  Handle<VkBuffer> vertex_buffer;
+  BufferHandles vertices;
+  BufferHandles indices;
 
   std::vector<Handle<VkSemaphore>> image_available_semaphores;
   std::vector<Handle<VkSemaphore>> render_finished_semaphores;
@@ -131,7 +131,7 @@ bool CreateFrameBuffers(Context*);
 
 bool CreateCommandPool(Context*);
 
-bool CreateVertexBuffers(Context*);
+bool CreateDataBuffers(Context*);
 
 bool CreateCommandBuffers(Context*);
 

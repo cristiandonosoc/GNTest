@@ -5,8 +5,7 @@
 
 #include <vector>
 
-#include <vulkan/vulkan.h>
-
+#include "warhol/graphics/vulkan/def.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {

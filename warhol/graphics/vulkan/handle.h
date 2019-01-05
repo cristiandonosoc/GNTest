@@ -3,8 +3,7 @@
 
 #pragma once
 
-#include <vulkan/vulkan.h>
-
+#include "warhol/graphics/vulkan/def.h"
 #include "warhol/utils/macros.h"
 
 namespace warhol {

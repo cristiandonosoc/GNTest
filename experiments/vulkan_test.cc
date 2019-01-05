@@ -122,7 +122,7 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
     return false;
   LOG(INFO) << "Created a command pool for each framebuffer.";
 
-  if (!vulkan::CreateVertexBuffers(context))
+  if (!vulkan::CreateDataBuffers(context))
     return false;
   LOG(INFO) << "Created vertex buffers.";
 

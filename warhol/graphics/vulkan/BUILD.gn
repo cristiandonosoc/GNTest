@@ -50,6 +50,8 @@ source_set("lib") {
     "context.h",
     "handle.cc",
     "handle.h",
+    "memory.cc",
+    "memory.h",
     "utils.cc",
     "utils.h",
   ]
