@@ -36,7 +36,8 @@ bool FindMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& properties,
 
 bool
 CreateBuffer(Context* context, VkDeviceSize size, VkBufferUsageFlags usage,
-             VkMemoryPropertyFlags desired_properties, BufferHandles* out) {
+             VkMemoryPropertyFlags desired_properties,
+             DeviceBackedMemory* out) {
   VkBufferCreateInfo buffer_info = {};
   buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   buffer_info.size = size;
@@ -131,7 +132,40 @@ bool CopyBuffer(Context* context, VkBuffer src_buffer, VkBuffer dst_buffer,
   return true;
 }
 
+DeviceBackedMemory::~DeviceBackedMemory() {
+  if (data == nullptr)
+    return;
 
+  // If there is data, there should be a device associated with it.
+  ASSERT(device != VK_NULL_HANDLE && memory.has_value());
+  vkUnmapMemory(device, *memory);
+}
+
+namespace {
+
+inline void MoveDeviceBackedMemory(DeviceBackedMemory* lhs,
+                                   DeviceBackedMemory* rhs) {
+  lhs->buffer = std::move(rhs->buffer);
+  lhs->memory = std::move(rhs->memory);
+  lhs->size = rhs->size;
+  lhs->data = rhs->data;
+  lhs->device = rhs->device;
+  rhs->data = nullptr;
+  rhs->device = VK_NULL_HANDLE;
+}
+
+} // namespace
+
+DeviceBackedMemory::DeviceBackedMemory(DeviceBackedMemory&& rhs) {
+  MoveDeviceBackedMemory(this, &rhs);
+}
+
+DeviceBackedMemory& DeviceBackedMemory::operator=(DeviceBackedMemory&& rhs) {
+  if (this != &rhs) {
+    MoveDeviceBackedMemory(this, &rhs);
+  }
+  return *this;
+}
 
 }  // namespace vulkan
 }  // namespace warhol

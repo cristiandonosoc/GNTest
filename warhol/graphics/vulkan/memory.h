@@ -12,16 +12,26 @@ namespace vulkan {
 
 struct Context;
 
-struct BufferHandles {
+struct DeviceBackedMemory {
+  DeviceBackedMemory() = default;
+  ~DeviceBackedMemory();
+  DELETE_COPY_AND_ASSIGN(DeviceBackedMemory);
+  DECLARE_MOVE_AND_ASSIGN(DeviceBackedMemory);
+
+  bool host_visible() const { return data != nullptr; }
+
   Handle<VkBuffer> buffer;
   Handle<VkDeviceMemory> memory;
 
-  bool valid() const { return buffer.has_value() && memory.has_value(); }
+  VkDeviceSize size;
+  // Not null if it's host visible.
+  void* data = nullptr;
+  VkDevice device = VK_NULL_HANDLE;
 };
 
 bool CreateBuffer(Context* context, VkDeviceSize size, VkBufferUsageFlags usage,
                   VkMemoryPropertyFlags desired_properties,
-                  BufferHandles* out);
+                  DeviceBackedMemory* out);
 
 
 // Copies one buffer and blocks waiting for the transfer.

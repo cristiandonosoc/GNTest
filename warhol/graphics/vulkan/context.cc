@@ -451,13 +451,38 @@ bool CreateRenderPass(Context* context) {
   return true;
 }
 
+// CreateDescriptorSetLayout ---------------------------------------------------
+
+bool CreateDescriptorSetLayout(Context* context) {
+  VkDescriptorSetLayoutBinding ubo_binding = {};
+  ubo_binding.binding = 0;
+  ubo_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  ubo_binding.descriptorCount = 1;
+  ubo_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  ubo_binding.pImmutableSamplers = nullptr;  // Optional.
+
+  VkDescriptorSetLayoutCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  create_info.bindingCount = 1;
+  create_info.pBindings = &ubo_binding;
+
+  VkDescriptorSetLayout descriptor_set_layout;
+  if (!VK_CALL(vkCreateDescriptorSetLayout, *context->device, &create_info,
+               nullptr, &descriptor_set_layout)) {
+    return false;
+  }
+
+  context->descriptor_set_layout.Set(context, descriptor_set_layout);
+  return true;
+}
+
 // CreatePipelineLayout --------------------------------------------------------
 
 bool CreatePipelineLayout(Context* context) {
   VkPipelineLayoutCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  create_info.setLayoutCount = 0; // Optional
-  create_info.pSetLayouts = nullptr; // Optional
+  create_info.setLayoutCount = 1;
+  create_info.pSetLayouts = &context->descriptor_set_layout.value();
   create_info.pushConstantRangeCount = 0; // Optional
   create_info.pPushConstantRanges = nullptr; // Optional
 
@@ -635,7 +660,7 @@ bool CreateGraphicsPipeline(Context* context) {
   // Requires enabling the "wideLines" GPU feature.
   rasterizer.lineWidth = 1.0f;
   rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;  // Cull back faces.
-  rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+  rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
   // Useful for solving z-fighting.
   rasterizer.depthBiasEnable = VK_FALSE;
   rasterizer.depthBiasConstantFactor = 0.0f; // Optional
@@ -848,7 +873,7 @@ bool CreateVertexBuffers(Context* context) {
   VkDeviceSize size = vertices.size() * sizeof(vertices[0]);
 
   // Create a staging buffer.
-  BufferHandles staging_handles;
+  DeviceBackedMemory staging_handles;
   VkBufferUsageFlags staging_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   VkMemoryPropertyFlags staging_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                         VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -858,16 +883,16 @@ bool CreateVertexBuffers(Context* context) {
   }
 
   // Map the vertex data to the staging buffer.
-  void* vertex_memory;
+  void* memory;
   if (!VK_CALL(vkMapMemory, *context->device, *staging_handles.memory, 0, size,
-               0, &vertex_memory)) {
+               0, &memory)) {
     return false;
   }
-  memcpy(vertex_memory, vertices.data(), size);
+  memcpy(memory, vertices.data(), size);
   vkUnmapMemory(*context->device, *staging_handles.memory);
 
   // Create the local memory and copy the memory to it.
-  BufferHandles handles;
+  DeviceBackedMemory handles;
   VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
   VkMemoryPropertyFlags desired_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -885,7 +910,7 @@ bool CreateIndicesBuffers(Context* context) {
   VkDeviceSize size = indices.size() * sizeof(indices[0]);
 
   // Create a staging buffer.
-  BufferHandles staging_handles;
+  DeviceBackedMemory staging_handles;
   VkBufferUsageFlags staging_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   VkMemoryPropertyFlags staging_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                         VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -895,16 +920,16 @@ bool CreateIndicesBuffers(Context* context) {
   }
 
   // Map the vertex data to the staging buffer.
-  void* vertex_memory;
+  void* memory;
   if (!VK_CALL(vkMapMemory, *context->device, *staging_handles.memory, 0, size,
-               0, &vertex_memory)) {
+               0, &memory)) {
     return false;
   }
-  memcpy(vertex_memory, vertices.data(), size);
+  memcpy(memory, indices.data(), size);
   vkUnmapMemory(*context->device, *staging_handles.memory);
 
   // Create the local memory and copy the memory to it.
-  BufferHandles handles;
+  DeviceBackedMemory handles;
   VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                              VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
   VkMemoryPropertyFlags desired_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -918,17 +943,120 @@ bool CreateIndicesBuffers(Context* context) {
   return true;
 }
 
+bool CreateUniformBuffers(Context* context, VkDeviceSize size) {
+  context->ubo_size = size;
+  context->uniform_buffers.reserve(context->images.size());
+  for (size_t i = 0; i < context->images.size(); i++) {
+    DeviceBackedMemory ubo;
+    VkBufferUsageFlags usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    if (!CreateBuffer(context, size, usage, flags, &ubo))
+      return false;
+
+    ubo.device = *context->device;
+    if (!VK_CALL(vkMapMemory, *context->device, *ubo.memory, 0,
+                              size, 0, &ubo.data)) {
+      return false;
+    }
+
+    context->uniform_buffers.emplace_back(std::move(ubo));
+  }
+  return true;
+}
+
 }  // namespace
 
-bool CreateDataBuffers(Context* context) {
-  if (!CreateVertexBuffers(context) || !CreateIndicesBuffers(context))
+bool CreateDataBuffers(Context* context, VkDeviceSize ubo_size) {
+  if (!CreateVertexBuffers(context) ||
+      !CreateIndicesBuffers(context) ||
+      !CreateUniformBuffers(context, ubo_size)) {
     return false;
+  }
+  return true;
+}
+
+// CreateDescriptorSets  --------------------------------------------------------
+
+namespace {
+
+bool CreateDescriptorPool(Context* context) {
+  VkDescriptorPoolSize pool_size = {};
+  pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  pool_size.descriptorCount = context->images.size();
+
+  VkDescriptorPoolCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+  create_info.poolSizeCount = 1;
+  create_info.pPoolSizes = &pool_size;
+  create_info.maxSets = context->images.size();
+
+  VkDescriptorPool pool;
+  if (!VK_CALL(vkCreateDescriptorPool, *context->device, &create_info, nullptr,
+                                       &pool)) {
+    return false;
+  }
+  context->descriptor_pool.Set(context, pool);
+  return true;
+}
+
+}  // namespace
+
+bool CreateDescriptorSets(Context* context) {
+  if (!CreateDescriptorPool(context))
+    return false;
+
+  LOG(INFO) << "Created descriptor pool.";
+
+  // The layout could be different for each descriptor set we're allocating.
+  // We point to the same layout everytime.
+  std::vector<VkDescriptorSetLayout> layouts(context->images.size(),
+                                             *context->descriptor_set_layout);
+
+  VkDescriptorSetAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  alloc_info.descriptorPool = *context->descriptor_pool;
+  alloc_info.descriptorSetCount = layouts.size();
+  alloc_info.pSetLayouts = layouts.data();
+
+  std::vector<VkDescriptorSet> descriptor_sets(layouts.size());
+  if (!VK_CALL(vkAllocateDescriptorSets, *context->device, &alloc_info,
+                                         descriptor_sets.data())) {
+    return false;
+  }
+
+
+  // We now associate our descriptor sets to a uniform buffer.
+  for (size_t i = 0; i < layouts.size(); i++) {
+    VkDescriptorBufferInfo buffer_info = {};
+    buffer_info.buffer = *context->uniform_buffers[i].buffer;
+    buffer_info.offset = 0;
+    buffer_info.range = context->ubo_size;
+
+    VkWriteDescriptorSet descriptor_write = {};
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstSet = descriptor_sets[i];
+    descriptor_write.dstBinding = 0;
+    descriptor_write.dstArrayElement = 0;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.pBufferInfo = &buffer_info;
+    descriptor_write.pImageInfo = nullptr;  // Optional.
+    descriptor_write.pTexelBufferView = nullptr;  // Optional.
+
+    // We could also do one big call with an array of descriptor writes.
+    vkUpdateDescriptorSets(*context->device, 1, &descriptor_write, 0, nullptr);
+  }
+
+  context->descriptor_sets = descriptor_sets;
+
   return true;
 }
 
 // CreateCommandBuffers --------------------------------------------------------
 
 bool CreateCommandBuffers(Context* context) {
+
   // Command buffers can get multiple allocated at once with one call.
   VkCommandBufferAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -980,7 +1108,12 @@ bool CreateCommandBuffers(Context* context) {
       vkCmdBindVertexBuffers(command_buffer, 0, 2, vertex_buffers, offsets);
       vkCmdBindIndexBuffer(command_buffer, *context->indices.buffer, 0,
                            VK_INDEX_TYPE_UINT16);
-      /* vkCmdDraw(command_buffer, 3, 1, 0, 0); */
+
+      // We bind the descriptor sets.
+      vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              *context->pipeline_layout, 0, 1,
+                              &context->descriptor_sets[i], 0, nullptr);
+
       vkCmdDrawIndexed(command_buffer, (uint32_t)indices.size(), 1, 0, 0, 0);
     }
     vkCmdEndRenderPass(command_buffer);

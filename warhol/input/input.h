@@ -55,4 +55,6 @@ struct InputState {
   static void InitFrame(InputState*);
 };
 
+static_assert((uint8_t)Keys::kLAST < InputState::kInputSize);
+
 }  // warhol

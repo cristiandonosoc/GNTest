@@ -22,13 +22,15 @@ std::string Pair<float>::ToString() const {
 
 // Generate the functions explicitly, as MSVC won't generate templates it does
 // not explicitly need.
+#if defined(_MSC_VER)
 template <typename T>
 static std::string GenTemplate() {
   static Pair<T> a;
   return a.ToString();
-}
-static auto float_t = GenTemplate<float>();
-static auto int_t = GenTemplate<int>();
-
+};
+static auto call_float_t = GenTemplate<float>();
+static auto call_int_t = GenTemplate<int>();
+static auto call_uint32_t = GenTemplate<uint32_t>();
+#endif
 
 }  // namespace warhol

@@ -15,5 +15,10 @@ source_set("platform") {
   } else {
     assert(false, "Unhandled arch: $target_os")
   }
+
+  # TODO(Cristian): Remove this dependency
+  deps = [
+    "//warhol/sdl2",
+  ]
 }
 

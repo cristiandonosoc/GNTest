@@ -25,6 +25,14 @@ std::string Platform::GetCurrentExecutablePath() {
   return buf;
 }
 
+std::string Platform::GetCurrentExecutableDirectory() {
+  std::string exe_path = GetCurrentExecutablePath();
+  size_t separator = exe_path.rfind('/');
+  if (separator == std::string::npos)
+    return exe_path;
+  return exe_path.substr(0, separator);
+}
+
 std::string Platform::GetBasePath() {
   std::string exe_path = GetCurrentExecutablePath();
   size_t separator = exe_path.rfind('/');

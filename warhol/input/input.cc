@@ -9,7 +9,6 @@ namespace warhol {
 
 InputState InputState::Create() {
   InputState state;
-  ASSERT((uint8_t)Keys::kLAST < InputState::kInputSize);
   return state;
 }
 

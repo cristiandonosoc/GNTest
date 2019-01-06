@@ -21,4 +21,5 @@ except:
 args = [
     "glslangValidator", "-V", source_shader_file, "-o", output_file,
 ]
-subprocess.call(args)
+
+sys.exit(subprocess.call(args))

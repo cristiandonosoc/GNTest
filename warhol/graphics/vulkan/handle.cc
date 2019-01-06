@@ -107,5 +107,17 @@ void Handle<VkDeviceMemory>::InternalClear() {
     vkFreeMemory(*context_->device, handle_, nullptr);
 }
 
+template<>
+void Handle<VkDescriptorSetLayout>::InternalClear() {
+  if (has_value() && context_)
+    vkDestroyDescriptorSetLayout(*context_->device, handle_, nullptr);
+}
+
+template<>
+void Handle<VkDescriptorPool>::InternalClear() {
+  if (has_value() && context_)
+    vkDestroyDescriptorPool(*context_->device, handle_, nullptr);
+}
+
 }  // namespace vulkan
 }  // namespace warhol

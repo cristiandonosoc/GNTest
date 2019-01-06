@@ -78,9 +78,12 @@ struct Context {
   std::vector<Handle<VkImageView>> image_views;
 
   Handle<VkRenderPass> render_pass = {};
-  // Uniforms need to be stated on pipeline creation. The pipeline layout is the
-  // one that defines those declarations.
+
+  Handle<VkDescriptorSetLayout> descriptor_set_layout;
   Handle<VkPipelineLayout> pipeline_layout = {};
+
+  Handle<VkDescriptorPool> descriptor_pool;
+  std::vector<VkDescriptorSet> descriptor_sets; // Freed with |descriptor_pool|.
 
   std::string vert_shader_path;
   std::string frag_shader_path;
@@ -90,9 +93,12 @@ struct Context {
 
   Handle<VkCommandPool> command_pool = {};
   std::vector<VkCommandBuffer> command_buffers;   // Freed with |command_pool|.
+  VkDeviceSize ubo_size;
+  std::vector<DeviceBackedMemory> uniform_buffers;
 
-  BufferHandles vertices;
-  BufferHandles indices;
+  // Actual geometry.
+  DeviceBackedMemory vertices;
+  DeviceBackedMemory indices;
 
   std::vector<Handle<VkSemaphore>> image_available_semaphores;
   std::vector<Handle<VkSemaphore>> render_finished_semaphores;
@@ -122,6 +128,8 @@ bool CreateImageViews(Context*);
 
 bool CreateRenderPass(Context*);
 
+bool CreateDescriptorSetLayout(Context*);
+
 bool CreatePipelineLayout(Context*);
 
 // |vert_shader_path| and |frag_shader_path| must be set at this call.
@@ -131,7 +139,12 @@ bool CreateFrameBuffers(Context*);
 
 bool CreateCommandPool(Context*);
 
-bool CreateDataBuffers(Context*);
+// Creates vertices, indices and uniforms.
+// |ubo_size| is the byte size of the uniform buffer object.
+bool CreateDataBuffers(Context*, VkDeviceSize ubo_size);
+
+// This wil also create the descriptor pools.
+bool CreateDescriptorSets(Context*);
 
 bool CreateCommandBuffers(Context*);
 

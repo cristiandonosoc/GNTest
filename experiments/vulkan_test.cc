@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-
+#define SDL_MAIN_HANDLED
 #include <SDL2/SDL_vulkan.h>
 #include <SDL2/SDL.h>
 
@@ -16,9 +16,17 @@
 #include <warhol/utils/log.h>
 #include <warhol/utils/types.h>
 
+#include <warhol/utils/glm_impl.h>
+
 using namespace warhol;
 
 namespace {
+
+struct UBO {
+  glm::mat4 model;
+  glm::mat4 view;
+  glm::mat4 proj;
+};
 
 struct ApplicationContext {
   bool running = false;
@@ -60,21 +68,24 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   if (!vulkan::CheckValidationLayers(context->validation_layers))
     return false;
 
+  std::cout << "Creating context...";
   if (!vulkan::CreateContext(context))
     return false;
-  LOG(INFO) << "Created context.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
+  std::cout << "Set debug callback....";
   if (!vulkan::SetupDebugCall(context, VulkanDebugCall))
     return false;
-  LOG(INFO) << "Set debug callback.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
+  std::cout << "Creating surface...";
   VkSurfaceKHR surface;
   if (!SDL_Vulkan_CreateSurface(
           sdl_context.get_window(), *context->instance, &surface)) {
     LOG(ERROR) << "Could not create surface: " << SDL_GetError();
   }
   context->surface.Set(context, surface);
-  LOG(INFO) << "Created a surface.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
   context->device_extensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -86,54 +97,85 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   vkGetPhysicalDeviceProperties(context->physical_device, &properties);
   LOG(INFO) << "Picked physical device: " << properties.deviceName;
 
+  std::cout << "Creating a logical device...";
   if (!vulkan::CreateLogicalDevice(context))
     return false;
-  LOG(INFO) << "Created a logical device.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
+  std::cout << "Creating a swap chain...";
   Pair<uint32_t> screen_size = {(uint32_t)sdl_context.width(),
                                 (uint32_t)sdl_context.height()};
   if (!vulkan::CreateSwapChain(context, screen_size))
     return false;
-  LOG(INFO) << "Created a swap chain.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
+  std::cout << "Creating image views...";
   if (!vulkan::CreateImageViews(context))
     return false;
-  LOG(INFO) << "Created image views.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
+  std::cout << "Creating a render pass...";
   if (!vulkan::CreateRenderPass(context))
     return false;
-  LOG(INFO) << "Created a render pass.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
+  std::cout << "Creating descriptor set layout...";
+  if (!vulkan::CreateDescriptorSetLayout(context))
+    return false;
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
+
+  std::cout << "Creating the pipeline layout...";
   if (!vulkan::CreatePipelineLayout(context))
     return false;
-  LOG(INFO) << "Created the pipeline layout.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
+  std::cout << "Creating a graphics pipeline...";
   context->vert_shader_path = Assets::VulkanShaderPath("demo.vert.spv");
   context->frag_shader_path = Assets::VulkanShaderPath("demo.frag.spv");
   if (!vulkan::CreateGraphicsPipeline(context))
     return false;
-  LOG(INFO) << "Created a graphics pipeline.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
+  std::cout << "Creating frame buffers...";
   if (!vulkan::CreateFrameBuffers(context))
     return false;
-  LOG(INFO) << "Created frame buffers.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
+  std::cout << "Creaging a command pool for each framebuffer...";
   if (!vulkan::CreateCommandPool(context))
     return false;
-  LOG(INFO) << "Created a command pool for each framebuffer.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
-  if (!vulkan::CreateDataBuffers(context))
+  std::cout << "Creaging vertex buffers...";
+  if (!vulkan::CreateDataBuffers(context, sizeof(UBO)))
     return false;
-  LOG(INFO) << "Created vertex buffers.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
+  std::cout << "Creating descriptor sets...";
+  if (!vulkan::CreateDescriptorSets(context))
+    return false;
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
+
+  std::cout << "Creating command buffers....";
   if (!vulkan::CreateCommandBuffers(context))
     return false;
-  LOG(INFO) << "Created some command buffers.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
+  std::cout << "Creagin synchronization objects...";
   if (!vulkan::CreateSyncObjects(context))
     return false;
-  LOG(INFO) << "Created synchronization objects.";
+  std::cout << " DONE" << std::endl; std::flush(std::cout);
 
+  LOG(INFO) << "Vulkan context creation successful!";
+  return true;
+}
+
+
+
+bool Update(const SDLContext& context, UBO* ubo) {
+  float time = context.seconds();
+  ubo->model = glm::rotate(
+      glm::mat4{1.0f}, time * glm::radians(90.0f), glm::vec3{0.0f, 0.0f, 1.0f});
   return true;
 }
 
@@ -207,6 +249,7 @@ bool PresentQueue(const SDLContext& sdl_context,
 }
 
 bool DrawFrame(const SDLContext& sdl_context,
+               const UBO& ubo,
                ApplicationContext* app_context,
                vulkan::Context* vk_context) {
   int current_frame = vk_context->current_frame;
@@ -244,6 +287,11 @@ bool DrawFrame(const SDLContext& sdl_context,
               &vk_context->in_flight_fences[current_frame].value())) {
     return false;
   }
+
+  // Copy the UBO
+  UBO* vk_ubo = (UBO*)vk_context->uniform_buffers[image_index].data;
+  *vk_ubo = ubo;
+
 
   if (!SubmitCommandBuffer(vk_context, image_index))
     return false;
@@ -288,6 +336,18 @@ int main() {
     return 1;
   }
 
+  // We know that the uniform memory object is mapped.
+  UBO ubo = {};
+  ubo.view = glm::lookAt(glm::vec3{2.0f, 2.0f, 2.0f}, {}, {0.0f, 0.0f, 0.1f});
+  ubo.proj = glm::perspective(glm::radians(45.0f),
+                              sdl_context.width() / (float)sdl_context.height(),
+                              0.1f, 100.f);
+
+  // GLM was thought with OpenGL in mind.
+  ubo.proj[1][1] *= -1;
+
+  LOG(INFO) << "Framebuffer count: " << vk_context.frame_buffers.size();
+
   InputState input = InputState::Create();
   app_context.running = true;
   while (app_context.running) {
@@ -299,12 +359,15 @@ int main() {
     if (input.keys_up[GET_KEY(Escape)])
       break;
 
-    if (!DrawFrame(sdl_context, &app_context, &vk_context)) {
+    if (!Update(sdl_context, &ubo))
+      break;
+
+    if (!DrawFrame(sdl_context, ubo, &app_context, &vk_context)) {
       LOG(ERROR) << "Error drawing with vulkan. Exiting.";
       break;
     }
 
-    SDL_Delay(16);
+    SDL_Delay(10);
   }
 
   if (!VK_CALL(vkDeviceWaitIdle, *vk_context.device)) {
