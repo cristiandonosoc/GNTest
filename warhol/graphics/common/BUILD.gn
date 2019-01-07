@@ -1,0 +1,13 @@
+# Copyright 2019, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+source_set("common") {
+  sources = [
+    "image.cc",
+    "image.h",
+  ]
+
+  deps = [
+    "//third_party/stb",
+  ]
+}

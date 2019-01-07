@@ -17,6 +17,11 @@ struct ClearOnMove{
   ClearOnMove(T value) : value(value) {}
   DELETE_COPY_AND_ASSIGN(ClearOnMove);
 
+  ClearOnMove& operator=(T v) {
+    value = v;
+    return *this;
+  }
+
   void clear() { value = 0; }
 
   ClearOnMove(ClearOnMove&& other) {

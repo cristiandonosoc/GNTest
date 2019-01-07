@@ -7,6 +7,7 @@
 
 #include <set>
 
+#include "warhol/graphics/common/image.h"
 #include "warhol/graphics/vulkan/memory.h"
 #include "warhol/graphics/vulkan/utils.h"
 #include "warhol/math/vec.h"
@@ -837,19 +838,6 @@ bool CreateCommandPool(Context* context) {
 
 namespace {
 
-#if 0
-std::vector<float> vertices = {
-  // Positions
-   0.0f, -0.5f,  0.0f,
-   0.5f,  0.5f,  0.0f,
-  -0.5f,  0.5f,  0.0f,
-  // Colors
-   1.0f,  0.0f,  0.0f,
-   0.0f,  1.0f,  1.0f,
-   0.0f,  0.0f,  1.0f,
-};
-#endif
-
 constexpr size_t kColorOffset = 12;
 const std::vector<float> vertices = {
   // Positions
@@ -873,36 +861,39 @@ bool CreateVertexBuffers(Context* context) {
   VkDeviceSize size = vertices.size() * sizeof(vertices[0]);
 
   // Create a staging buffer.
-  DeviceBackedMemory staging_handles;
-  VkBufferUsageFlags staging_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  VkMemoryPropertyFlags staging_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-  if (!CreateBuffer(context, size, staging_usage, staging_flags,
-                    &staging_handles)) {
+  AllocBufferConfig alloc_config = {};
+  alloc_config.size = size;
+  alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+  MemoryBacked<VkBuffer> staging_memory;
+  if (!AllocBuffer(context, alloc_config, &staging_memory))
     return false;
-  }
 
   // Map the vertex data to the staging buffer.
   void* memory;
-  if (!VK_CALL(vkMapMemory, *context->device, *staging_handles.memory, 0, size,
+  if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.memory, 0, size,
                0, &memory)) {
     return false;
   }
   memcpy(memory, vertices.data(), size);
-  vkUnmapMemory(*context->device, *staging_handles.memory);
+  vkUnmapMemory(*context->device, *staging_memory.memory);
 
   // Create the local memory and copy the memory to it.
-  DeviceBackedMemory handles;
-  VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-  VkMemoryPropertyFlags desired_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  if (!CreateBuffer(context, size, usage, desired_flags, &handles) ||
-      !CopyBuffer(context, *staging_handles.buffer, *handles.buffer, size)) {
+  alloc_config = {};
+  alloc_config.size = size;
+  alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  alloc_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  MemoryBacked<VkBuffer> vertices_memory;
+  if (!AllocBuffer(context, alloc_config, &vertices_memory) ||
+      !CopyBuffer(context, *staging_memory.handle, *vertices_memory.handle,
+                  size)) {
     return false;
   }
 
-  // The stating buffers will be freed by Handle<>
-  context->vertices = std::move(handles);
+  // The staging buffers will be freed by Handle<>
+  context->vertices = std::move(vertices_memory);
   return true;
 }
 
@@ -910,36 +901,39 @@ bool CreateIndicesBuffers(Context* context) {
   VkDeviceSize size = indices.size() * sizeof(indices[0]);
 
   // Create a staging buffer.
-  DeviceBackedMemory staging_handles;
-  VkBufferUsageFlags staging_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  VkMemoryPropertyFlags staging_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-  if (!CreateBuffer(context, size, staging_usage, staging_flags,
-                    &staging_handles)) {
+  AllocBufferConfig alloc_config = {};
+  alloc_config.size = size;
+  alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+  MemoryBacked<VkBuffer> staging_memory;
+  if (!AllocBuffer(context, alloc_config, &staging_memory))
     return false;
-  }
 
   // Map the vertex data to the staging buffer.
   void* memory;
-  if (!VK_CALL(vkMapMemory, *context->device, *staging_handles.memory, 0, size,
+  if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.memory, 0, size,
                0, &memory)) {
     return false;
   }
   memcpy(memory, indices.data(), size);
-  vkUnmapMemory(*context->device, *staging_handles.memory);
+  vkUnmapMemory(*context->device, *staging_memory.memory);
 
   // Create the local memory and copy the memory to it.
-  DeviceBackedMemory handles;
-  VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-  VkMemoryPropertyFlags desired_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  if (!CreateBuffer(context, size, usage, desired_flags, &handles) ||
-      !CopyBuffer(context, *staging_handles.buffer, *handles.buffer, size)) {
+  alloc_config = {};
+  alloc_config.size = size;
+  alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+  alloc_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  MemoryBacked<VkBuffer> indices_memory;
+  if (!AllocBuffer(context, alloc_config, &indices_memory) ||
+      !CopyBuffer(context, *staging_memory.handle, *indices_memory.handle,
+                  size)) {
     return false;
   }
 
   // The stating buffers will be freed by Handle<>
-  context->indices = std::move(handles);
+  context->indices = std::move(indices_memory);
   return true;
 }
 
@@ -947,11 +941,13 @@ bool CreateUniformBuffers(Context* context, VkDeviceSize size) {
   context->ubo_size = size;
   context->uniform_buffers.reserve(context->images.size());
   for (size_t i = 0; i < context->images.size(); i++) {
-    DeviceBackedMemory ubo;
-    VkBufferUsageFlags usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    if (!CreateBuffer(context, size, usage, flags, &ubo))
+    AllocBufferConfig alloc_config = {};
+    alloc_config.size = size;
+    alloc_config.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    MemoryBacked<VkBuffer> ubo;
+    if (!AllocBuffer(context, alloc_config, &ubo))
       return false;
 
     ubo.device = *context->device;
@@ -976,7 +972,45 @@ bool CreateDataBuffers(Context* context, VkDeviceSize ubo_size) {
   return true;
 }
 
-// CreateDescriptorSets  --------------------------------------------------------
+// CreateTextureBuffers --------------------------------------------------------
+
+bool CreateTextureBuffers(Context* context, const Image& src_image) {
+  // Create a staging buffer.
+  AllocBufferConfig alloc_config = {};
+  alloc_config.size = src_image.data_size,
+  alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+  MemoryBacked<VkBuffer> staging_memory;
+  if (!AllocBuffer(context, alloc_config, &staging_memory))
+    return false;
+
+  // Map the vertex data to the staging buffer.
+  void* memory;
+  if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.memory,
+                            0, src_image.data_size, 0, &memory)) {
+    return false;
+  }
+  memcpy(memory, src_image.data.value, src_image.data_size);
+  vkUnmapMemory(*context->device, *staging_memory.memory);
+
+  AllocImageConfig image_alloc = {};
+  image_alloc.tiling = VK_IMAGE_TILING_OPTIMAL;
+  image_alloc.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                      VK_IMAGE_USAGE_SAMPLED_BIT;
+  image_alloc.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  MemoryBacked<VkImage> image;
+  if (!AllocImage(context, src_image, image_alloc, &image))
+    return false;
+  if (!VK_CALL(vkBindImageMemory, *context->device, *image.handle,
+                                  *image.memory, 0)) {
+    return false;
+  }
+
+  return true;
+}
+
+// CreateDescriptorSets  -------------------------------------------------------
 
 namespace {
 
@@ -1029,7 +1063,7 @@ bool CreateDescriptorSets(Context* context) {
   // We now associate our descriptor sets to a uniform buffer.
   for (size_t i = 0; i < layouts.size(); i++) {
     VkDescriptorBufferInfo buffer_info = {};
-    buffer_info.buffer = *context->uniform_buffers[i].buffer;
+    buffer_info.buffer = *context->uniform_buffers[i].handle;
     buffer_info.offset = 0;
     buffer_info.range = context->ubo_size;
 
@@ -1101,12 +1135,12 @@ bool CreateCommandBuffers(Context* context) {
 
       // We are binding the same buffer in two different points.
       VkBuffer vertex_buffers[] = {
-          *context->vertices.buffer,
-          *context->vertices.buffer,
+          *context->vertices.handle,
+          *context->vertices.handle,
       };
       VkDeviceSize offsets[] = {0, kColorOffset * sizeof(float)};
       vkCmdBindVertexBuffers(command_buffer, 0, 2, vertex_buffers, offsets);
-      vkCmdBindIndexBuffer(command_buffer, *context->indices.buffer, 0,
+      vkCmdBindIndexBuffer(command_buffer, *context->indices.handle, 0,
                            VK_INDEX_TYPE_UINT16);
 
       // We bind the descriptor sets.
@@ -1125,7 +1159,7 @@ bool CreateCommandBuffers(Context* context) {
   return true;
 }
 
-// CreateSemaphores ------------------------------------------------------------
+// CreateSyncObjects -----------------------------------------------------------
 
 bool CreateSyncObjects(Context* context) {
   context->image_available_semaphores.clear();
@@ -1213,10 +1247,6 @@ bool RecreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
 
   return true;
 }
-
-// Vertex Buffers --------------------------------------------------------------
-
-
 
 }  // namespace vulkan
 }  // namespace warhol

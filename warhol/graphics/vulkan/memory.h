@@ -3,40 +3,111 @@
 
 #pragma once
 
-#include "warhol/graphics/vulkan/def.h"
+#include <utility>
 
+#include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/handle.h"
+#include "warhol/utils/assert.h"
 
 namespace warhol {
+
+struct Image;
+
 namespace vulkan {
 
 struct Context;
 
-struct DeviceBackedMemory {
-  DeviceBackedMemory() = default;
-  ~DeviceBackedMemory();
-  DELETE_COPY_AND_ASSIGN(DeviceBackedMemory);
-  DECLARE_MOVE_AND_ASSIGN(DeviceBackedMemory);
+// Definition at the end of the header.
+template <typename HandleType>
+struct MemoryBacked;
 
-  bool host_visible() const { return data != nullptr; }
+// API -------------------------------------------------------------------------
 
-  Handle<VkBuffer> buffer;
-  Handle<VkDeviceMemory> memory;
+Handle<VkDeviceMemory>
+AllocMemory(Context* context, const VkMemoryRequirements& memory_reqs,
+            const VkMemoryPropertyFlags& desired_properties);
 
+struct AllocBufferConfig {
   VkDeviceSize size;
-  // Not null if it's host visible.
-  void* data = nullptr;
-  VkDevice device = VK_NULL_HANDLE;
+  VkBufferUsageFlags usage;
+  VkMemoryPropertyFlags properties;
 };
 
-bool CreateBuffer(Context* context, VkDeviceSize size, VkBufferUsageFlags usage,
-                  VkMemoryPropertyFlags desired_properties,
-                  DeviceBackedMemory* out);
-
+// Creates a VkBuffer and allocates it.
+bool AllocBuffer(Context*, const AllocBufferConfig&,
+                 MemoryBacked<VkBuffer>* out);
 
 // Copies one buffer and blocks waiting for the transfer.
 bool CopyBuffer(Context* context, VkBuffer src_buffer, VkBuffer dst_buffer,
                 VkDeviceSize size);
+
+struct AllocImageConfig {
+  VkImageTiling tiling;
+  VkImageUsageFlags usage;
+  VkMemoryPropertyFlags properties;
+};
+
+// Creates a VkImage and allocates it.
+bool AllocImage(Context* context, const Image&, const AllocImageConfig&,
+                MemoryBacked<VkImage>* out);
+
+// MemoryBacked Handles --------------------------------------------------------
+//
+// Represents a handle (VkBuffer, VkImage, etc.) that is backed by some memory
+// memory in the GPU (VkDeviceMemory). This struct holds the memory as a
+// resource and will destroy it on destruction.
+
+template <typename HandleType>
+struct MemoryBacked {
+  // Constructors
+  MemoryBacked() = default;
+  ~MemoryBacked() {
+    if (data == nullptr)
+      return;
+
+    // If there is data, there should be a device associated with it.
+    ASSERT(device != VK_NULL_HANDLE && memory.has_value());
+    vkUnmapMemory(device, *memory);
+  }
+
+  DELETE_COPY_AND_ASSIGN(MemoryBacked);
+
+  MemoryBacked(MemoryBacked&& rhs) { Move(&rhs); }
+  MemoryBacked& operator=(MemoryBacked&& rhs) {
+    if (this != &rhs) {
+      Move(&rhs);
+    }
+    return *this;
+  }
+
+  bool host_visible() const { return data != nullptr; }
+
+  // Layout
+  Handle<HandleType> handle;
+  Handle<VkDeviceMemory> memory;
+
+  // Not null if it's host visible.
+  VkDeviceSize size;
+  void* data = nullptr;
+
+  VkDevice device = VK_NULL_HANDLE;
+
+  private:
+   void Move(MemoryBacked* rhs) {
+     handle = std::move(rhs->handle);
+     memory = std::move(rhs->memory);
+     size = rhs->size;
+     data = rhs->data;
+     device = rhs->device;
+
+     rhs->Reset();
+   }
+
+   void Reset() {
+     data = nullptr;
+     device = VK_NULL_HANDLE;
+   }
+};
 
 }  // namespace vulkan
 }  // namespace warhol

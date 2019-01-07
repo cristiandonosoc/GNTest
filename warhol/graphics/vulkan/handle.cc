@@ -119,5 +119,11 @@ void Handle<VkDescriptorPool>::InternalClear() {
     vkDestroyDescriptorPool(*context_->device, handle_, nullptr);
 }
 
+template<>
+void Handle<VkImage>::InternalClear() {
+  if (has_value() && context_)
+    vkDestroyImage(*context_->device, handle_, nullptr);
+}
+
 }  // namespace vulkan
 }  // namespace warhol

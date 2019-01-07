@@ -94,11 +94,11 @@ struct Context {
   Handle<VkCommandPool> command_pool = {};
   std::vector<VkCommandBuffer> command_buffers;   // Freed with |command_pool|.
   VkDeviceSize ubo_size;
-  std::vector<DeviceBackedMemory> uniform_buffers;
+  std::vector<MemoryBacked<VkBuffer>> uniform_buffers;
 
   // Actual geometry.
-  DeviceBackedMemory vertices;
-  DeviceBackedMemory indices;
+  MemoryBacked<VkBuffer> vertices;
+  MemoryBacked<VkBuffer> indices;
 
   std::vector<Handle<VkSemaphore>> image_available_semaphores;
   std::vector<Handle<VkSemaphore>> render_finished_semaphores;
@@ -142,6 +142,8 @@ bool CreateCommandPool(Context*);
 // Creates vertices, indices and uniforms.
 // |ubo_size| is the byte size of the uniform buffer object.
 bool CreateDataBuffers(Context*, VkDeviceSize ubo_size);
+
+bool CreateTextureBuffers(Context*);
 
 // This wil also create the descriptor pools.
 bool CreateDescriptorSets(Context*);

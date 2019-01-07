@@ -51,6 +51,8 @@ source_set("lib") {
     "context.h",
     "handle.cc",
     "handle.h",
+    "image_utils.cc",
+    "image_utils.h",
     "memory.cc",
     "memory.h",
     "utils.cc",
@@ -63,35 +65,7 @@ source_set("lib") {
   ]
 
   deps = [
+    "//warhol/graphics/common",
     "//warhol/utils",
   ]
 }
-
-# source_set("vulkan_lib") {
-#   sources = [
-#     "vulkan_context.cc",
-#     "vulkan_context.h",
-#     "vulkan_utils.cc",
-#     "vulkan_utils.h",
-#   ]
-#   configs += [
-#     # TODO(donosoc): Abstract the SDL2 dependencies for vulkan so this config
-#     #                dependency can be avoided.
-#     "//src/sdl2:sdl2_config",
-#     ":vulkan_config",
-#   ]
-# }
-
-# executable("vulkan_test") {
-#   sources = [
-#     "vulkan_test.cc"
-#   ]
-#   deps = [
-#     ":vulkan_lib",
-#     "//src/utils",
-#   ]
-#   configs += [
-#     ":vulkan_config",
-#   ]
-#}
-

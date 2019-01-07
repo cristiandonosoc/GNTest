@@ -23,14 +23,16 @@ namespace warhol {
     ::warhol::AssertionFailed(FROM_HERE, "Not implemented"); \
   } while (false)
 
+#define NOT_REACHED()                                     \
+  do {                                                    \
+    ::warhol::AssertionFailed(FROM_HERE, "Invalid path"); \
+  } while (false)
+
 #else
 
-#define ASSERT(condition) \
-  do {                    \
-  } while (false)
-#define NOT_IMPLEMENTED() \
-  do {                    \
-  } while (false)
+#define ASSERT(condition) do {} while (false)
+#define NOT_IMPLEMENTED() do {} while (false)
+#define NOT_REACHED() do {} while (false)
 #endif
 
 void AssertionFailed(Location loc, const char* condition);
