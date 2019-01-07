@@ -27,13 +27,14 @@ Handle<VkDeviceMemory>
 AllocMemory(Context* context, const VkMemoryRequirements& memory_reqs,
             const VkMemoryPropertyFlags& desired_properties);
 
+// *** VkBuffer ***
+
+// Creates a VkBuffer and allocates it.
 struct AllocBufferConfig {
   VkDeviceSize size;
   VkBufferUsageFlags usage;
   VkMemoryPropertyFlags properties;
 };
-
-// Creates a VkBuffer and allocates it.
 bool AllocBuffer(Context*, const AllocBufferConfig&,
                  MemoryBacked<VkBuffer>* out);
 
@@ -41,15 +42,18 @@ bool AllocBuffer(Context*, const AllocBufferConfig&,
 bool CopyBuffer(Context* context, VkBuffer src_buffer, VkBuffer dst_buffer,
                 VkDeviceSize size);
 
+// *** VkImage ***
+
+// Creates a VkImage and allocates it.
 struct AllocImageConfig {
   VkImageTiling tiling;
   VkImageUsageFlags usage;
   VkMemoryPropertyFlags properties;
 };
-
-// Creates a VkImage and allocates it.
 bool AllocImage(Context* context, const Image&, const AllocImageConfig&,
                 MemoryBacked<VkImage>* out);
+
+bool CopyBufferToImage(Context*, const Image&, VkBuffer src, VkImage dst);
 
 // MemoryBacked Handles --------------------------------------------------------
 //

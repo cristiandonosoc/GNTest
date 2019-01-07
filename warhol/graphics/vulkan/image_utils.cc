@@ -3,10 +3,49 @@
 
 #include "warhol/graphics/vulkan/image_utils.h"
 
+#include "warhol/graphics/vulkan/commands.h"
+#include "warhol/graphics/vulkan/context.h"
+#include "warhol/graphics/vulkan/handle.h"
 #include "warhol/utils/assert.h"
 
 namespace warhol {
 namespace vulkan {
+
+bool TransitionImageLayout(Context* context, VkImage image,
+                           const TransitionImageLayoutConfig& config) {
+  Handle<VkCommandBuffer> command_buffer = BeginSingleTimeCommands(context);
+  if (!command_buffer.has_value())
+    return false;
+
+  VkImageMemoryBarrier barrier = {};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout = config.old_layout;
+  barrier.newLayout = config.new_layout;
+
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+  barrier.image = image;
+  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  barrier.subresourceRange.baseMipLevel = 0;
+  barrier.subresourceRange.levelCount = 1;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount = 1;
+
+  barrier.srcAccessMask = 0;  // TODO
+  barrier.dstAccessMask = 0;  // TODO
+
+
+
+
+
+  if (!EndSingleTimeCommands(context, *command_buffer))
+    return false;
+
+  return true;
+}
+
+// Warhol -> Vulkan ------------------------------------------------------------
 
 VkFormat ToVulkan(Image::Format format) {
   switch (format) {

@@ -9,10 +9,9 @@ declare_args() {
 config("config") {
   handled = false
 
-  include_dirs = [
-    # rebase_path("$vulkan_include_path", "$target_out_dir")
-    "$vulkan_include_path",
-  ]
+  if ("$vulkan_include_path" != "") {
+    include_dirs = [ "$vulkan_include_path" ]
+  }
 
   if (target_os == "win" && compiler == "msvc") {
     libs = [ "$vulkan_lib_path/vulkan-1.lib" ]
@@ -47,6 +46,8 @@ config("config") {
 
 source_set("lib") {
   sources = [
+    "commands.cc",
+    "commands.h",
     "context.cc",
     "context.h",
     "handle.cc",

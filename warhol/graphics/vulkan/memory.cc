@@ -4,6 +4,7 @@
 #include "warhol/graphics/vulkan/memory.h"
 
 #include "warhol/graphics/vulkan/context.h"
+#include "warhol/graphics/vulkan/commands.h"
 #include "warhol/graphics/vulkan/image_utils.h"
 #include "warhol/graphics/vulkan/utils.h"
 #include "warhol/utils/scope_trigger.h"
@@ -93,51 +94,43 @@ AllocBuffer(Context* context, const AllocBufferConfig& config,
 
 bool CopyBuffer(Context* context, VkBuffer src_buffer, VkBuffer dst_buffer,
                 VkDeviceSize size) {
-  // Allocate a temporary command buffer for these copy operations.
-  VkCommandBufferAllocateInfo alloc_info = {};
-  alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  alloc_info.commandBufferCount = 1;
-  // TODO(Cristian): Have a separate command pool for these transient commands.
-  alloc_info.commandPool = *context->command_pool;
-
-  VkCommandBuffer command_buffer;
-  if (!VK_CALL(vkAllocateCommandBuffers, *context->device, &alloc_info,
-               &command_buffer)) {
-    return false;
-  }
-  // In order to ensure freeing.
-  Handle<VkCommandBuffer> command_buffer_handle(context, command_buffer);
-
-  // This command buffer will be used only once.
-  VkCommandBufferBeginInfo begin_info = {};
-  begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-  if (!VK_CALL(vkBeginCommandBuffer, command_buffer, &begin_info))
+  Handle<VkCommandBuffer> command_buffer = BeginSingleTimeCommands(context);
+  if (!command_buffer.has_value())
     return false;
 
   VkBufferCopy buffer_copy = {};
   buffer_copy.size = size;
   buffer_copy.srcOffset = 0;
   buffer_copy.dstOffset = 0;
-  vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &buffer_copy);
+  vkCmdCopyBuffer(*command_buffer, src_buffer, dst_buffer, 1, &buffer_copy);
 
-  if (!VK_CALL(vkEndCommandBuffer, command_buffer))
+  if (!EndSingleTimeCommands(context, *command_buffer))
+    return false;
+  return true;
+}
+
+bool CopyBufferToImage(Context* context, const Image& image,
+                       VkBuffer src, VkImage dst) {
+  auto command_buffer = BeginSingleTimeCommands(context);
+  if (!command_buffer.has_value())
     return false;
 
-  VkSubmitInfo submit_info = {};
-  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &command_buffer;
+  VkBufferImageCopy copy = {};
+  copy.bufferOffset = 0;
+  copy.bufferRowLength = 0;
+  copy.bufferImageHeight = 0;
+  copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  copy.imageSubresource.mipLevel = 0;
+  copy.imageSubresource.baseArrayLayer = 0;
+  copy.imageSubresource.layerCount = 1;
+  copy.imageOffset = {0, 0, 0};
+  copy.imageExtent = { (uint32_t)image.width, (uint32_t)image.height, 1 };
 
-  // We submit and wait for the queue to be idle.
-  if (!VK_CALL(vkQueueSubmit, context->graphics_queue, 1, &submit_info,
-               nullptr) ||
-      !VK_CALL(vkQueueWaitIdle, context->graphics_queue)) {
+  vkCmdCopyBufferToImage(*command_buffer, src, dst,
+                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+
+  if (!EndSingleTimeCommands(context, *command_buffer))
     return false;
-  }
-
   return true;
 }
 

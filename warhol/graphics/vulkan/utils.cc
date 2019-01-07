@@ -3,6 +3,8 @@
 
 #include "warhol/graphics/vulkan/utils.h"
 
+#include <string.h>
+
 #include "warhol/utils/assert.h"
 
 namespace warhol {
