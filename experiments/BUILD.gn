@@ -53,6 +53,7 @@ executable("vulkan_test") {
 
   deps = [
     "//warhol/assets",
+    "//warhol/debug:timing",
     "//warhol/graphics/vulkan:lib",
     "//warhol/math",
     "//warhol/sdl2",

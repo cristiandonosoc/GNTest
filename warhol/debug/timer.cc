@@ -40,7 +40,9 @@ Timer& Timer::operator=(Timer&& other) {
 }
 
 Timer Timer::ManualTimer() {
-  return Timer(Type::kManual);
+  Timer timer(Type::kManual);
+  timer.Init();
+  return timer;
 }
 
 Timer Timer::LoggingTimer(const char* file, int line, const char* description) {

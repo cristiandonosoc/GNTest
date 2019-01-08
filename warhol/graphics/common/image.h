@@ -40,6 +40,7 @@ struct Image {
 
   int width = -1;
   int height = -1;
+  int channels = -1;
 
   ClearOnMove<uint8_t*> data;
   int data_size = 0;

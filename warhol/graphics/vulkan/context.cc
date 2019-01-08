@@ -8,6 +8,7 @@
 #include <set>
 
 #include "warhol/graphics/common/image.h"
+#include "warhol/graphics/vulkan/image_utils.h"
 #include "warhol/graphics/vulkan/memory.h"
 #include "warhol/graphics/vulkan/utils.h"
 #include "warhol/math/vec.h"
@@ -975,6 +976,7 @@ bool CreateDataBuffers(Context* context, VkDeviceSize ubo_size) {
 // CreateTextureBuffers --------------------------------------------------------
 
 bool CreateTextureBuffers(Context* context, const Image& src_image) {
+  LOG(DEBUG) << "Allocating staging buffer.";
   // Create a staging buffer.
   AllocBufferConfig alloc_config = {};
   alloc_config.size = src_image.data_size,
@@ -994,18 +996,42 @@ bool CreateTextureBuffers(Context* context, const Image& src_image) {
   memcpy(memory, src_image.data.value, src_image.data_size);
   vkUnmapMemory(*context->device, *staging_memory.memory);
 
+
+  LOG(DEBUG) << "Allocating image buffer.";
+
+
+  // Allocate and image.
   AllocImageConfig image_alloc = {};
   image_alloc.tiling = VK_IMAGE_TILING_OPTIMAL;
   image_alloc.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                       VK_IMAGE_USAGE_SAMPLED_BIT;
   image_alloc.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   MemoryBacked<VkImage> image;
-  if (!AllocImage(context, src_image, image_alloc, &image))
-    return false;
-  if (!VK_CALL(vkBindImageMemory, *context->device, *image.handle,
+  if (!AllocImage(context, src_image, image_alloc, &image) ||
+      !VK_CALL(vkBindImageMemory, *context->device, *image.handle,
                                   *image.memory, 0)) {
     return false;
   }
+
+  // We need to transition the image layout to receive data.
+  TransitionImageLayoutConfig transition_config = {};
+  transition_config.format = VK_FORMAT_B8G8R8A8_UNORM;
+  transition_config.old_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+  transition_config.new_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  if (!TransitionImageLayout(context, *image.handle, transition_config))
+    return false;
+
+  // Now we copy the data to the image.
+  if (!CopyBufferToImage(context, src_image, *staging_memory.handle,
+                         *image.handle)) {
+    return false;
+  }
+
+  // We now transition the image to the sampling layout.
+  transition_config.old_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  transition_config.new_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  if (!TransitionImageLayout(context, *image.handle, transition_config))
+      return false;
 
   return true;
 }

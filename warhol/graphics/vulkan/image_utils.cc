@@ -11,11 +11,51 @@
 namespace warhol {
 namespace vulkan {
 
+namespace {
+
+struct TransitionMasks {
+  VkAccessFlags src_access_mask;
+  VkAccessFlags dst_access_mask;
+  VkPipelineStageFlags src_stage_mask;
+  VkPipelineStageFlags dst_stage_mask;
+};
+
+bool
+DetermineTransitionMasks(VkImageLayout old_layout, VkImageLayout new_layout,
+                         TransitionMasks* out) {
+  if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
+      new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    out->src_access_mask = 0;
+    out->dst_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    out->src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    out->dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  } else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+             new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    out-> src_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    out-> dst_access_mask = VK_ACCESS_SHADER_READ_BIT;
+
+    out->src_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    out->dst_stage_mask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  } else {
+    return false;
+  }
+
+  return true;
+}
+
+}  // namespace
+
 bool TransitionImageLayout(Context* context, VkImage image,
                            const TransitionImageLayoutConfig& config) {
   Handle<VkCommandBuffer> command_buffer = BeginSingleTimeCommands(context);
   if (!command_buffer.has_value())
     return false;
+
+  TransitionMasks transition_masks;
+  if (!DetermineTransitionMasks(
+          config.old_layout, config.new_layout, &transition_masks)) {
+    return false;
+  }
 
   VkImageMemoryBarrier barrier = {};
   barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -32,12 +72,16 @@ bool TransitionImageLayout(Context* context, VkImage image,
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount = 1;
 
-  barrier.srcAccessMask = 0;  // TODO
-  barrier.dstAccessMask = 0;  // TODO
+  barrier.srcAccessMask = transition_masks.src_access_mask;
+  barrier.dstAccessMask = transition_masks.dst_access_mask;
 
-
-
-
+  vkCmdPipelineBarrier(*command_buffer,
+                       transition_masks.src_stage_mask,
+                       transition_masks.dst_stage_mask,
+                       0,
+                       0, nullptr,      // Memory barriers.
+                       0, nullptr,      // Buffer memory barriers.
+                       1, &barrier);    // Image memory barriers.
 
   if (!EndSingleTimeCommands(context, *command_buffer))
     return false;

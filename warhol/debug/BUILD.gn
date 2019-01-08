@@ -1,7 +1,15 @@
 # Copyright 2018, Cristián Donoso.
 # This code has a BSD license. See LICENSE.
 
-source_set("debug") {
+group("debug") {
+  deps = [
+    ":timing",
+    ":volumes",
+  ]
+}
+
+
+source_set("timing"){
   sources = [
     "timed_block.cc",
     "timed_block.h",
@@ -9,6 +17,16 @@ source_set("debug") {
     "timer.h",
     "time_logger.cc",
     "time_logger,h",
+  ]
+
+  deps = [
+    "//warhol/sdl2",
+    "//warhol/utils",
+  ]
+}
+
+source_set("volumes") {
+  sources = [
     "volumes.cc",
     "volumes.h",
   ]
@@ -19,7 +37,6 @@ source_set("debug") {
 
   deps = [
     "//warhol/graphics/GL",
-    "//warhol/sdl2",
     "//warhol/utils",
   ]
 }

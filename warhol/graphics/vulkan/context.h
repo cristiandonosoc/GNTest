@@ -16,6 +16,9 @@
 
 
 namespace warhol {
+
+struct Image;
+
 namespace vulkan {
 
 // The indices for given queues families within a particular physical device.
@@ -143,7 +146,7 @@ bool CreateCommandPool(Context*);
 // |ubo_size| is the byte size of the uniform buffer object.
 bool CreateDataBuffers(Context*, VkDeviceSize ubo_size);
 
-bool CreateTextureBuffers(Context*);
+bool CreateTextureBuffers(Context*, const Image& src_image);
 
 // This wil also create the descriptor pools.
 bool CreateDescriptorSets(Context*);

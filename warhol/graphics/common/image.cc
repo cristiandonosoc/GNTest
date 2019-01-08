@@ -13,10 +13,11 @@ Image Image::Create2DImageFromPath(const std::string& path) {
   image.format = Image::Format::kRGBA8;
   // We require 4 channels.
   image.data = stbi_load(path.data(),
-                         &image.width, &image.height, nullptr,
+                         &image.width, &image.height, &image.channels,
                          STBI_rgb_alpha);
   if (!image.valid())
     image.Release();
+  image.data_size = image.width * image.height * STBI_rgb_alpha;
 
   return image;
 }
@@ -34,6 +35,7 @@ uint8_t* Image::Release() {
   data_size = 0;
   width = -1;
   height = -1;
+  channels = -1;
   return tmp;
 }
 

@@ -9,13 +9,16 @@
 namespace warhol {
 namespace vulkan {
 
+struct Context;
+
 struct TransitionImageLayoutConfig {
   VkFormat format;
   VkImageLayout old_layout;
   VkImageLayout new_layout;
 };
 
-bool TransitionImageLayout(VkImage image, const TransitionImageLayoutConfig&);
+bool TransitionImageLayout(Context*, VkImage image,
+                           const TransitionImageLayoutConfig&);
 
 // Transforms warhol's internal formatting enums to the vulkan's equivalent.
 

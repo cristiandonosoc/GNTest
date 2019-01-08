@@ -21,13 +21,13 @@ struct Context;
 template <typename HandleType>
 struct MemoryBacked;
 
-// API -------------------------------------------------------------------------
+// Memory ----------------------------------------------------------------------
 
 Handle<VkDeviceMemory>
 AllocMemory(Context* context, const VkMemoryRequirements& memory_reqs,
             const VkMemoryPropertyFlags& desired_properties);
 
-// *** VkBuffer ***
+// VkBuffer --------------------------------------------------------------------
 
 // Creates a VkBuffer and allocates it.
 struct AllocBufferConfig {
@@ -42,7 +42,7 @@ bool AllocBuffer(Context*, const AllocBufferConfig&,
 bool CopyBuffer(Context* context, VkBuffer src_buffer, VkBuffer dst_buffer,
                 VkDeviceSize size);
 
-// *** VkImage ***
+// VkImage ---------------------------------------------------------------------
 
 // Creates a VkImage and allocates it.
 struct AllocImageConfig {

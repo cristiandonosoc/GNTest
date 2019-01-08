@@ -10,13 +10,14 @@
 #include <vulkan/vulkan.h>
 
 #include <warhol/assets/assets.h>
+#include <warhol/debug/timer.h>
+#include <warhol/graphics/common/image.h>
 #include <warhol/graphics/vulkan/context.h>
 #include <warhol/graphics/vulkan/utils.h>
 #include <warhol/sdl2/sdl_context.h>
+#include <warhol/utils/glm_impl.h>
 #include <warhol/utils/log.h>
 #include <warhol/utils/types.h>
-
-#include <warhol/utils/glm_impl.h>
 
 using namespace warhol;
 
@@ -71,12 +72,12 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   std::cout << "Creating context...";
   if (!vulkan::CreateContext(context))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Set debug callback....";
   if (!vulkan::SetupDebugCall(context, VulkanDebugCall))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creating surface...";
   VkSurfaceKHR surface;
@@ -85,7 +86,7 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
     LOG(ERROR) << "Could not create surface: " << SDL_GetError();
   }
   context->surface.Set(context, surface);
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   context->device_extensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -100,71 +101,77 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   std::cout << "Creating a logical device...";
   if (!vulkan::CreateLogicalDevice(context))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creating a swap chain...";
   Pair<uint32_t> screen_size = {(uint32_t)sdl_context.width(),
                                 (uint32_t)sdl_context.height()};
   if (!vulkan::CreateSwapChain(context, screen_size))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creating image views...";
   if (!vulkan::CreateImageViews(context))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creating a render pass...";
   if (!vulkan::CreateRenderPass(context))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creating descriptor set layout...";
   if (!vulkan::CreateDescriptorSetLayout(context))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creating the pipeline layout...";
   if (!vulkan::CreatePipelineLayout(context))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creating a graphics pipeline...";
   context->vert_shader_path = Assets::VulkanShaderPath("demo.vert.spv");
   context->frag_shader_path = Assets::VulkanShaderPath("demo.frag.spv");
   if (!vulkan::CreateGraphicsPipeline(context))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creating frame buffers...";
   if (!vulkan::CreateFrameBuffers(context))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creaging a command pool for each framebuffer...";
   if (!vulkan::CreateCommandPool(context))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creaging vertex buffers...";
   if (!vulkan::CreateDataBuffers(context, sizeof(UBO)))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
+
+  std::cout << "Creating texture buffers...";
+  Image image = Image::Create2DImageFromPath(Assets::TexturePath("wall.jpg"));
+  if (!vulkan::CreateTextureBuffers(context, image))
+    return false;
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creating descriptor sets...";
   if (!vulkan::CreateDescriptorSets(context))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creating command buffers....";
   if (!vulkan::CreateCommandBuffers(context))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   std::cout << "Creagin synchronization objects...";
   if (!vulkan::CreateSyncObjects(context))
     return false;
-  std::cout << " DONE" << std::endl; std::flush(std::cout);
+  std::cout << " DONE" << std::endl;
 
   LOG(INFO) << "Vulkan context creation successful!";
   return true;
@@ -322,19 +329,33 @@ void HandleSDLEvents(ApplicationContext* app_context,
 
 int main() {
   ApplicationContext app_context = {};
-
   SDLContext sdl_context = {};
-  if (!sdl_context.InitVulkan(SDL_WINDOW_RESIZABLE))
-    return 1;
-  LOG(INFO) << "Created SDL context.";
+  vulkan::Context vk_context = {};
+
+  {
+    Timer timer = Timer::ManualTimer();
+
+    if (!sdl_context.InitVulkan(SDL_WINDOW_RESIZABLE))
+      return 1;
+
+    float timing = timer.End();
+    LOG(INFO) << "Created SDL context: " << timing << " ms.";
+  }
+
+  {
+    Timer timer = Timer::ManualTimer();
+
+    if (!SetupVulkan(sdl_context, &vk_context)) {
+      LOG(ERROR) << "Could not setup vulkan. Exiting.";
+      return 1;
+    }
+
+    float timing = timer.End();
+    LOG(INFO) << "Initialized vulkan: " << timing << " ms.";
+  }
+
   LOG(INFO) << "Window size. WIDTH: " << sdl_context.width()
             << ", HEIGHT: " << sdl_context.height();
-
-  vulkan::Context vk_context;
-  if (!SetupVulkan(sdl_context, &vk_context)) {
-    LOG(ERROR) << "Could not setup vulkan. Exiting.";
-    return 1;
-  }
 
   // We know that the uniform memory object is mapped.
   UBO ubo = {};
