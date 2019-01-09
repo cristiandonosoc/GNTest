@@ -5,11 +5,34 @@
 
 #include "warhol/graphics/vulkan/commands.h"
 #include "warhol/graphics/vulkan/context.h"
-#include "warhol/graphics/vulkan/handle.h"
+#include "warhol/graphics/vulkan/utils.h"
 #include "warhol/utils/assert.h"
 
 namespace warhol {
 namespace vulkan {
+
+Handle<VkImageView>
+CreateImageView(Context* context, VkImage image, VkFormat format) {
+  VkImageViewCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  create_info.image = image;
+  create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  create_info.format = format;
+  create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  create_info.subresourceRange.baseMipLevel = 0;
+  create_info.subresourceRange.levelCount = 1;
+  create_info.subresourceRange.baseArrayLayer = 0;
+  create_info.subresourceRange.layerCount = 1;
+
+  VkImageView image_view;
+  if (!VK_CALL(vkCreateImageView, *context->device, &create_info, nullptr,
+                                  &image_view)) {
+    return {};
+  }
+  return {context, image_view};
+}
+
+// TransitionImageLayout -------------------------------------------------------
 
 namespace {
 

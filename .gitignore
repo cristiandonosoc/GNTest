@@ -1,3 +1,4 @@
 out/*
 imgui.ini
 examples/*
+.DS_Store

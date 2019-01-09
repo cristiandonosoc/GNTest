@@ -67,6 +67,7 @@ struct Context {
 
   Handle<VkSurfaceKHR> surface = {};
 
+  // TODO(Cristian): How to specify features that we want to require.
   std::vector<const char*> device_extensions;
   VkPhysicalDevice physical_device = VK_NULL_HANDLE; // Freed with |instance|.
   PhysicalDeviceInfo physical_device_info;
@@ -102,6 +103,10 @@ struct Context {
   // Actual geometry.
   MemoryBacked<VkBuffer> vertices;
   MemoryBacked<VkBuffer> indices;
+
+  MemoryBacked<VkImage> texture;
+  Handle<VkImageView> texture_view;
+  Handle<VkSampler> texture_sampler;
 
   std::vector<Handle<VkSemaphore>> image_available_semaphores;
   std::vector<Handle<VkSemaphore>> render_finished_semaphores;
@@ -147,6 +152,10 @@ bool CreateCommandPool(Context*);
 bool CreateDataBuffers(Context*, VkDeviceSize ubo_size);
 
 bool CreateTextureBuffers(Context*, const Image& src_image);
+
+bool CreateTextureImageView(Context*);
+
+bool CreateTextureSampler(Context*);
 
 // This wil also create the descriptor pools.
 bool CreateDescriptorSets(Context*);

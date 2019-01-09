@@ -132,7 +132,7 @@ SwapChainCapabilities QuerySwapChainSupport(const VkPhysicalDevice& device,
 }
 
 PhysicalDeviceInfo GetPhysicalDeviceInfo(const VkPhysicalDevice& device,
-                           const VkSurfaceKHR& surface) {
+                                         const VkSurfaceKHR& surface) {
   PhysicalDeviceInfo info;
   vkGetPhysicalDeviceProperties(device, &info.properties);
   vkGetPhysicalDeviceFeatures(device, &info.features);
@@ -153,6 +153,15 @@ bool IsSuitableDevice(const VkPhysicalDevice& device,
 
   if (!CheckPhysicalDeviceExtensions(device, required_extensions))
     return false;
+
+  // We check for features.
+  VkPhysicalDeviceFeatures features;
+  vkGetPhysicalDeviceFeatures(device, &features);
+
+  if (!features.samplerAnisotropy) {
+    LOG(ERROR) << "Require sampler anisotropy feature.";
+    return false;
+  }
 
   auto& capabilities = device_info.swap_chain_capabilities;
   if (capabilities.formats.empty() || capabilities.present_modes.empty())
@@ -223,6 +232,7 @@ bool CreateLogicalDevice(Context* context) {
   create_info.queueCreateInfoCount = unique_queues.size();
   create_info.pQueueCreateInfos = queue_create_infos;
   VkPhysicalDeviceFeatures enabled_features = {};
+  enabled_features.samplerAnisotropy = VK_TRUE;
   create_info.pEnabledFeatures = &enabled_features;
   create_info.enabledExtensionCount = context->device_extensions.size();
   create_info.ppEnabledExtensionNames = context->device_extensions.data();
@@ -367,33 +377,50 @@ bool CreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
 bool CreateImageViews(Context* context) {
   context->image_views.clear();
   for (size_t i = 0; i < context->images.size(); i++) {
-    VkImageViewCreateInfo create_info = {};
-    create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    create_info.image = context->images[i];
-    create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    create_info.format = context->swap_chain_details.format.format;
-
-    // We don't need to swizzle (swap around) any of the color channel.
-    create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-    // This is an image (color texture).
-    create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    create_info.subresourceRange.baseMipLevel = 0;
-    create_info.subresourceRange.levelCount = 1;
-    create_info.subresourceRange.baseArrayLayer = 0;
-    create_info.subresourceRange.layerCount = 1;
-
-    VkImageView image_view;
-    if (!VK_CALL(vkCreateImageView, *context->device, &create_info, nullptr,
-                 &image_view)) {
+    VkFormat format = context->swap_chain_details.format.format;
+    auto image_view = CreateImageView(context, context->images[i], format);
+    if (!image_view.has_value())
       return false;
-    }
-    context->image_views.emplace_back(context, image_view);
+
+    context->image_views.emplace_back(std::move(image_view));
   }
 
+  return true;
+}
+
+// CreateTextureSampler --------------------------------------------------------
+
+bool CreateTextureSampler(Context* context) {
+  VkSamplerCreateInfo sampler_info = {};
+  sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  sampler_info.minFilter = VK_FILTER_LINEAR;
+  sampler_info.magFilter = VK_FILTER_LINEAR;
+
+  sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+
+  sampler_info.anisotropyEnable = VK_TRUE;
+  sampler_info.maxAnisotropy = 16;
+
+  sampler_info.unnormalizedCoordinates = VK_FALSE;
+
+  sampler_info.compareEnable = VK_FALSE;
+  sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+
+  sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+  sampler_info.mipLodBias = 0.0f;
+  sampler_info.minLod = 0.0f;
+  sampler_info.maxLod = 0.0f;
+
+  VkSampler sampler_handle;
+  if (!VK_CALL(vkCreateSampler, *context->device, &sampler_info, nullptr,
+                                &sampler_handle)) {
+    return false;
+  }
+
+  context->texture_sampler = {context, sampler_handle};
   return true;
 }
 
@@ -456,17 +483,27 @@ bool CreateRenderPass(Context* context) {
 // CreateDescriptorSetLayout ---------------------------------------------------
 
 bool CreateDescriptorSetLayout(Context* context) {
-  VkDescriptorSetLayoutBinding ubo_binding = {};
+  VkDescriptorSetLayoutBinding bindings[2] = {};
+
+  // UBO binding
+  auto& ubo_binding = bindings[0];
   ubo_binding.binding = 0;
   ubo_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   ubo_binding.descriptorCount = 1;
   ubo_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
   ubo_binding.pImmutableSamplers = nullptr;  // Optional.
 
+  auto& sampler_binding = bindings[1];
+  sampler_binding.binding = 1;
+  sampler_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  sampler_binding.descriptorCount = 1;
+  sampler_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  ubo_binding.pImmutableSamplers = nullptr;  // Optional.
+
   VkDescriptorSetLayoutCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  create_info.bindingCount = 1;
-  create_info.pBindings = &ubo_binding;
+  create_info.bindingCount = ARRAY_SIZE(bindings);
+  create_info.pBindings = bindings;
 
   VkDescriptorSetLayout descriptor_set_layout;
   if (!VK_CALL(vkCreateDescriptorSetLayout, *context->device, &create_info,
@@ -515,24 +552,35 @@ VkShaderModule CreateShaderModule(const VkDevice& device,
 }
 
 std::vector<VkVertexInputBindingDescription> GetBindingDescriptions() {
-  std::vector<VkVertexInputBindingDescription> bindings;
-  bindings.reserve(2);
+  VkVertexInputBindingDescription bindings[3] = {};
 
-  VkVertexInputBindingDescription binding;
-  binding = {};
-  binding.binding = 0;
-  binding.stride = 3 * sizeof(float);
-  binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-  bindings.push_back(binding);
+  auto& pos_binding = bindings[0];
+  pos_binding.binding = 0;
+  pos_binding.stride = 3 * sizeof(float);
+  pos_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-  binding.binding = 1;
-  bindings.push_back(binding);
-  return bindings;
+  auto& color_binding= bindings[1];
+  color_binding.binding = 1;
+  color_binding.stride = 3 * sizeof(float);
+  color_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+  auto& uv_binding = bindings[2];
+  uv_binding.binding = 2;
+  uv_binding.stride = 2 * sizeof(float);
+  uv_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+  std::vector<VkVertexInputBindingDescription> result;
+  result.reserve(3);
+  result.emplace_back(std::move(bindings[0]));
+  result.emplace_back(std::move(bindings[1]));
+  result.emplace_back(std::move(bindings[2]));
+
+  return result;
 }
 
 std::vector<VkVertexInputAttributeDescription> GetAttributeDescriptions() {
   std::vector<VkVertexInputAttributeDescription> descriptions;
-  descriptions.reserve(2);
+  descriptions.reserve(3);
 
   VkVertexInputAttributeDescription pos_desc = {};
   pos_desc.binding = 0;
@@ -547,6 +595,13 @@ std::vector<VkVertexInputAttributeDescription> GetAttributeDescriptions() {
   color_desc.format = VK_FORMAT_R32G32B32_SFLOAT;
   color_desc.offset = 0;
   descriptions.push_back(std::move(color_desc));
+
+  VkVertexInputAttributeDescription uv_desc = {};
+  uv_desc.binding = 2;
+  uv_desc.location = 2;
+  uv_desc.format = VK_FORMAT_R32G32_SFLOAT;
+  uv_desc.offset = 0;
+  descriptions.push_back(std::move(uv_desc));
 
   return descriptions;
 }
@@ -839,7 +894,8 @@ bool CreateCommandPool(Context* context) {
 
 namespace {
 
-constexpr size_t kColorOffset = 12;
+constexpr size_t kColorOffset = 12 * sizeof(float);
+constexpr size_t kUVOffset = 24 * sizeof(float);
 const std::vector<float> vertices = {
   // Positions
   -0.5f, -0.5f,  0.0f,
@@ -851,7 +907,13 @@ const std::vector<float> vertices = {
    1.0f,  0.0f,  0.0f,
    0.0f,  1.0f,  0.0f,
    0.0f,  0.0f,  1.0f,
-   1.0f,  1.0f,  1.0f
+   1.0f,  1.0f,  1.0f,
+
+  // UV
+   0.0f,  0.0f,
+   1.0f,  0.0f,
+   1.0f,  1.0f,
+   0.0f,  1.0f,
 };
 
 const std::vector<uint16_t> indices = {
@@ -1033,6 +1095,19 @@ bool CreateTextureBuffers(Context* context, const Image& src_image) {
   if (!TransitionImageLayout(context, *image.handle, transition_config))
       return false;
 
+  context->texture = std::move(image);
+  return true;
+}
+
+// CreateTextureImageView ------------------------------------------------------
+
+bool CreateTextureImageView(Context* context) {
+  auto image_view = CreateImageView(context, *context->texture.handle,
+                                    VK_FORMAT_B8G8R8A8_UNORM);
+  if (!image_view.has_value())
+    return false;
+
+  context->texture_view = std::move(image_view);
   return true;
 }
 
@@ -1041,14 +1116,19 @@ bool CreateTextureBuffers(Context* context, const Image& src_image) {
 namespace {
 
 bool CreateDescriptorPool(Context* context) {
-  VkDescriptorPoolSize pool_size = {};
-  pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  pool_size.descriptorCount = context->images.size();
+  VkDescriptorPoolSize pool_sizes[2] = {};
+  auto& uniform_size = pool_sizes[0];
+  uniform_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  uniform_size.descriptorCount = context->images.size();
+
+  auto& sampler_size = pool_sizes[1];
+  sampler_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  sampler_size.descriptorCount = context->images.size();
 
   VkDescriptorPoolCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  create_info.poolSizeCount = 1;
-  create_info.pPoolSizes = &pool_size;
+  create_info.poolSizeCount = ARRAY_SIZE(pool_sizes);
+  create_info.pPoolSizes = pool_sizes;
   create_info.maxSets = context->images.size();
 
   VkDescriptorPool pool;
@@ -1065,8 +1145,6 @@ bool CreateDescriptorPool(Context* context) {
 bool CreateDescriptorSets(Context* context) {
   if (!CreateDescriptorPool(context))
     return false;
-
-  LOG(INFO) << "Created descriptor pool.";
 
   // The layout could be different for each descriptor set we're allocating.
   // We point to the same layout everytime.
@@ -1085,7 +1163,6 @@ bool CreateDescriptorSets(Context* context) {
     return false;
   }
 
-
   // We now associate our descriptor sets to a uniform buffer.
   for (size_t i = 0; i < layouts.size(); i++) {
     VkDescriptorBufferInfo buffer_info = {};
@@ -1093,19 +1170,33 @@ bool CreateDescriptorSets(Context* context) {
     buffer_info.offset = 0;
     buffer_info.range = context->ubo_size;
 
-    VkWriteDescriptorSet descriptor_write = {};
-    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write.dstSet = descriptor_sets[i];
-    descriptor_write.dstBinding = 0;
-    descriptor_write.dstArrayElement = 0;
-    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor_write.descriptorCount = 1;
-    descriptor_write.pBufferInfo = &buffer_info;
-    descriptor_write.pImageInfo = nullptr;  // Optional.
-    descriptor_write.pTexelBufferView = nullptr;  // Optional.
+    VkDescriptorImageInfo image_info = {};
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image_info.imageView = *context->texture_view;
+    image_info.sampler = *context->texture_sampler;
+
+    VkWriteDescriptorSet descriptor_writes[2] = {};
+
+    auto& buffer_write = descriptor_writes[0];
+    buffer_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    buffer_write.dstSet = descriptor_sets[i];
+    buffer_write.dstBinding = 0;
+    buffer_write.dstArrayElement = 0;
+    buffer_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    buffer_write.descriptorCount = 1;
+    buffer_write.pBufferInfo = &buffer_info;
+
+    auto& texture_write = descriptor_writes[1];
+    texture_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    texture_write.dstSet = descriptor_sets[i];
+    texture_write.dstBinding = 1;
+    texture_write.dstArrayElement = 0;
+    texture_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    texture_write.descriptorCount = 1;
+    texture_write.pImageInfo = &image_info;
 
     // We could also do one big call with an array of descriptor writes.
-    vkUpdateDescriptorSets(*context->device, 1, &descriptor_write, 0, nullptr);
+    vkUpdateDescriptorSets(*context->device, 2, descriptor_writes, 0, nullptr);
   }
 
   context->descriptor_sets = descriptor_sets;
@@ -1116,7 +1207,6 @@ bool CreateDescriptorSets(Context* context) {
 // CreateCommandBuffers --------------------------------------------------------
 
 bool CreateCommandBuffers(Context* context) {
-
   // Command buffers can get multiple allocated at once with one call.
   VkCommandBufferAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1163,9 +1253,10 @@ bool CreateCommandBuffers(Context* context) {
       VkBuffer vertex_buffers[] = {
           *context->vertices.handle,
           *context->vertices.handle,
+          *context->vertices.handle,
       };
-      VkDeviceSize offsets[] = {0, kColorOffset * sizeof(float)};
-      vkCmdBindVertexBuffers(command_buffer, 0, 2, vertex_buffers, offsets);
+      VkDeviceSize offsets[] = {0, kColorOffset, kUVOffset };
+      vkCmdBindVertexBuffers(command_buffer, 0, 3, vertex_buffers, offsets);
       vkCmdBindIndexBuffer(command_buffer, *context->indices.handle, 0,
                            VK_INDEX_TYPE_UINT16);
 

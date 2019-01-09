@@ -15,67 +15,79 @@ void Handle<VkInstance>::InternalClear() {
     vkDestroyInstance(handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkDebugUtilsMessengerEXT>::InternalClear() {
   if (has_value() && context_)
     DestroyDebugUtilsMessengerEXT(*context_->instance, handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkSurfaceKHR>::InternalClear() {
   if (has_value() && context_)
     vkDestroySurfaceKHR(*context_->instance, handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkDevice>::InternalClear() {
   if (has_value() && context_)
     vkDestroyDevice(handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkSwapchainKHR>::InternalClear() {
   if (has_value() && context_)
     vkDestroySwapchainKHR(*context_->device, handle_, nullptr);
 }
 
-template<>
+template <>
+void Handle<VkImage>::InternalClear() {
+  if (has_value() && context_)
+    vkDestroyImage(*context_->device, handle_, nullptr);
+}
+
+template <>
 void Handle<VkImageView>::InternalClear() {
   if (has_value() && context_)
     vkDestroyImageView(*context_->device, handle_, nullptr);
 }
 
-template<>
+template <>
+void Handle<VkSampler>::InternalClear() {
+  if (has_value() && context_)
+    vkDestroySampler(*context_->device, handle_, nullptr);
+}
+
+template <>
 void Handle<VkRenderPass>::InternalClear() {
   if (has_value() && context_)
     vkDestroyRenderPass(*context_->device, handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkPipelineLayout>::InternalClear() {
   if (has_value() && context_)
     vkDestroyPipelineLayout(*context_->device, handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkPipeline>::InternalClear() {
   if (has_value() && context_)
     vkDestroyPipeline(*context_->device, handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkFramebuffer>::InternalClear() {
   if (has_value() && context_)
     vkDestroyFramebuffer(*context_->device, handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkCommandPool>::InternalClear() {
   if (has_value() && context_)
     vkDestroyCommandPool(*context_->device, handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkCommandBuffer>::InternalClear() {
   if (has_value() && context_) {
     vkFreeCommandBuffers(*context_->device, *context_->command_pool,
@@ -83,46 +95,40 @@ void Handle<VkCommandBuffer>::InternalClear() {
   }
 }
 
-template<>
+template <>
 void Handle<VkSemaphore>::InternalClear() {
   if (has_value() && context_)
     vkDestroySemaphore(*context_->device, handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkFence>::InternalClear() {
   if (has_value() && context_)
     vkDestroyFence(*context_->device, handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkBuffer>::InternalClear() {
   if (has_value() && context_)
     vkDestroyBuffer(*context_->device, handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkDeviceMemory>::InternalClear() {
   if (has_value() && context_)
     vkFreeMemory(*context_->device, handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkDescriptorSetLayout>::InternalClear() {
   if (has_value() && context_)
     vkDestroyDescriptorSetLayout(*context_->device, handle_, nullptr);
 }
 
-template<>
+template <>
 void Handle<VkDescriptorPool>::InternalClear() {
   if (has_value() && context_)
     vkDestroyDescriptorPool(*context_->device, handle_, nullptr);
-}
-
-template<>
-void Handle<VkImage>::InternalClear() {
-  if (has_value() && context_)
-    vkDestroyImage(*context_->device, handle_, nullptr);
 }
 
 }  // namespace vulkan

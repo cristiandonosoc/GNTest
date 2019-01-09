@@ -16,9 +16,8 @@ namespace vulkan {
 bool CheckExtensions(const std::vector<const char*>& extensions);
 void AddDebugExtensions(std::vector<const char*>*);
 bool CheckValidationLayers(const std::vector<const char*>& layers);
-bool CheckPhysicalDeviceExtensions(
-    const VkPhysicalDevice&,
-    const std::vector<const char*>& required_extensions);
+bool CheckPhysicalDeviceExtensions(const VkPhysicalDevice&,
+                                   const std::vector<const char*>& extensions);
 
 // GetInstanceProcAddr calls ---------------------------------------------------
 

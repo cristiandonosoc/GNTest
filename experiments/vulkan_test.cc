@@ -147,14 +147,24 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
     return false;
   std::cout << " DONE" << std::endl;
 
-  std::cout << "Creaging vertex buffers...";
+  std::cout << "Creating vertex buffers...";
   if (!vulkan::CreateDataBuffers(context, sizeof(UBO)))
     return false;
   std::cout << " DONE" << std::endl;
 
   std::cout << "Creating texture buffers...";
-  Image image = Image::Create2DImageFromPath(Assets::TexturePath("wall.jpg"));
+  Image image = Image::Create2DImageFromPath(Assets::TexturePath("awesomeface.png"));
   if (!vulkan::CreateTextureBuffers(context, image))
+    return false;
+  std::cout << " DONE" << std::endl;
+
+  std::cout << "Creating imate view...";
+  if (!vulkan::CreateTextureImageView(context))
+    return false;
+  std::cout << " DONE" << std::endl;
+
+  std::cout << "Creating texture sampler...";
+  if (!vulkan::CreateTextureSampler(context))
     return false;
   std::cout << " DONE" << std::endl;
 

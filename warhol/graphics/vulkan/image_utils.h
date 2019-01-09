@@ -5,18 +5,21 @@
 
 #include "warhol/graphics/common/image.h"
 #include "warhol/graphics/vulkan/def.h"
+#include "warhol/graphics/vulkan/handle.h"
 
 namespace warhol {
 namespace vulkan {
 
 struct Context;
 
+// Returns VK_NULL_HANDLE
+Handle<VkImageView> CreateImageView(Context*, VkImage, VkFormat);
+
 struct TransitionImageLayoutConfig {
   VkFormat format;
   VkImageLayout old_layout;
   VkImageLayout new_layout;
 };
-
 bool TransitionImageLayout(Context*, VkImage image,
                            const TransitionImageLayoutConfig&);
 
