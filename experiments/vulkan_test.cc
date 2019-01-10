@@ -115,6 +115,16 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
     return false;
   std::cout << " DONE" << std::endl;
 
+  std::cout << "Creating a command pool for each framebuffer...";
+  if (!vulkan::CreateCommandPool(context))
+    return false;
+  std::cout << " DONE" << std::endl;
+
+  std::cout << "Creating depth buffers...";
+  if (!vulkan::CreateDepthResources(context))
+    return false;
+  std::cout << " DONE" << std::endl;
+
   std::cout << "Creating a render pass...";
   if (!vulkan::CreateRenderPass(context))
     return false;
@@ -139,11 +149,6 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
 
   std::cout << "Creating frame buffers...";
   if (!vulkan::CreateFrameBuffers(context))
-    return false;
-  std::cout << " DONE" << std::endl;
-
-  std::cout << "Creaging a command pool for each framebuffer...";
-  if (!vulkan::CreateCommandPool(context))
     return false;
   std::cout << " DONE" << std::endl;
 

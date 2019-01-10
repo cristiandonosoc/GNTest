@@ -30,6 +30,11 @@ MemoryBacked<VkImage> CreateImage(Context* context,
   if (!memory_handle.has_value())
     return {};
 
+  if (!VK_CALL(vkBindImageMemory, *context->device, *image_handle,
+                                  *memory_handle, 0)) {
+    return {};
+  }
+
   MemoryBacked<VkImage> backed_image;
   backed_image.handle = std::move(image_handle);
   backed_image.memory = std::move(memory_handle);
@@ -71,26 +76,58 @@ struct TransitionMasks {
 };
 
 bool
-DetermineTransitionMasks(VkImageLayout old_layout, VkImageLayout new_layout,
-                         TransitionMasks* out) {
-  if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
-      new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-    out->src_access_mask = 0;
-    out->dst_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    out->src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    out->dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  } else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-             new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    out-> src_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    out-> dst_access_mask = VK_ACCESS_SHADER_READ_BIT;
-
-    out->src_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    out->dst_stage_mask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  } else {
-    return false;
+GetTransitionMasks(VkImageLayout old_layout, VkImageLayout new_layout,
+                   TransitionMasks* out) {
+  if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED) {
+    switch (new_layout) {
+      case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+        out->src_access_mask = 0;
+        out->dst_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        out->src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        out->dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        return true;
+      case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        out->src_access_mask = 0;
+        out->dst_access_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        out->src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        out->dst_stage_mask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        return true;
+      default:
+        break;
+    }
+  } else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    switch (new_layout) {
+      case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        out-> src_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        out-> dst_access_mask = VK_ACCESS_SHADER_READ_BIT;
+        out->src_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        out->dst_stage_mask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        return true;
+      default:
+        break;
+    }
   }
 
-  return true;
+  LOG(ERROR) << "Could not get transition mask " << EnumToString(old_layout)
+             << " -> " << EnumToString(new_layout);
+  return false;
+}
+
+VkImageAspectFlags
+GetImageAspectFlags(VkFormat format, VkImageLayout new_layout) {
+  VkImageAspectFlags aspect_flags = 0;
+
+  // If this is a depth mask, we say so. We also check if there is a stencil
+  // component.
+  if (new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+    aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
+    if (HasStencilComponent(format))
+      aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
+  } else {
+    aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
+  }
+
+  return aspect_flags;
 }
 
 }  // namespace
@@ -102,8 +139,8 @@ bool TransitionImageLayout(Context* context, VkImage image,
     return false;
 
   TransitionMasks transition_masks;
-  if (!DetermineTransitionMasks(
-          config.old_layout, config.new_layout, &transition_masks)) {
+  if (!GetTransitionMasks(config.old_layout, config.new_layout,
+                          &transition_masks)) {
     return false;
   }
 
@@ -116,7 +153,9 @@ bool TransitionImageLayout(Context* context, VkImage image,
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
   barrier.image = image;
-  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+  auto aspect_flags = GetImageAspectFlags(config.format, config.new_layout);
+  barrier.subresourceRange.aspectMask = aspect_flags;
   barrier.subresourceRange.baseMipLevel = 0;
   barrier.subresourceRange.levelCount = 1;
   barrier.subresourceRange.baseArrayLayer = 0;

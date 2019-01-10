@@ -446,27 +446,49 @@ bool CreateRenderPass(Context* context) {
   color_attachment_ref.attachment = 0;
   color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+  VkAttachmentDescription depth_attachment = {};
+  depth_attachment.format = context->depth_format;
+  depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+  depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  // What layouts the data has to be before and after using the render target.
+  depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  depth_attachment.finalLayout =
+      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+  VkAttachmentReference depth_ref = {};
+  depth_ref.attachment = 1;
+  depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+
   VkSubpassDescription subpass = {};
   // This is a graphics subpass.
   subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
   subpass.colorAttachmentCount = 1;
   subpass.pColorAttachments = &color_attachment_ref;
+  subpass.pDepthStencilAttachment = &depth_ref;
 
   // Create a dependency for this render pass.
   VkSubpassDependency dependency = {};
   dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
   dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
   dependency.srcAccessMask = 0;
-
   dependency.dstSubpass = 0;
   dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
   dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
                              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
+  VkAttachmentDescription attachments[] = {
+    color_attachment,
+    depth_attachment,
+  };
+
   VkRenderPassCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-  create_info.attachmentCount = 1;
-  create_info.pAttachments = &color_attachment;
+  create_info.attachmentCount = ARRAY_SIZE(attachments);
+  create_info.pAttachments = attachments;
   create_info.subpassCount = 1;
   create_info.pSubpasses = &subpass;
   create_info.dependencyCount = 1;
@@ -748,8 +770,7 @@ bool CreateGraphicsPipeline(Context* context) {
   //
   // 1. Mix the old and new.
   // 2. Combine old and new with bitwise operation.
-
-
+  //
   // A Color Blend Attachment describes blending *per* framebuffer.
 
   VkPipelineColorBlendAttachmentState color_attachment = {};
@@ -781,6 +802,22 @@ bool CreateGraphicsPipeline(Context* context) {
   color_blend_state.blendConstants[1] = 0.0f; // Optional
   color_blend_state.blendConstants[2] = 0.0f; // Optional
   color_blend_state.blendConstants[3] = 0.0f; // Optional
+
+  // ****** Depth Buffer ******
+
+  VkPipelineDepthStencilStateCreateInfo depth_stencil = {};
+  depth_stencil.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+  depth_stencil.depthTestEnable = VK_TRUE;
+  depth_stencil.depthWriteEnable = VK_TRUE;
+  depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+  depth_stencil.depthBoundsTestEnable = VK_FALSE;
+  depth_stencil.minDepthBounds = 0.0f;  // Optional.
+  depth_stencil.maxDepthBounds = 1.0f;  // Optional.
+
+  depth_stencil.stencilTestEnable = VK_FALSE;
+  depth_stencil.front = {};   // Optional.
+  depth_stencil.back = {};    // Optional.
 
   // ****** Dynamic State ******
   //
@@ -814,7 +851,7 @@ bool CreateGraphicsPipeline(Context* context) {
   create_info.pViewportState = &viewport_state;
   create_info.pRasterizationState = &rasterizer;
   create_info.pMultisampleState = &multisampling;
-  create_info.pDepthStencilState = nullptr; // Optional
+  create_info.pDepthStencilState = &depth_stencil;
   create_info.pColorBlendState = &color_blend_state;
   create_info.pDynamicState = nullptr; // Optional
 
@@ -847,12 +884,15 @@ bool CreateFrameBuffers(Context* context) {
   context->frame_buffers.clear();
   for (size_t i = 0; i < context->image_views.size(); i++) {
     // A framebuffer references image views for input data.
-    VkImageView attachments[] = { *context->image_views[i] };
+    VkImageView attachments[] = {
+      *context->image_views[i],
+      *context->depth_image_view,
+    };
 
     VkFramebufferCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     create_info.renderPass = *context->render_pass;
-    create_info.attachmentCount = 1;
+    create_info.attachmentCount = ARRAY_SIZE(attachments);
     create_info.pAttachments = attachments;
     create_info.width = context->swap_chain_details.extent.width;
     create_info.height = context->swap_chain_details.extent.height;
@@ -960,8 +1000,16 @@ bool CreateDepthResources(Context* context) {
   if (!image_view.has_value())
     return false;
 
+  TransitionImageLayoutConfig transition = {};
+  transition.format = depth_format;
+  transition.old_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+  transition.new_layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  if (!TransitionImageLayout(context, *image.handle, transition))
+    return false;
 
-
+  context->depth_format = depth_format;
+  context->depth_image = std::move(image);
+  context->depth_image_view = std::move(image_view);
 
   return true;
 }
@@ -1130,7 +1178,6 @@ bool CreateDataBuffers(Context* context, VkDeviceSize ubo_size) {
 // CreateTextureBuffers --------------------------------------------------------
 
 bool CreateTextureBuffers(Context* context, const Image& src) {
-  LOG(DEBUG) << "Allocating staging buffer.";
   // Create a staging buffer.
   AllocBufferConfig alloc_config = {};
   alloc_config.size = src.data_size,
@@ -1149,8 +1196,6 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
   }
   memcpy(memory, src.data.value, src.data_size);
   vkUnmapMemory(*context->device, *staging_memory.memory);
-
-  LOG(DEBUG) << "Allocating image buffer.";
 
   // Allocate and image.
   CreateImageConfig image_config = {};
@@ -1171,11 +1216,6 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
   MemoryBacked<VkImage> image = CreateImage(context, image_config);
   if (!image.has_value())
     return false;
-
-  if (!VK_CALL(vkBindImageMemory, *context->device, *image.handle,
-                                  *image.memory, 0)) {
-    return false;
-  }
 
   // We need to transition the image layout to receive data.
   TransitionImageLayoutConfig transition_config = {};
@@ -1342,9 +1382,14 @@ bool CreateCommandBuffers(Context* context) {
     render_pass_begin.framebuffer = *context->frame_buffers[i];
     render_pass_begin.renderArea.offset = {0, 0};
     render_pass_begin.renderArea.extent = context->swap_chain_details.extent;
-    VkClearValue clear_value = {{{0.7f, 0.3f, 0.5f, 1.0f}}};
-    render_pass_begin.clearValueCount = 1;
-    render_pass_begin.pClearValues = &clear_value;
+
+
+    VkClearValue clear_values[2] = {};
+    clear_values[0].color = {{0.7f, 0.3f, 0.5f, 1.0f}};
+    clear_values[1].depthStencil = {1.0f, 0};
+
+    render_pass_begin.clearValueCount = ARRAY_SIZE(clear_values);
+    render_pass_begin.pClearValues = clear_values;
 
     vkCmdBeginRenderPass(command_buffer,
                          &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);

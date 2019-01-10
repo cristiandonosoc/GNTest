@@ -82,6 +82,7 @@ struct Context {
   std::vector<VkImage> images;    // Freed with |swap_chain|.
   std::vector<Handle<VkImageView>> image_views;
 
+  VkFormat depth_format = VK_FORMAT_UNDEFINED;
   MemoryBacked<VkImage> depth_image;
   Handle<VkImageView> depth_image_view;
 
@@ -138,6 +139,8 @@ bool CreateSwapChain(Context*, Pair<uint32_t> screen_size);
 
 bool CreateImageViews(Context*);
 
+bool CreateDepthResources(Context*);
+
 bool CreateRenderPass(Context*);
 
 bool CreateDescriptorSetLayout(Context*);
@@ -150,8 +153,6 @@ bool CreateGraphicsPipeline(Context*);
 bool CreateFrameBuffers(Context*);
 
 bool CreateCommandPool(Context*);
-
-bool CreateDepthResources(Context*);
 
 // Creates vertices, indices and uniforms.
 // |ubo_size| is the byte size of the uniform buffer object.

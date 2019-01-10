@@ -84,7 +84,7 @@ template<> const char* EnumToString(VkDebugUtilsMessageTypeFlagBitsEXT);
 template<> const char* EnumToString(VkFormat);
 template<> const char* EnumToString(VkColorSpaceKHR);
 template<> const char* EnumToString(VkPresentModeKHR);
-
+template<> const char* EnumToString(VkImageLayout);
 
 // Checked Vulkan Call ---------------------------------------------------------
 
