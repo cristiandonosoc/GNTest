@@ -378,7 +378,8 @@ bool CreateImageViews(Context* context) {
   context->image_views.clear();
   for (size_t i = 0; i < context->images.size(); i++) {
     VkFormat format = context->swap_chain_details.format.format;
-    auto image_view = CreateImageView(context, context->images[i], format);
+    auto image_view = CreateImageView(context, context->images[i], format,
+                                      VK_IMAGE_ASPECT_COLOR_BIT);
     if (!image_view.has_value())
       return false;
 
@@ -890,12 +891,87 @@ bool CreateCommandPool(Context* context) {
   return true;
 }
 
-// CreateVertexBuffers ---------------------------------------------------------
+// CreateDepthResources --------------------------------------------------------
 
 namespace {
 
-constexpr size_t kColorOffset = 12 * sizeof(float);
-constexpr size_t kUVOffset = 24 * sizeof(float);
+// Returns format undefined on error.
+VkFormat FindDepthFormat(VkPhysicalDevice device,
+                         VkImageTiling tiling, VkFormatFeatureFlags features,
+                         const std::vector<VkFormat>& candidates) {
+  for (const VkFormat& format : candidates) {
+    // We get what the GPU supports for this format.
+
+    VkFormatProperties properties;
+    vkGetPhysicalDeviceFormatProperties(device, format, &properties);
+
+    if (tiling == VK_IMAGE_TILING_LINEAR &&
+        (properties.linearTilingFeatures & features) == features) {
+      return format;
+    } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
+               (properties.optimalTilingFeatures & features) == features) {
+      return format;
+    }
+  }
+
+  return VK_FORMAT_UNDEFINED;
+}
+
+}  // namespace
+
+
+bool CreateDepthResources(Context* context) {
+  VkFormat depth_format =
+      FindDepthFormat(context->physical_device,
+                      VK_IMAGE_TILING_OPTIMAL,
+                      VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                      {VK_FORMAT_D32_SFLOAT,
+                       VK_FORMAT_D32_SFLOAT_S8_UINT,
+                       VK_FORMAT_D24_UNORM_S8_UINT});
+
+  if (depth_format == VK_FORMAT_UNDEFINED) {
+    LOG(ERROR) << "Could not find a valid depth format.";
+    return false;
+  }
+
+  // Allocate and image.
+  CreateImageConfig image_config = {};
+  VkImageCreateInfo& image_info = image_config.create_info;
+  image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  image_info.format = depth_format;
+  image_info.imageType = VK_IMAGE_TYPE_2D;
+  image_info.extent.width = context->swap_chain_details.extent.width;
+  image_info.extent.height = context->swap_chain_details.extent.height;
+  image_info.extent.depth = 1;
+  image_info.mipLevels = 1;
+  image_info.arrayLayers = 1;
+  image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+  image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+  image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  MemoryBacked<VkImage> image = CreateImage(context, image_config);
+  if (!image.has_value())
+    return false;
+
+  auto image_view = CreateImageView(context, *image.handle, depth_format,
+                                    VK_IMAGE_ASPECT_DEPTH_BIT);
+  if (!image_view.has_value())
+    return false;
+
+
+
+
+  return true;
+}
+
+// CreateDataBuffers------------------------------------------------------------
+
+namespace {
+
+constexpr size_t kColorOffset = 2 * 12 * sizeof(float);
+constexpr size_t kUVOffset = 2 * 24 * sizeof(float);
 const std::vector<float> vertices = {
   // Positions
   -0.5f, -0.5f,  0.0f,
@@ -903,7 +979,17 @@ const std::vector<float> vertices = {
    0.5f,  0.5f,  0.0f,
   -0.5f,  0.5f,  0.0f,
 
+  -0.5f, -0.5f,  -0.5f,
+   0.5f, -0.5f,  -0.5f,
+   0.5f,  0.5f,  -0.5f,
+  -0.5f,  0.5f,  -0.5f,
+
   // Colors
+   1.0f,  0.0f,  0.0f,
+   0.0f,  1.0f,  0.0f,
+   0.0f,  0.0f,  1.0f,
+   1.0f,  1.0f,  1.0f,
+
    1.0f,  0.0f,  0.0f,
    0.0f,  1.0f,  0.0f,
    0.0f,  0.0f,  1.0f,
@@ -914,10 +1000,16 @@ const std::vector<float> vertices = {
    1.0f,  0.0f,
    1.0f,  1.0f,
    0.0f,  1.0f,
+
+   0.0f,  0.0f,
+   1.0f,  0.0f,
+   1.0f,  1.0f,
+   0.0f,  1.0f,
 };
 
 const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0
+    0, 1, 2, 2, 3, 0,
+    4, 5, 6, 6, 7, 4,
 };
 
 bool CreateVertexBuffers(Context* context) {
@@ -1037,11 +1129,11 @@ bool CreateDataBuffers(Context* context, VkDeviceSize ubo_size) {
 
 // CreateTextureBuffers --------------------------------------------------------
 
-bool CreateTextureBuffers(Context* context, const Image& src_image) {
+bool CreateTextureBuffers(Context* context, const Image& src) {
   LOG(DEBUG) << "Allocating staging buffer.";
   // Create a staging buffer.
   AllocBufferConfig alloc_config = {};
-  alloc_config.size = src_image.data_size,
+  alloc_config.size = src.data_size,
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -1052,25 +1144,35 @@ bool CreateTextureBuffers(Context* context, const Image& src_image) {
   // Map the vertex data to the staging buffer.
   void* memory;
   if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.memory,
-                            0, src_image.data_size, 0, &memory)) {
+                            0, src.data_size, 0, &memory)) {
     return false;
   }
-  memcpy(memory, src_image.data.value, src_image.data_size);
+  memcpy(memory, src.data.value, src.data_size);
   vkUnmapMemory(*context->device, *staging_memory.memory);
-
 
   LOG(DEBUG) << "Allocating image buffer.";
 
-
   // Allocate and image.
-  AllocImageConfig image_alloc = {};
-  image_alloc.tiling = VK_IMAGE_TILING_OPTIMAL;
-  image_alloc.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+  CreateImageConfig image_config = {};
+  VkImageCreateInfo& image_info = image_config.create_info;
+  image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  image_info.format = ToVulkan(src.format);
+  image_info.imageType = ToVulkan(src.type);
+  image_info.extent = { (uint32_t)src.width, (uint32_t)src.height, 1 };
+  image_info.mipLevels = 1;
+  image_info.arrayLayers = 1;
+  image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+  image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                       VK_IMAGE_USAGE_SAMPLED_BIT;
-  image_alloc.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  MemoryBacked<VkImage> image;
-  if (!AllocImage(context, src_image, image_alloc, &image) ||
-      !VK_CALL(vkBindImageMemory, *context->device, *image.handle,
+  image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+  image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  MemoryBacked<VkImage> image = CreateImage(context, image_config);
+  if (!image.has_value())
+    return false;
+
+  if (!VK_CALL(vkBindImageMemory, *context->device, *image.handle,
                                   *image.memory, 0)) {
     return false;
   }
@@ -1084,7 +1186,7 @@ bool CreateTextureBuffers(Context* context, const Image& src_image) {
     return false;
 
   // Now we copy the data to the image.
-  if (!CopyBufferToImage(context, src_image, *staging_memory.handle,
+  if (!CopyBufferToImage(context, src, *staging_memory.handle,
                          *image.handle)) {
     return false;
   }
@@ -1101,9 +1203,10 @@ bool CreateTextureBuffers(Context* context, const Image& src_image) {
 
 // CreateTextureImageView ------------------------------------------------------
 
-bool CreateTextureImageView(Context* context) {
+bool CreateTextureImageView(Context* context, const Image& src_image) {
   auto image_view = CreateImageView(context, *context->texture.handle,
-                                    VK_FORMAT_B8G8R8A8_UNORM);
+                                    ToVulkan(src_image.format),
+                                    VK_IMAGE_ASPECT_COLOR_BIT);
   if (!image_view.has_value())
     return false;
 

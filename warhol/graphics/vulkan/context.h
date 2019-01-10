@@ -78,8 +78,12 @@ struct Context {
 
   Handle<VkSwapchainKHR> swap_chain = {};
   SwapChainDetails swap_chain_details = {};
+
   std::vector<VkImage> images;    // Freed with |swap_chain|.
   std::vector<Handle<VkImageView>> image_views;
+
+  MemoryBacked<VkImage> depth_image;
+  Handle<VkImageView> depth_image_view;
 
   Handle<VkRenderPass> render_pass = {};
 
@@ -147,13 +151,15 @@ bool CreateFrameBuffers(Context*);
 
 bool CreateCommandPool(Context*);
 
+bool CreateDepthResources(Context*);
+
 // Creates vertices, indices and uniforms.
 // |ubo_size| is the byte size of the uniform buffer object.
 bool CreateDataBuffers(Context*, VkDeviceSize ubo_size);
 
-bool CreateTextureBuffers(Context*, const Image& src_image);
+bool CreateTextureBuffers(Context*, const Image&);
 
-bool CreateTextureImageView(Context*);
+bool CreateTextureImageView(Context*, const Image&);
 
 bool CreateTextureSampler(Context*);
 

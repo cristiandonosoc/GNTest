@@ -113,45 +113,6 @@ bool CopyBuffer(Context* context, VkBuffer src_buffer, VkBuffer dst_buffer,
 
 // VkImage ---------------------------------------------------------------------
 
-bool AllocImage(Context* context, const Image& src_image,
-                const AllocImageConfig& config, MemoryBacked<VkImage>* out) {
-  VkImageCreateInfo create_info = {};
-  create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  create_info.imageType = ToVulkan(src_image.type);
-  create_info.extent.width = src_image.width;
-  create_info.extent.height = src_image.height;
-  create_info.extent.depth = 1;
-  create_info.mipLevels = 1;
-  create_info.arrayLayers = 1;
-  create_info.format = ToVulkan(src_image.format);
-  create_info.tiling = config.tiling;
-  create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  create_info.usage = config.usage;
-  create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-  create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-  create_info.flags = 0; // Optional.
-
-  VkImage image;
-  if (!VK_CALL(vkCreateImage, *context->device, &create_info, nullptr,
-                              &image)) {
-    return false;
-  }
-  Handle<VkImage> image_handle(context, image);
-
-  VkMemoryRequirements memory_reqs;
-  vkGetImageMemoryRequirements(*context->device, image, &memory_reqs);
-
-  auto memory_handle = AllocMemory(context, memory_reqs, config.properties);
-  if (!memory_handle.has_value())
-    return false;
-
-  out->handle = std::move(image_handle);
-  out->memory = std::move(memory_handle);
-
-  return true;
-}
-
 bool CopyBufferToImage(Context* context, const Image& image,
                        VkBuffer src, VkImage dst) {
   auto command_buffer = BeginSingleTimeCommands(context);

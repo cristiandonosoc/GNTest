@@ -5,20 +5,47 @@
 
 #include "warhol/graphics/vulkan/commands.h"
 #include "warhol/graphics/vulkan/context.h"
+#include "warhol/graphics/vulkan/memory.h"
 #include "warhol/graphics/vulkan/utils.h"
 #include "warhol/utils/assert.h"
 
 namespace warhol {
 namespace vulkan {
 
+// Image Creation --------------------------------------------------------------
+
+MemoryBacked<VkImage> CreateImage(Context* context,
+                                  const CreateImageConfig& config) {
+  VkImage image;
+  if (!VK_CALL(vkCreateImage, *context->device, &config.create_info, nullptr,
+                              &image)) {
+    return {};
+  }
+  Handle<VkImage> image_handle(context, image);
+
+  VkMemoryRequirements memory_reqs;
+  vkGetImageMemoryRequirements(*context->device, image, &memory_reqs);
+
+  auto memory_handle = AllocMemory(context, memory_reqs, config.properties);
+  if (!memory_handle.has_value())
+    return {};
+
+  MemoryBacked<VkImage> backed_image;
+  backed_image.handle = std::move(image_handle);
+  backed_image.memory = std::move(memory_handle);
+
+  return backed_image;
+}
+
 Handle<VkImageView>
-CreateImageView(Context* context, VkImage image, VkFormat format) {
+CreateImageView(Context* context, VkImage image, VkFormat format,
+                VkImageAspectFlags aspect_flags) {
   VkImageViewCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   create_info.image = image;
   create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
   create_info.format = format;
-  create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  create_info.subresourceRange.aspectMask = aspect_flags;
   create_info.subresourceRange.baseMipLevel = 0;
   create_info.subresourceRange.levelCount = 1;
   create_info.subresourceRange.baseArrayLayer = 0;
@@ -112,11 +139,16 @@ bool TransitionImageLayout(Context* context, VkImage image,
   return true;
 }
 
+bool HasStencilComponent(VkFormat format) {
+  return format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
+         format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
 // Warhol -> Vulkan ------------------------------------------------------------
 
 VkFormat ToVulkan(Image::Format format) {
   switch (format) {
-    case Image::Format::kRGBA8: return VK_FORMAT_B8G8R8A8_UNORM;
+    case Image::Format::kRGBA8: return VK_FORMAT_R8G8B8A8_UNORM;
     case Image::Format::kLast: break;
   }
 

@@ -22,6 +22,9 @@ struct ClearOnMove{
     return *this;
   }
 
+  T& operator*() { return value; }
+  T* operator->() { return &value; }
+
   void clear() { value = 0; }
 
   ClearOnMove(ClearOnMove&& other) {

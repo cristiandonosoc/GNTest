@@ -15,5 +15,13 @@
 #include "warhol/utils/macros.h"
 
 BEGIN_IGNORE_WARNINGS()
+
+#define GLM_FORCE_RADIANS
+
+// Makes GLM perspective matrix to generate depth between 0.0 - 1.0, instead
+// of OpenGL's -1.0 to 1,0.
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
 #include <third_party/include/glm/glm.hpp>
+
 END_IGNORE_WARNINGS()

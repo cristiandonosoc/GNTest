@@ -44,15 +44,6 @@ bool CopyBuffer(Context* context, VkBuffer src_buffer, VkBuffer dst_buffer,
 
 // VkImage ---------------------------------------------------------------------
 
-// Creates a VkImage and allocates it.
-struct AllocImageConfig {
-  VkImageTiling tiling;
-  VkImageUsageFlags usage;
-  VkMemoryPropertyFlags properties;
-};
-bool AllocImage(Context* context, const Image&, const AllocImageConfig&,
-                MemoryBacked<VkImage>* out);
-
 bool CopyBufferToImage(Context*, const Image&, VkBuffer src, VkImage dst);
 
 // MemoryBacked Handles --------------------------------------------------------
@@ -84,6 +75,7 @@ struct MemoryBacked {
     return *this;
   }
 
+  bool has_value() const { return handle.has_value() && memory.has_value(); }
   bool host_visible() const { return data != nullptr; }
 
   // Layout

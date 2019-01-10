@@ -153,13 +153,33 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   std::cout << " DONE" << std::endl;
 
   std::cout << "Creating texture buffers...";
-  Image image = Image::Create2DImageFromPath(Assets::TexturePath("awesomeface.png"));
+  Image image = Image::Create2DImageFromPath(Assets::TexturePath("wall.jpg"));
+
+#if 0
+  Image image = {};
+  image.width = 1;
+  image.height = 1;
+  image.channels = 4;
+  image.data_size = 1 * 1 * 4;
+  image.data = (uint8_t*)malloc(image.data_size);
+  image.free_function = free;
+  image.type = Image::Type::k2D;
+  image.format = Image::Format::kRGBA8;
+
+  // Only red.
+  (*image.data)[0] = 0;
+  (*image.data)[1] = 0;
+  (*image.data)[2] = 0xff;
+  (*image.data)[3] = 0xff;
+#endif
+
+
   if (!vulkan::CreateTextureBuffers(context, image))
     return false;
   std::cout << " DONE" << std::endl;
 
   std::cout << "Creating imate view...";
-  if (!vulkan::CreateTextureImageView(context))
+  if (!vulkan::CreateTextureImageView(context, image))
     return false;
   std::cout << " DONE" << std::endl;
 

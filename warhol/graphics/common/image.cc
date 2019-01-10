@@ -5,12 +5,16 @@
 
 #include <third_party/stb/stb_image.h>
 
+#include "warhol/utils/assert.h"
+
 namespace warhol {
 
 Image Image::Create2DImageFromPath(const std::string& path) {
   Image image;
   image.type = Image::Type::k2D;
   image.format = Image::Format::kRGBA8;
+  image.free_function = stbi_image_free;
+
   // We require 4 channels.
   image.data = stbi_load(path.data(),
                          &image.width, &image.height, &image.channels,
@@ -25,8 +29,9 @@ Image Image::Create2DImageFromPath(const std::string& path) {
 Image::Image() = default;
 Image::~Image() {
   uint8_t* ptr = Release();
+  ASSERT(free_function);
   if (ptr)
-    stbi_image_free(ptr);
+    free_function(ptr);
 }
 
 uint8_t* Image::Release() {

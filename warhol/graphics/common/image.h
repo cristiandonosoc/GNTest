@@ -14,6 +14,9 @@ namespace warhol {
 
 // NOTE: Image assumes that data was loaded through stb_image.
 struct Image {
+  // Function to be used to free the data.
+  using FreeFunction = void(*)(void*);
+
   enum class Type {
     k1D,
     k2D,
@@ -42,8 +45,9 @@ struct Image {
   int height = -1;
   int channels = -1;
 
-  ClearOnMove<uint8_t*> data;
+  ClearOnMove<uint8_t*> data = nullptr;
   int data_size = 0;
+  FreeFunction free_function = nullptr;
 
   Type type = Type::kLast;
   Format format = Format::kLast;
