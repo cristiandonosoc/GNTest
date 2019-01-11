@@ -1,0 +1,11 @@
+assets/models/*.zip filter=lfs diff=lfs merge=lfs -text
+assets/models/chalet.obj.zip filter=lfs diff=lfs merge=lfs -text
+assets/textures filter=lfs diff=lfs merge=lfs -text
+assets/models filter=lfs diff=lfs merge=lfs -text
+assets/models/* filter=lfs diff=lfs merge=lfs -text
+assets/textures/* filter=lfs diff=lfs merge=lfs -text
+assets/textures/grid.png filter=lfs diff=lfs merge=lfs -text
+assets/textures/wall.jpg filter=lfs diff=lfs merge=lfs -text
+assets/textures/atlas.png filter=lfs diff=lfs merge=lfs -text
+assets/textures/awesomeface.png filter=lfs diff=lfs merge=lfs -text
+assets/textures/chalet.jpg filter=lfs diff=lfs merge=lfs -text
