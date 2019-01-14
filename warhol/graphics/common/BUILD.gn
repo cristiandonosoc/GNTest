@@ -5,9 +5,12 @@ source_set("common") {
   sources = [
     "image.cc",
     "image.h",
+    "mesh.cc",
+    "mesh.h",
   ]
 
   deps = [
     "//third_party/stb",
+    "//third_party/tiny_obj_loader",
   ]
 }

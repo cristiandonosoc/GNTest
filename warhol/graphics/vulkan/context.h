@@ -18,6 +18,7 @@
 namespace warhol {
 
 struct Image;
+struct Mesh;
 
 namespace vulkan {
 
@@ -139,6 +140,8 @@ bool CreateSwapChain(Context*, Pair<uint32_t> screen_size);
 
 bool CreateImageViews(Context*);
 
+bool CreateCommandPool(Context*);
+
 bool CreateDepthResources(Context*);
 
 bool CreateRenderPass(Context*);
@@ -152,11 +155,13 @@ bool CreateGraphicsPipeline(Context*);
 
 bool CreateFrameBuffers(Context*);
 
-bool CreateCommandPool(Context*);
+/* // Creates vertices, indices and uniforms. */
+/* // |ubo_size| is the byte size of the uniform buffer object. */
+/* bool CreateDataBuffers(Context*, VkDeviceSize ubo_size); */
 
-// Creates vertices, indices and uniforms.
-// |ubo_size| is the byte size of the uniform buffer object.
-bool CreateDataBuffers(Context*, VkDeviceSize ubo_size);
+bool LoadModel(Context*, const Mesh&);
+
+bool SetupUBO(Context* , VkDeviceSize ubo_size);
 
 bool CreateTextureBuffers(Context*, const Image&);
 

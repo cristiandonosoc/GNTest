@@ -21,6 +21,11 @@ struct Pair {
   T& min() { return x; }
   T& max() { return y; }
 
+  T& operator[](size_t index) {
+    assert(index < 3);
+    return *((T*)this + index);
+  }
+
   Pair operator+(const Pair& rhs) const { return {x + rhs.x, y + rhs.y}; }
   Pair operator-(const Pair& rhs) const { return {x - rhs.x, y - rhs.y}; }
 
@@ -69,7 +74,7 @@ struct Pair3 {
 
   T& operator[](size_t index) {
     assert(index < 3);
-    return *((T*)this) + index;
+    return *((T*)this + index);
   }
 
   Pair3 operator+(const Pair3& rhs) const {
@@ -105,8 +110,6 @@ struct Pair3 {
     y *= v;
     z *= v;
   }
-
-
 
   std::string ToString() const {
     return StringPrintf("X: %f, Y: %f, Z: %f", (float)x, (float)y, (float)z);
@@ -190,8 +193,15 @@ struct Vec3 {
   bool operator==(const Vec3& rhs) const {
     return x == rhs.x && y == rhs.y && z == rhs.z;
   }
+
   bool operator!=(const Vec3& rhs) const {
     return x != rhs.x || y != rhs.y || z != rhs.z;
+  }
+
+  bool operator<(const Vec3& rhs) const {
+    if (x != rhs.x) return x < rhs.x;
+    if (y != rhs.y) return y < rhs.y;
+    return z < rhs.z;
   }
 
   Vec3 operator-() const { return {-x, -y, -z}; }
@@ -227,5 +237,20 @@ struct Vec3 {
     return StringPrintf("X: %f, Y: %f, Z: %f", x, y, z);
   }
 };
+
+inline size_t Hash(const Vec2& vec) {
+  size_t result = 0;
+  result = Math::CombineHash(result, Math::Hash(vec.x));
+  result = Math::CombineHash(result, Math::Hash(vec.y));
+  return result;
+}
+
+inline size_t Hash(const Vec3& vec) {
+  size_t result = 0;
+  result = Math::CombineHash(result, Math::Hash(vec.x));
+  result = Math::CombineHash(result, Math::Hash(vec.y));
+  result = Math::CombineHash(result, Math::Hash(vec.z));
+  return result;
+}
 
 }  // namespace warhol

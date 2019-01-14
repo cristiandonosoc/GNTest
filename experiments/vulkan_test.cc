@@ -2,6 +2,7 @@
 // This code has a BSD license. See LICENSE.
 
 #include <iostream>
+#include <optional>
 
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL_vulkan.h>
@@ -12,6 +13,7 @@
 #include <warhol/assets/assets.h>
 #include <warhol/debug/timer.h>
 #include <warhol/graphics/common/image.h>
+#include <warhol/graphics/common/mesh.h>
 #include <warhol/graphics/vulkan/context.h>
 #include <warhol/graphics/vulkan/utils.h>
 #include <warhol/sdl2/sdl_context.h>
@@ -23,15 +25,15 @@ using namespace warhol;
 
 namespace {
 
+struct ApplicationContext {
+  bool running = false;
+  bool window_size_changed = false;
+};
+
 struct UBO {
   glm::mat4 model;
   glm::mat4 view;
   glm::mat4 proj;
-};
-
-struct ApplicationContext {
-  bool running = false;
-  bool window_size_changed = false;
 };
 
 // TODO: Setup a better debug call.
@@ -152,13 +154,25 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
     return false;
   std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating vertex buffers...";
-  if (!vulkan::CreateDataBuffers(context, sizeof(UBO)))
+  std::cout << "Loading model..."; std::flush(std::cout);
+  const char* model_name = "chalet.obj";
+  auto model = LoadModel(Assets::ModelPath(model_name));
+  if (!model) {
+    LOG(ERROR) << "COuld not load " << model_name;
+    return false;
+  }
+
+  if (!vulkan::LoadModel(context, *model))
+    return false;
+  std::cout << " DONE" << std::endl;
+
+  std::cout << "Setting up UBO..."; std::flush(std::cout);
+  if (!vulkan::SetupUBO(context, sizeof(UBO)))
     return false;
   std::cout << " DONE" << std::endl;
 
   std::cout << "Creating texture buffers...";
-  Image image = Image::Create2DImageFromPath(Assets::TexturePath("wall.jpg"));
+  Image image = Image::Create2DImageFromPath(Assets::TexturePath("chalet.jpg"));
 
 #if 0
   Image image = {};
@@ -366,6 +380,18 @@ int main() {
   ApplicationContext app_context = {};
   SDLContext sdl_context = {};
   vulkan::Context vk_context = {};
+
+  /* { */
+  /*   Timer timer = Timer::ManualTimer(); */
+
+  /*   if (!LoadModel(Assets::ModelPath("chalet.obj"))) */
+  /*     return 1; */
+
+  /*   float timing = timer.End(); */
+  /*   LOG(INFO) << "Loaded model: " << timing << " ms."; */
+  /* } */
+
+  /* return 0; */
 
   {
     Timer timer = Timer::ManualTimer();

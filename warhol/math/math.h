@@ -3,8 +3,11 @@
 
 #pragma once
 
+#include <stdint.h>
+
 // For some reason math.h doesn't give us the symbols in some OS (eg. osx).
 #include <cmath>
+
 
 namespace warhol {
 
@@ -17,6 +20,18 @@ class Math {
  public:
   static constexpr float kPI = 3.14159265358979323846f;
   static constexpr float kSqrt2 = 1.4142135623730950488f;
+
+  static size_t Hash(float f) {
+    // We assume the float itself can hash.
+    uint32_t* as_uint = (uint32_t*)&f;
+    return *as_uint;
+  }
+
+  static size_t CombineHash(size_t lhs, size_t rhs) {
+		rhs += 0x9e3779b9 + (lhs << 6) + (lhs>> 2);
+    lhs ^= rhs;
+    return lhs;
+  }
 };
 
 inline float rad2deg(float rad) {

@@ -8,6 +8,7 @@
 #include <set>
 
 #include "warhol/graphics/common/image.h"
+#include "warhol/graphics/common/mesh.h"
 #include "warhol/graphics/vulkan/image_utils.h"
 #include "warhol/graphics/vulkan/memory.h"
 #include "warhol/graphics/vulkan/utils.h"
@@ -575,30 +576,40 @@ VkShaderModule CreateShaderModule(const VkDevice& device,
 }
 
 std::vector<VkVertexInputBindingDescription> GetBindingDescriptions() {
-  VkVertexInputBindingDescription bindings[3] = {};
+  std::vector<VkVertexInputBindingDescription> bindings;
 
-  auto& pos_binding = bindings[0];
-  pos_binding.binding = 0;
-  pos_binding.stride = 3 * sizeof(float);
-  pos_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+  VkVertexInputBindingDescription binding = {};
+  binding.binding = 0;
+  binding.stride = sizeof(Vertex);
+  binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+  bindings.emplace_back(std::move(binding));
 
-  auto& color_binding= bindings[1];
-  color_binding.binding = 1;
-  color_binding.stride = 3 * sizeof(float);
-  color_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+  return bindings;
 
-  auto& uv_binding = bindings[2];
-  uv_binding.binding = 2;
-  uv_binding.stride = 2 * sizeof(float);
-  uv_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+  /* VkVertexInputBindingDescription bindings[3] = {}; */
 
-  std::vector<VkVertexInputBindingDescription> result;
-  result.reserve(3);
-  result.emplace_back(std::move(bindings[0]));
-  result.emplace_back(std::move(bindings[1]));
-  result.emplace_back(std::move(bindings[2]));
+  /* auto& pos_binding = bindings[0]; */
+  /* pos_binding.binding = 0; */
+  /* pos_binding.stride = 3 * sizeof(float); */
+  /* pos_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX; */
 
-  return result;
+  /* auto& color_binding= bindings[1]; */
+  /* color_binding.binding = 1; */
+  /* color_binding.stride = 3 * sizeof(float); */
+  /* color_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX; */
+
+  /* auto& uv_binding = bindings[2]; */
+  /* uv_binding.binding = 2; */
+  /* uv_binding.stride = 2 * sizeof(float); */
+  /* uv_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX; */
+
+  /* std::vector<VkVertexInputBindingDescription> result; */
+  /* result.reserve(3); */
+  /* result.emplace_back(std::move(bindings[0])); */
+  /* result.emplace_back(std::move(bindings[1])); */
+  /* result.emplace_back(std::move(bindings[2])); */
+
+  /* return result; */
 }
 
 std::vector<VkVertexInputAttributeDescription> GetAttributeDescriptions() {
@@ -613,17 +624,17 @@ std::vector<VkVertexInputAttributeDescription> GetAttributeDescriptions() {
   descriptions.push_back(std::move(pos_desc));
 
   VkVertexInputAttributeDescription color_desc = {};
-  color_desc.binding = 1;
+  color_desc.binding = 0;
   color_desc.location = 1;
   color_desc.format = VK_FORMAT_R32G32B32_SFLOAT;
-  color_desc.offset = 0;
+  color_desc.offset = offsetof(Vertex, color);
   descriptions.push_back(std::move(color_desc));
 
   VkVertexInputAttributeDescription uv_desc = {};
-  uv_desc.binding = 2;
+  uv_desc.binding = 0;
   uv_desc.location = 2;
   uv_desc.format = VK_FORMAT_R32G32_SFLOAT;
-  uv_desc.offset = 0;
+  uv_desc.offset = offsetof(Vertex, uv);
   descriptions.push_back(std::move(uv_desc));
 
   return descriptions;
@@ -681,8 +692,10 @@ bool CreateGraphicsPipeline(Context* context) {
   VkPipelineVertexInputStateCreateInfo vertex_input = {};
   vertex_input.sType =
       VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  LOG(DEBUG) << "Bindings size: " << bindings.size();
   vertex_input.vertexBindingDescriptionCount = bindings.size();
   vertex_input.pVertexBindingDescriptions = bindings.data();
+  LOG(DEBUG) << "Attributes size: " << attributes.size();
   vertex_input.vertexAttributeDescriptionCount = attributes.size();
   vertex_input.pVertexAttributeDescriptions = attributes.data();
 
@@ -1018,6 +1031,8 @@ bool CreateDepthResources(Context* context) {
 
 namespace {
 
+#if 0
+
 constexpr size_t kColorOffset = 2 * 12 * sizeof(float);
 constexpr size_t kUVOffset = 2 * 24 * sizeof(float);
 const std::vector<float> vertices = {
@@ -1060,8 +1075,10 @@ const std::vector<uint16_t> indices = {
     4, 5, 6, 6, 7, 4,
 };
 
-bool CreateVertexBuffers(Context* context) {
-  VkDeviceSize size = vertices.size() * sizeof(vertices[0]);
+#endif
+
+bool CreateVertexBuffers(Context* context, const Mesh& mesh) {
+  VkDeviceSize size = mesh.vertices.size() * sizeof(mesh.vertices[0]);
 
   // Create a staging buffer.
   AllocBufferConfig alloc_config = {};
@@ -1079,7 +1096,7 @@ bool CreateVertexBuffers(Context* context) {
                0, &memory)) {
     return false;
   }
-  memcpy(memory, vertices.data(), size);
+  memcpy(memory, mesh.vertices.data(), size);
   vkUnmapMemory(*context->device, *staging_memory.memory);
 
   // Create the local memory and copy the memory to it.
@@ -1100,8 +1117,10 @@ bool CreateVertexBuffers(Context* context) {
   return true;
 }
 
-bool CreateIndicesBuffers(Context* context) {
-  VkDeviceSize size = indices.size() * sizeof(indices[0]);
+static size_t indices_count = 0;
+
+bool CreateIndicesBuffers(Context* context, const Mesh& mesh) {
+  VkDeviceSize size = mesh.indices.size() * sizeof(mesh.indices[0]);
 
   // Create a staging buffer.
   AllocBufferConfig alloc_config = {};
@@ -1119,7 +1138,7 @@ bool CreateIndicesBuffers(Context* context) {
                0, &memory)) {
     return false;
   }
-  memcpy(memory, indices.data(), size);
+  memcpy(memory, mesh.indices.data(), size);
   vkUnmapMemory(*context->device, *staging_memory.memory);
 
   // Create the local memory and copy the memory to it.
@@ -1135,17 +1154,32 @@ bool CreateIndicesBuffers(Context* context) {
     return false;
   }
 
+  indices_count = mesh.indices.size();
+
   // The stating buffers will be freed by Handle<>
   context->indices = std::move(indices_memory);
   return true;
 }
 
-bool CreateUniformBuffers(Context* context, VkDeviceSize size) {
-  context->ubo_size = size;
+}  // namespace
+
+bool LoadModel(Context* context, const Mesh& mesh) {
+  if (!CreateVertexBuffers(context, mesh) ||
+      !CreateIndicesBuffers(context, mesh)) {
+    return false;
+  }
+
+  return true;
+}
+
+// SetupUBO --------------------------------------------------------------------
+
+bool SetupUBO(Context* context , VkDeviceSize ubo_size) {
+  context->ubo_size = ubo_size;
   context->uniform_buffers.reserve(context->images.size());
   for (size_t i = 0; i < context->images.size(); i++) {
     AllocBufferConfig alloc_config = {};
-    alloc_config.size = size;
+    alloc_config.size = ubo_size;
     alloc_config.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -1154,23 +1188,12 @@ bool CreateUniformBuffers(Context* context, VkDeviceSize size) {
       return false;
 
     ubo.device = *context->device;
-    if (!VK_CALL(vkMapMemory, *context->device, *ubo.memory, 0,
-                              size, 0, &ubo.data)) {
+    if (!VK_CALL(vkMapMemory, *context->device, *ubo.memory, 0, ubo_size,
+                              0, &ubo.data)) {
       return false;
     }
 
     context->uniform_buffers.emplace_back(std::move(ubo));
-  }
-  return true;
-}
-
-}  // namespace
-
-bool CreateDataBuffers(Context* context, VkDeviceSize ubo_size) {
-  if (!CreateVertexBuffers(context) ||
-      !CreateIndicesBuffers(context) ||
-      !CreateUniformBuffers(context, ubo_size)) {
-    return false;
   }
   return true;
 }
@@ -1400,20 +1423,25 @@ bool CreateCommandBuffers(Context* context) {
       // We are binding the same buffer in two different points.
       VkBuffer vertex_buffers[] = {
           *context->vertices.handle,
-          *context->vertices.handle,
-          *context->vertices.handle,
+          /* *context->vertices.handle, */
+          /* *context->vertices.handle, */
       };
-      VkDeviceSize offsets[] = {0, kColorOffset, kUVOffset };
-      vkCmdBindVertexBuffers(command_buffer, 0, 3, vertex_buffers, offsets);
+      VkDeviceSize offsets[] = {
+        0,
+        /* kColorOffset, */
+        /* kUVOffset */
+      };
+      vkCmdBindVertexBuffers(command_buffer, 0,
+                             ARRAY_SIZE(vertex_buffers), vertex_buffers, offsets);
       vkCmdBindIndexBuffer(command_buffer, *context->indices.handle, 0,
-                           VK_INDEX_TYPE_UINT16);
+                           VK_INDEX_TYPE_UINT32);
 
       // We bind the descriptor sets.
       vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                               *context->pipeline_layout, 0, 1,
                               &context->descriptor_sets[i], 0, nullptr);
 
-      vkCmdDrawIndexed(command_buffer, (uint32_t)indices.size(), 1, 0, 0, 0);
+      vkCmdDrawIndexed(command_buffer, (uint32_t)indices_count, 1, 0, 0, 0);
     }
     vkCmdEndRenderPass(command_buffer);
 
