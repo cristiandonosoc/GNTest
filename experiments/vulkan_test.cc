@@ -173,6 +173,7 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
 
   std::cout << "Creating texture buffers...";
   Image image = Image::Create2DImageFromPath(Assets::TexturePath("chalet.jpg"));
+  image.mip_levels = 2;
 
 #if 0
   Image image = {};
@@ -225,8 +226,6 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   LOG(INFO) << "Vulkan context creation successful!";
   return true;
 }
-
-
 
 bool Update(const SDLContext& context, UBO* ubo) {
   float time = context.seconds();

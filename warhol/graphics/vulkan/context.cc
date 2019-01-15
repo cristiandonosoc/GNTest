@@ -378,9 +378,11 @@ bool CreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
 bool CreateImageViews(Context* context) {
   context->image_views.clear();
   for (size_t i = 0; i < context->images.size(); i++) {
-    VkFormat format = context->swap_chain_details.format.format;
-    auto image_view = CreateImageView(context, context->images[i], format,
-                                      VK_IMAGE_ASPECT_COLOR_BIT);
+    CreateImageViewConfig config = {};
+    config.image = context->images[i];
+    config.format = context->swap_chain_details.format.format;
+    config.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+    auto image_view = CreateImageView(context, config);
     if (!image_view.has_value())
       return false;
 
@@ -1008,8 +1010,11 @@ bool CreateDepthResources(Context* context) {
   if (!image.has_value())
     return false;
 
-  auto image_view = CreateImageView(context, *image.handle, depth_format,
-                                    VK_IMAGE_ASPECT_DEPTH_BIT);
+  CreateImageViewConfig config = {};
+  config.image = *image.handle;
+  config.format = depth_format;
+  config.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
+  auto image_view = CreateImageView(context, config);
   if (!image_view.has_value())
     return false;
 
@@ -1227,7 +1232,7 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
   image_info.format = ToVulkan(src.format);
   image_info.imageType = ToVulkan(src.type);
   image_info.extent = { (uint32_t)src.width, (uint32_t)src.height, 1 };
-  image_info.mipLevels = 1;
+  image_info.mipLevels = src.mip_levels;
   image_info.arrayLayers = 1;
   image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
   image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
@@ -1236,6 +1241,10 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
   image_info.samples = VK_SAMPLE_COUNT_1_BIT;
   image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  // If we're creating mip levels, this image will also be a source for copy
+  // operations.
+  if (image_config.create_info.mipLevels > 1)
+    image_config.create_info.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
   MemoryBacked<VkImage> image = CreateImage(context, image_config);
   if (!image.has_value())
     return false;
@@ -1245,6 +1254,7 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
   transition_config.format = VK_FORMAT_B8G8R8A8_UNORM;
   transition_config.old_layout = VK_IMAGE_LAYOUT_UNDEFINED;
   transition_config.new_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  transition_config.mip_levels = src.mip_levels;
   if (!TransitionImageLayout(context, *image.handle, transition_config))
     return false;
 
@@ -1254,11 +1264,18 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
     return false;
   }
 
-  // We now transition the image to the sampling layout.
-  transition_config.old_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  transition_config.new_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  if (!TransitionImageLayout(context, *image.handle, transition_config))
-      return false;
+  LOG(DEBUG) << "Generating mip maps.";
+
+  // Generate all the mipmaps for this texture.
+  // Generating the mipmaps will take care of the transition to
+  // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL for us.
+  GenerateMipmapsConfig mipmap_config = {};
+  mipmap_config.image = *image.handle;
+  mipmap_config.width = src.width;
+  mipmap_config.height = src.height;
+  mipmap_config.mip_levels = src.mip_levels;
+  if (!GenerateMipmaps(context, mipmap_config))
+    return false;
 
   context->texture = std::move(image);
   return true;
@@ -1267,9 +1284,12 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
 // CreateTextureImageView ------------------------------------------------------
 
 bool CreateTextureImageView(Context* context, const Image& src_image) {
-  auto image_view = CreateImageView(context, *context->texture.handle,
-                                    ToVulkan(src_image.format),
-                                    VK_IMAGE_ASPECT_COLOR_BIT);
+  CreateImageViewConfig config = {};
+  config.image = *context->texture.handle;
+  config.format = ToVulkan(src_image.format);
+  config.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+  config.mip_levels = src_image.mip_levels;
+  auto image_view = CreateImageView(context, config);
   if (!image_view.has_value())
     return false;
 

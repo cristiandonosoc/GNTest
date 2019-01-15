@@ -5,6 +5,7 @@
 
 #include <third_party/stb/stb_image.h>
 
+#include "warhol/math/math.h"
 #include "warhol/utils/assert.h"
 
 namespace warhol {
@@ -21,7 +22,13 @@ Image Image::Create2DImageFromPath(const std::string& path) {
                          STBI_rgb_alpha);
   if (!image.valid())
     image.Release();
+
   image.data_size = image.width * image.height * STBI_rgb_alpha;
+  image.mip_levels = (int)Math::floor(Math::log2(Math::max(image.width,
+                                                           image.height)));
+  // At minimum we need a 1.
+  if (image.mip_levels < 1)
+    image.mip_levels = 1;
 
   return image;
 }

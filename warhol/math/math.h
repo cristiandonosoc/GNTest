@@ -8,7 +8,6 @@
 // For some reason math.h doesn't give us the symbols in some OS (eg. osx).
 #include <cmath>
 
-
 namespace warhol {
 
 struct Vec3;
@@ -32,6 +31,20 @@ class Math {
     lhs ^= rhs;
     return lhs;
   }
+
+  template <typename T>
+  static T max(const T& lhs, const T& rhs) {
+    return lhs < rhs ? lhs : rhs;
+  }
+
+  static float floor(float f) {
+    return (float)((int)f);
+  }
+
+  static float log2(float f) {
+    return std::log2(f);
+  }
+
 };
 
 inline float rad2deg(float rad) {

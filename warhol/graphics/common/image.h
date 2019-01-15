@@ -29,7 +29,6 @@ struct Image {
     kLast,
   };
 
-
   static Image Create2DImageFromPath(const std::string&);
   // Will also clear the fields from |this|.
   uint8_t* Release();
@@ -44,6 +43,7 @@ struct Image {
   int width = -1;
   int height = -1;
   int channels = -1;
+  int mip_levels = 1;
 
   ClearOnMove<uint8_t*> data = nullptr;
   int data_size = 0;
