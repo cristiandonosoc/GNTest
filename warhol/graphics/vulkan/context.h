@@ -83,6 +83,9 @@ struct Context {
   std::vector<VkImage> images;    // Freed with |swap_chain|.
   std::vector<Handle<VkImageView>> image_views;
 
+  MemoryBacked<VkImage> msaa_image;
+  Handle<VkImageView> msaa_image_view;
+
   VkFormat depth_format = VK_FORMAT_UNDEFINED;
   MemoryBacked<VkImage> depth_image;
   Handle<VkImageView> depth_image_view;
@@ -142,6 +145,8 @@ bool CreateImageViews(Context*);
 
 bool CreateCommandPool(Context*);
 
+bool CreateMsaa(Context*);
+
 bool CreateDepthResources(Context*);
 
 bool CreateRenderPass(Context*);
@@ -167,7 +172,7 @@ bool CreateTextureBuffers(Context*, const Image&);
 
 bool CreateTextureImageView(Context*, const Image&);
 
-bool CreateTextureSampler(Context*);
+bool CreateTextureSampler(Context*, const Image&);
 
 // This wil also create the descriptor pools.
 bool CreateDescriptorSets(Context*);

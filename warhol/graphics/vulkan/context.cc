@@ -392,9 +392,9 @@ bool CreateImageViews(Context* context) {
   return true;
 }
 
-// CreateTextureSampler --------------------------------------------------------
+// CreateTextureSamplea --------------------------------------------------------
 
-bool CreateTextureSampler(Context* context) {
+bool CreateTextureSampler(Context* context, const Image& image) {
   VkSamplerCreateInfo sampler_info = {};
   sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
   sampler_info.minFilter = VK_FILTER_LINEAR;
@@ -416,7 +416,7 @@ bool CreateTextureSampler(Context* context) {
   sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
   sampler_info.mipLodBias = 0.0f;
   sampler_info.minLod = 0.0f;
-  sampler_info.maxLod = 0.0f;
+  sampler_info.maxLod = (float)image.mip_levels;
 
   VkSampler sampler_handle;
   if (!VK_CALL(vkCreateSampler, *context->device, &sampler_info, nullptr,
@@ -641,6 +641,20 @@ std::vector<VkVertexInputAttributeDescription> GetAttributeDescriptions() {
 
   return descriptions;
 }
+
+VkSampleCountFlagBits GetMaxSampleCount(
+    const VkPhysicalDeviceProperties& properties) {
+  VkSampleCountFlags counts =
+      Math::min(properties.limits.framebufferColorSampleCounts,
+                properties.limits.framebufferDepthSampleCounts);
+  if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
+  if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
+  if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
+  if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
+  if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
+  if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
+
+  return VK_SAMPLE_COUNT_1_BIT;
 
 }  // namespace
 
@@ -946,6 +960,37 @@ bool CreateCommandPool(Context* context) {
   return true;
 }
 
+// CreateMsaa ------------------------------------------------------------------
+
+bool CreateMsaa(Context* context, const Image& src_img) {
+  CreateImageConfig image_config = {};
+  VkImageCreateInfo& image_info = image_config.create_info;
+  image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  image_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+  image_info.imageType = VK_IMAGE_TYPE_2D;
+  image_info.extent.width = src_img.width;
+  image_info.extent.height = src_img.height;
+  image_info.extent.depth = 1;
+  image_info.mipLevels = 1;
+  image_info.arrayLayers = 1;
+  image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+  image_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                     VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                     VK_IMAGE_USAGE_SAMPLED_BIT;
+  image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+  image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+  image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  MemoryBacked<VkImage> mbi = CreateImage(context, image_config);
+  if (!mbi.has_value())
+    return false;
+
+
+
+}
+
 // CreateDepthResources --------------------------------------------------------
 
 namespace {
@@ -1040,46 +1085,6 @@ namespace {
 
 constexpr size_t kColorOffset = 2 * 12 * sizeof(float);
 constexpr size_t kUVOffset = 2 * 24 * sizeof(float);
-const std::vector<float> vertices = {
-  // Positions
-  -0.5f, -0.5f,  0.0f,
-   0.5f, -0.5f,  0.0f,
-   0.5f,  0.5f,  0.0f,
-  -0.5f,  0.5f,  0.0f,
-
-  -0.5f, -0.5f,  -0.5f,
-   0.5f, -0.5f,  -0.5f,
-   0.5f,  0.5f,  -0.5f,
-  -0.5f,  0.5f,  -0.5f,
-
-  // Colors
-   1.0f,  0.0f,  0.0f,
-   0.0f,  1.0f,  0.0f,
-   0.0f,  0.0f,  1.0f,
-   1.0f,  1.0f,  1.0f,
-
-   1.0f,  0.0f,  0.0f,
-   0.0f,  1.0f,  0.0f,
-   0.0f,  0.0f,  1.0f,
-   1.0f,  1.0f,  1.0f,
-
-  // UV
-   0.0f,  0.0f,
-   1.0f,  0.0f,
-   1.0f,  1.0f,
-   0.0f,  1.0f,
-
-   0.0f,  0.0f,
-   1.0f,  0.0f,
-   1.0f,  1.0f,
-   0.0f,  1.0f,
-};
-
-const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4,
-};
-
 #endif
 
 bool CreateVertexBuffers(Context* context, const Mesh& mesh) {
@@ -1271,6 +1276,7 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
   // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL for us.
   GenerateMipmapsConfig mipmap_config = {};
   mipmap_config.image = *image.handle;
+  mipmap_config.format = ToVulkan(src.format);
   mipmap_config.width = src.width;
   mipmap_config.height = src.height;
   mipmap_config.mip_levels = src.mip_levels;

@@ -36,6 +36,41 @@ struct UBO {
   glm::mat4 proj;
 };
 
+const std::vector<Vertex> vertices = {
+  {{-0.5f, -0.5f,  0.0f},
+    {1.0f,  0.0f,  0.0f},
+   {0.0f,  0.0f}},
+  {{0.5f, -0.5f,  0.0f},
+    {0.0f,  1.0f,  0.0f},
+    {1.0f,  0.0f}},
+  {{0.5f,  0.5f,  0.0f},
+    {0.0f,  0.0f,  1.0f},
+    {1.0f,  1.0f}},
+  {{-0.5f,  0.5f,  0.0f},
+    {1.0f,  1.0f,  1.0f},
+    {0.0f,  1.0f}},
+
+  {{-0.5f, -0.5f,  -0.5f},
+    {1.0f,  0.0f,  0.0f},
+    {0.0f,  0.0f}},
+  {{0.5f, -0.5f,  -0.5f},
+    {0.0f,  1.0f,  0.0f},
+    {1.0f,  0.0f}},
+  {{0.5f,  0.5f,  -0.5f},
+    {0.0f,  0.0f,  1.0f},
+    {1.0f,  1.0f}},
+  {{-0.5f,  0.5f,  -0.5f},
+    {1.0f,  1.0f,  1.0f},
+    {0.0f,  1.0f}},
+};
+
+const std::vector<uint32_t> indices = {
+    0, 1, 2, 2, 3, 0,
+    4, 5, 6, 6, 7, 4,
+};
+
+
+
 // TODO: Setup a better debug call.
 static VKAPI_ATTR VkBool32 VKAPI_CALL
 VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
@@ -155,14 +190,33 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   std::cout << " DONE" << std::endl;
 
   std::cout << "Loading model..."; std::flush(std::cout);
-  const char* model_name = "chalet.obj";
-  auto model = LoadModel(Assets::ModelPath(model_name));
-  if (!model) {
-    LOG(ERROR) << "COuld not load " << model_name;
-    return false;
-  }
+  /* const char* model_name = "chalet.obj"; */
+  /* auto model = LoadModel(Assets::ModelPath(model_name)); */
+  /* if (!model) { */
+  /*   LOG(ERROR) << "COuld not load " << model_name; */
+  /*   return false; */
+  /* } */
 
-  if (!vulkan::LoadModel(context, *model))
+  Mesh mesh = {};
+  mesh.vertices = vertices;
+  /* const float* begin = vertices.data(); */
+  /* const float* end = begin + vertices.size(); */
+
+  /* const float* ptr = begin; */
+  /* while (begin < end) { */
+  /*   const Vertex* v = (const Vertex*)ptr; */
+  /*   mesh.vertices.push_back(*v); */
+  /*   ptr += (sizeof(Vertex) / sizeof(float)); */
+  /* } */
+
+  /* mesh.vertices.resize(vertices.size() / sizeof(Vertex)); */
+  /* float* ptr = (float*)mesh.vertices.data(); */
+  /* for (float f : vertices) { */
+  /*   *ptr++ = f; */
+  /* } */
+  mesh.indices = indices;
+
+  if (!vulkan::LoadModel(context, mesh))
     return false;
   std::cout << " DONE" << std::endl;
 
@@ -173,7 +227,7 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
 
   std::cout << "Creating texture buffers...";
   Image image = Image::Create2DImageFromPath(Assets::TexturePath("chalet.jpg"));
-  image.mip_levels = 2;
+  /* image.mip_levels = 2; */
 
 #if 0
   Image image = {};
@@ -204,7 +258,7 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   std::cout << " DONE" << std::endl;
 
   std::cout << "Creating texture sampler...";
-  if (!vulkan::CreateTextureSampler(context))
+  if (!vulkan::CreateTextureSampler(context, image))
     return false;
   std::cout << " DONE" << std::endl;
 
@@ -379,18 +433,6 @@ int main() {
   ApplicationContext app_context = {};
   SDLContext sdl_context = {};
   vulkan::Context vk_context = {};
-
-  /* { */
-  /*   Timer timer = Timer::ManualTimer(); */
-
-  /*   if (!LoadModel(Assets::ModelPath("chalet.obj"))) */
-  /*     return 1; */
-
-  /*   float timing = timer.End(); */
-  /*   LOG(INFO) << "Loaded model: " << timing << " ms."; */
-  /* } */
-
-  /* return 0; */
 
   {
     Timer timer = Timer::ManualTimer();

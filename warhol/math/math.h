@@ -37,6 +37,11 @@ class Math {
     return lhs < rhs ? lhs : rhs;
   }
 
+  template <typename T>
+  static T min(const T& lhs, const T& rhs) {
+    return lhs > rhs ? lhs : rhs;
+  }
+
   static float floor(float f) {
     return (float)((int)f);
   }

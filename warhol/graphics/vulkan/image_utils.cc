@@ -190,9 +190,22 @@ inline int GetDstMip(int mip) {
   return mip;
 }
 
+bool CheckForFilteringSupport(VkPhysicalDevice device, VkFormat format) {
+  VkFormatProperties format_properties;
+  vkGetPhysicalDeviceFormatProperties(device, format, &format_properties);
+
+  return format_properties.optimalTilingFeatures &
+         VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+}
+
 }  // namespace
 
 bool GenerateMipmaps(Context* context, const GenerateMipmapsConfig& config) {
+  if (!CheckForFilteringSupport(context->physical_device, config.format)) {
+    LOG(ERROR) << "No linear filtering support.";
+    return false;
+  }
+
   Handle<VkCommandBuffer> command_buffer = BeginSingleTimeCommands(context);
   if (!command_buffer.has_value())
     return false;

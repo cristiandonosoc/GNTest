@@ -42,6 +42,7 @@ bool TransitionImageLayout(Context*, VkImage image,
 
 struct GenerateMipmapsConfig {
   VkImage image;
+  VkFormat format;
   uint32_t width;
   uint32_t height;
   uint32_t mip_levels;
