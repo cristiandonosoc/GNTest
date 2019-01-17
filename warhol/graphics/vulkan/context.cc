@@ -642,20 +642,6 @@ std::vector<VkVertexInputAttributeDescription> GetAttributeDescriptions() {
   return descriptions;
 }
 
-VkSampleCountFlagBits GetMaxSampleCount(
-    const VkPhysicalDeviceProperties& properties) {
-  VkSampleCountFlags counts =
-      Math::min(properties.limits.framebufferColorSampleCounts,
-                properties.limits.framebufferDepthSampleCounts);
-  if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
-  if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
-  if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
-  if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
-  if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
-  if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
-
-  return VK_SAMPLE_COUNT_1_BIT;
-
 }  // namespace
 
 bool CreateGraphicsPipeline(Context* context) {
@@ -958,37 +944,6 @@ bool CreateCommandPool(Context* context) {
 
   context->command_pool.Set(context, std::move(command_pool));
   return true;
-}
-
-// CreateMsaa ------------------------------------------------------------------
-
-bool CreateMsaa(Context* context, const Image& src_img) {
-  CreateImageConfig image_config = {};
-  VkImageCreateInfo& image_info = image_config.create_info;
-  image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  image_info.format = VK_FORMAT_R8G8B8A8_UNORM;
-  image_info.imageType = VK_IMAGE_TYPE_2D;
-  image_info.extent.width = src_img.width;
-  image_info.extent.height = src_img.height;
-  image_info.extent.depth = 1;
-  image_info.mipLevels = 1;
-  image_info.arrayLayers = 1;
-  image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-  image_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                     VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                     VK_IMAGE_USAGE_SAMPLED_BIT;
-  image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  image_info.samples = VK_SAMPLE_COUNT_1_BIT;
-  image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-  image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  MemoryBacked<VkImage> mbi = CreateImage(context, image_config);
-  if (!mbi.has_value())
-    return false;
-
-
-
 }
 
 // CreateDepthResources --------------------------------------------------------

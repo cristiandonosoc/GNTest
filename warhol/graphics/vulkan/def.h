@@ -8,3 +8,14 @@
 // to find the headers, we can case it here and leave the other code alone.
 
 #include <vulkan/vulkan.h>
+
+namespace warhol {
+namespace vulkan {
+
+constexpr int kMaxFramesInFlight = 2;
+
+// TODO(Cristian): Actually use this when creating framebuffers.
+constexpr int kNumFrames = 2;
+
+}  // namespace vulkan
+}  // namespace warhol

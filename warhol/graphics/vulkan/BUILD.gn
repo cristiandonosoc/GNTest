@@ -46,6 +46,8 @@ config("config") {
 
 source_set("lib") {
   sources = [
+    "allocator.cc",
+    "allocator.h",
     "commands.cc",
     "commands.h",
     "context.cc",

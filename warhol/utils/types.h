@@ -9,6 +9,16 @@
 
 namespace warhol {
 
+struct MemoryDefs {
+  static constexpr size_t kKilobyte = 1024;
+  static constexpr size_t kMegabyte = 1024 * 1024;
+  static constexpr size_t kGigabyte = 1024 * 1024 * 1024;
+};
+
+#define KILOBYTES(count) count * ::warhol::MemoryDefs::kKilobyte
+#define MEGABYTES(count) count * ::warhol::MemoryDefs::kMegabyte
+#define GIGABYTES(count) count * ::warhol::MemoryDefs::kGigabyte
+
 struct Limits {
   static constexpr uint16_t kUint8Min = std::numeric_limits<uint8_t>::min();
   static constexpr uint16_t kUint8Max = std::numeric_limits<uint8_t>::max();

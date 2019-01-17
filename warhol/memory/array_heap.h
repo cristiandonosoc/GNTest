@@ -5,7 +5,7 @@
 
 #include <mutex>
 
-#include "warhol/memory/types.h"
+#include "warhol/utils/types.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/macros.h"
 

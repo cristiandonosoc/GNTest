@@ -33,7 +33,10 @@
 
 #define DECLARE_CONSTRUCTOR(class_name) class_name();
 #define DELETE_CONSTRUCTOR(class_name) class_name() = delete;
-#define DEFAULT_CONSTRUCTOR(class_name) class_name() = delete;
+#define DEFAULT_CONSTRUCTOR(class_name) class_name() = default;
+
+#define DECLARE_DESTRUCTOR(class_name) ~class_name();
+#define DEFAULT_DESTRUCTOR(class_name) ~class_name() = default;
 
 #define DECLARE_COPY_AND_ASSIGN(class_name) \
   class_name(const class_name&);            \
