@@ -21,6 +21,21 @@ struct Context;
 template <typename HandleType>
 struct MemoryBacked;
 
+enum class MemoryUsage {
+  kNone,
+  kGPUOnly,
+  kCPUOnly,
+  kCPUToGPU,
+  kGPUToCPU,
+};
+const char* MemoryUsageToString(MemoryUsage);
+
+// |memory_type_bits| determines what kind of memory we can use.
+// This is normally given by |vkGetBufferMemoryRequirements| or its image
+// equivalent.
+// Returns UINT32_MAX on error.
+uint32_t FindMemoryTypeIndex(Context*, MemoryUsage, uint32_t memory_type_bits);
+
 // Memory ----------------------------------------------------------------------
 
 Handle<VkDeviceMemory>

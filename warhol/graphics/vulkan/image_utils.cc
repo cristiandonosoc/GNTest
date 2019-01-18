@@ -225,8 +225,6 @@ bool GenerateMipmaps(Context* context, const GenerateMipmapsConfig& config) {
   int mip_height = config.height;
 
   for (uint32_t i = 1; i < config.mip_levels; i++) {
-    LOG(DEBUG) << "Mip level " << i - 1 << ": Transition to src.";
-
     // We prepare each mip map for destination, marking the current one to be
     // a src transfer, while keeping the next one as dst.
     barrier.subresourceRange.baseMipLevel = i - 1;
@@ -242,8 +240,6 @@ bool GenerateMipmaps(Context* context, const GenerateMipmapsConfig& config) {
                          0, nullptr,
                          0, nullptr,
                          1, &barrier);
-
-    LOG(DEBUG) << "Mip level " << i << ": Blitting.";
 
     // We blit the new mip map.
     VkImageBlit blit = {};
@@ -265,8 +261,6 @@ bool GenerateMipmaps(Context* context, const GenerateMipmapsConfig& config) {
                    1, &blit,
                    VK_FILTER_LINEAR);
 
-    LOG(DEBUG) << "Mip level " << i - 1 << ": transition to shared read.";
-
     // We barrier the src mipmap to read access from the shader.
     barrier.subresourceRange.baseMipLevel = i - 1;
     barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -285,8 +279,6 @@ bool GenerateMipmaps(Context* context, const GenerateMipmapsConfig& config) {
     mip_width = GetDstMip(mip_width);
     mip_height = GetDstMip(mip_height);
   }
-
-  LOG(DEBUG) << "Mip level " << config.mip_levels - 1 << ": transition to shared read.";
 
   // We need to transfer the last mip level to shader read.
   barrier.subresourceRange.baseMipLevel = config.mip_levels - 1;
