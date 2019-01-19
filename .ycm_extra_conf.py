@@ -37,6 +37,7 @@ import ycm_core
 flags = [
 '-Wall',
 '-Wextra',
+'Wmissing-prototypes',
 '-x', 'c++',
 '--std=c++17',
 '-I', os.path.join(os.getcwd()),

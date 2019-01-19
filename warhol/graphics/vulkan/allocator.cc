@@ -3,20 +3,78 @@
 
 #include "warhol/graphics/vulkan/allocator.h"
 
+#include "warhol/graphics/vulkan/utils.h"
 #include "warhol/graphics/vulkan/context.h"
 #include "warhol/utils/assert.h"
+#include "warhol/utils/log.h"
 
 namespace warhol {
 namespace vulkan {
 
-// MemoryPool ------------------------------------------------------------------
+// MemoryBlock -----------------------------------------------------------------
 
-bool Init(MemoryPool*, const InitMemoryPoolConfig&) {
-  NOT_IMPLEMENTED();
-  return false;
+const char*
+MemoryBlock::AllocationTypeToString(MemoryBlock::AllocationType type) {
+  switch (type) {
+    case AllocationType::kFree: return "kFree";
+    case AllocationType::kBuffer: return "kBuffer";
+    case AllocationType::kImage: return "kImage";
+    case AllocationType::kImageLinear: return "kImageLinear";
+    case AllocationType::kImageOptional: return "kImageOptional";
+    case AllocationType::kNone: break;
+  }
+
+  NOT_REACHED();
+  return nullptr;
 }
 
-bool Shutdown(MemoryPool*);
+// MemoryPool ------------------------------------------------------------------
+
+MemoryPool::~MemoryPool() { Shutdown(this); }
+
+bool Init(Context* context, MemoryPool* pool,
+          const InitMemoryPoolConfig& config) {
+  pool->id = config.id;
+  pool->memory_type_index = config.memory_type_index;
+  pool->memory_usage = config.memory_usage;
+  pool->size = config.size;
+
+  auto memory = AllocMemory(context, pool->size, pool->memory_type_index);
+  if (!memory.has_value())
+    return false;
+
+  pool->memory= std::move(memory);
+
+  if (pool->is_host_visible()) {
+    if (!VK_CALL(vkMapMemory, *context->device, *pool->memory, 0, pool->size,
+                              0, (void**)&pool->data)) {
+      return false;
+    }
+  }
+
+  // Create an initial free block.
+  auto head = std::make_unique<MemoryBlock>();
+  *head = {};
+  head->id = pool->next_block_id++;
+  head->size = pool->size;
+  head->offset = 0;
+  head->allocation_type = MemoryBlock::AllocationType::kFree;
+
+  pool->head = std::move(head);
+  return true;
+}
+
+void Shutdown(MemoryPool* pool) {
+  if (pool->is_host_visible())
+    vkUnmapMemory(pool->memory.context()->device.value(), *pool->memory);
+  pool->memory.Clear();
+
+  // This will call all the chain destructors.
+  pool->head.reset();
+
+  // Once all the resources have been freed, we clear the values.
+  *pool = {};
+}
 
 bool AllocateFrom(MemoryPool*, uint32_t , uint32_t , Allocation*) {
   NOT_IMPLEMENTED();
@@ -29,12 +87,72 @@ bool Free(MemoryPool*, Allocation* out);
 
 namespace {
 
-bool
-AllocateFromPools(Context* context, Allocator* allocator,
+bool AllocateFromPools(Allocator* allocator, const AllocateConfig& config,
+                       uint32_t memory_type_index, Allocation* out) {
+  for (MemoryPool& pool : allocator->pools) {
+    if (pool.memory_type_index != memory_type_index)
+      continue;
+
+    if (AllocateFrom(&pool, config.size, config.align, out))
+      return true;
+  }
+
+  // We could not allocate from any of the existent pools.
+  return false;
+}
+
+}  // namespace
+
+bool AllocateFrom(Context* context, Allocator* allocator,
                   const AllocateConfig& config, Allocation* out) {
+  uint32_t memory_type_index = FindMemoryTypeIndex(
+      context, config.memory_usage, config.memory_type_bits);
+  if (memory_type_index == UINT32_MAX) {
+    LOG(ERROR) << "Could not find a memory type index.";
+    return false;
+  }
+
+  // See if we can allocate from one of the existent pools.
+  if (AllocateFromPools(allocator, config, memory_type_index, out))
+    return true;
+
+  // Can't allocate from existent pools. Creating a new one.
+  VkDeviceSize pool_size = (config.memory_usage == MemoryUsage::kGPUOnly)
+                               ? allocator->host_visible_memory_size
+                               : allocator->device_local_memory_size;
+
+  MemoryPool memory_pool;
+  InitMemoryPoolConfig init_config = {};
+  init_config.id = allocator->next_pool_id++;
+  init_config.memory_type_index = memory_type_index;
+  init_config.memory_usage = config.memory_usage;
+  init_config.size = pool_size;
+  if (!Init(context, &memory_pool, init_config))
+    return false;
+
+  allocator->pools.push_back(std::move(memory_pool));
+
+  // Allocate directly from the pool. If we can't we simply fail.
+  if (!AllocateFrom(&memory_pool, config.size, config.align, out)) {
+    LOG(ERROR) << "Could not allocated from a new pool.";
+    return false;
+  }
+
+  return true;
+}
+
+namespace {
+
+
+#if 0
+
+bool AllocateFromPools(Context* context,
+                       Allocator* allocator,
+                       const AllocateConfig& config,
+                       Allocation* out) {
   const auto& mem_properties = context->physical_device_info.memory_properties;
 
-  VkMemoryPropertyFlags required = 0;   // Device local by default.
+  VkMemoryPropertyFlags required = 0;  // Device local by default.
   if (config.host_visible) {
     required = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -92,37 +210,9 @@ AllocateFromPools(Context* context, Allocator* allocator,
   return false;
 }
 
+#endif
+
 }  // namespace
-
-
-bool Allocate(Context* context, Allocator* allocator,
-              const AllocateConfig& config, Allocation* out) {
-  // See if we can allocate from one of the existent pools.
-  if (AllocateFromPools(context, allocator, config, out))
-    return true;
-
-  // Can't allocate from existent pools. Creating a new one.
-  VkDeviceSize pool_size = config.host_visible
-                               ? allocator->host_visible_memory_size
-                               : allocator->device_local_memory_size;
-
-  MemoryPool memory_pool;
-  InitMemoryPoolConfig init_config = {};
-  init_config.id = allocator->next_pool_id++;
-  init_config.memory_types = config.memory_types;
-  init_config.size = pool_size;
-  init_config.host_visible = config.host_visible;
-  if (!Init(&memory_pool, init_config))
-    return false;
-
-  allocator->pools.push_back(std::move(memory_pool));
-
-  // Allocate directly from the pool. If we can't we simply fail.
-  if (!AllocateFrom(&memory_pool, config.size, config.align, out))
-    return false;
-
-  return true;
-}
 
 }  // namespace vulkan
 }  // namespace warhol

@@ -42,6 +42,9 @@ Handle<VkDeviceMemory>
 AllocMemory(Context* context, const VkMemoryRequirements& memory_reqs,
             const VkMemoryPropertyFlags& desired_properties);
 
+Handle<VkDeviceMemory>
+AllocMemory(Context*, VkDeviceSize size, uint32_t memory_type_index);
+
 // VkBuffer --------------------------------------------------------------------
 
 // Creates a VkBuffer and allocates it.

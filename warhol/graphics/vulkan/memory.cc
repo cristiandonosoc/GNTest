@@ -29,14 +29,14 @@ const char* MemoryUsageToString(MemoryUsage memory_usage) {
 // |type_filter| comes from the |memoryTypeBits| field in VkMemoryRequirements.
 // That field establishes the index of all the valid memory types within the
 // |memoryTypes| array in VkPhysicalDeviceMemoryProperties.
-bool FindMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& properties,
-                         uint32_t type_filter,
-                         VkMemoryPropertyFlags desired_flags,
-                         uint32_t* memory_type_index) {
+static bool
+FindMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& properties,
+                    uint32_t type_filter, VkMemoryPropertyFlags desired_flags,
+                    uint32_t* memory_type_index) {
   for (uint32_t i = 0; i < properties.memoryTypeCount; i++) {
     const VkMemoryType& memory_type = properties.memoryTypes[i];
     if ((type_filter & (1 << i) &&
-        (memory_type.propertyFlags & desired_flags) == desired_flags)) {
+         (memory_type.propertyFlags & desired_flags) == desired_flags)) {
       *memory_type_index = i;
       return true;
     }
@@ -103,6 +103,24 @@ uint32_t FindMemoryTypeIndex(Context* context, MemoryUsage memory_usage,
   return UINT32_MAX;
 }
 
+// AllocMemory -----------------------------------------------------------------
+
+Handle<VkDeviceMemory>
+AllocMemory(Context* context, VkDeviceSize size, uint32_t memory_type_index) {
+  VkMemoryAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.allocationSize = size;
+  alloc_info.memoryTypeIndex = memory_type_index;
+
+  VkDeviceMemory memory;
+  if (!VK_CALL(vkAllocateMemory, *context->device, &alloc_info, nullptr,
+                                 &memory)) {
+    return {};
+  }
+  return {context, memory};
+}
+
+
 Handle<VkDeviceMemory>
 AllocMemory(Context* context, const VkMemoryRequirements& memory_reqs,
             const VkMemoryPropertyFlags& desired_properties) {
@@ -113,17 +131,7 @@ AllocMemory(Context* context, const VkMemoryRequirements& memory_reqs,
     return {};
   }
 
-  VkMemoryAllocateInfo alloc_info = {};
-  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  alloc_info.allocationSize = memory_reqs.size;
-  alloc_info.memoryTypeIndex = memory_type_index;
-
-  VkDeviceMemory memory;
-  if (!VK_CALL(vkAllocateMemory, *context->device, &alloc_info, nullptr,
-                                 &memory)) {
-    return {};
-  }
-  return {context, memory};
+  return AllocMemory(context, memory_reqs.size, memory_type_index);
 }
 
 // VkBuffer --------------------------------------------------------------------

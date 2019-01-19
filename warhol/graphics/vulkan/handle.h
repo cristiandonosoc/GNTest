@@ -54,6 +54,8 @@ struct Handle {
   HandleType* operator->() { return &handle_; }
   HandleType& value() { return handle_; }
 
+  Context* context() { return context_; }
+
  private:
   // This function creates the corresponding freeing of the resource.
   // These are specialized on demand. If you get weird Handle<type> undefined

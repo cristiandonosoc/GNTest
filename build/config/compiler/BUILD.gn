@@ -58,6 +58,7 @@ if (compiler == "clang") {
       "-Wextra",
       "-Werror",
       "-Wno-unused-function",
+      "-Wmissing-prototypes",
     ]
   }
 
