@@ -247,6 +247,16 @@ bool CreateLogicalDevice(Context* context) {
   context->device.Set(context, device);
   vkGetDeviceQueue(device, indices.graphics, 0, &context->graphics_queue);
   vkGetDeviceQueue(device, indices.present, 0, &context->present_queue);
+
+  return true;
+}
+
+// CreateAllocator -------------------------------------------------------------
+
+bool CreateAllocator(Context* context) {
+  Allocator allocator = {};
+  Init(&allocator, MEGABYTES(32), MEGABYTES(32));
+  context->allocator = std::move(allocator);
   return true;
 }
 

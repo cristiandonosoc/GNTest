@@ -3,24 +3,54 @@
 
 #include "warhol/graphics/vulkan/allocator.h"
 
+#include "warhol/containers/sort.h"
 #include "warhol/graphics/vulkan/utils.h"
 #include "warhol/graphics/vulkan/context.h"
+#include "warhol/utils/align.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
 namespace vulkan {
 
+// Allocation ------------------------------------------------------------------
+
+namespace {
+
+void MarkAsInvalid(Allocation* allocation) {
+  allocation->device_memory.clear();
+}
+
+}  // namespace
+
+
+Allocation::~Allocation() {
+  if (valid())
+    Free(this);
+}
+
+void Free(Allocation* allocation) {
+  // This can happen when Free was called not at the destr
+  if (!allocation->valid())
+    NOT_REACHED();
+
+  // The MemoryPool could have gotten reallocated.
+  ASSERT(allocation->pool->valid());
+  ASSERT(allocation->pool->id == allocation->pool_id);
+
+  MarkForFree(allocation->pool, allocation);
+}
+
 // MemoryBlock -----------------------------------------------------------------
 
 const char*
-MemoryBlock::AllocationTypeToString(MemoryBlock::AllocationType type) {
+AllocationTypeToString(AllocationType type) {
   switch (type) {
     case AllocationType::kFree: return "kFree";
     case AllocationType::kBuffer: return "kBuffer";
     case AllocationType::kImage: return "kImage";
     case AllocationType::kImageLinear: return "kImageLinear";
-    case AllocationType::kImageOptional: return "kImageOptional";
+    case AllocationType::kImageOptimal: return "kImageOptimal";
     case AllocationType::kNone: break;
   }
 
@@ -30,7 +60,114 @@ MemoryBlock::AllocationTypeToString(MemoryBlock::AllocationType type) {
 
 // MemoryPool ------------------------------------------------------------------
 
-MemoryPool::~MemoryPool() { Shutdown(this); }
+namespace {
+
+// This will check that 2 allocations (a & b) are bound to the same "page
+// granurality". This granurality (represented here by |page_size|) is a page
+// sized limit in which buffers and images must placed apart in order for them
+// to not alias. This only applies when linear and optimal resources are layed
+// out next to each other.
+//
+// The page size is in Physical Device Limits: Buffer Image Granularity.
+//
+// Algorithm comes from the Vulkan 1.0.39 spec. "Buffer-Image Granularity".
+// Also known as "Linear-Optimal Granularity".
+bool AreOnTheSamePage(VkDeviceSize a_offset, VkDeviceSize a_size,
+                      VkDeviceSize b_offset, VkDeviceSize page_size) {
+  // They cannot be literally coinciding in memory.
+  ASSERT(a_offset + a_size <= b_offset && a_size > 0 && page_size > 0);
+
+
+  VkDeviceSize a_end = a_offset + a_size - 1;
+  // This aligns |a_end_page| to the granurality of the pages.
+  VkDeviceSize a_end_page =  a_end & ~(page_size - 1);
+
+  VkDeviceSize b_start = b_offset;
+  VkDeviceSize b_start_page = b_start & (page_size - 1);
+
+  return a_end_page == b_start_page;
+}
+
+// Granularity conflics occur when linear resources are allocated next to
+// optimal resources.
+bool HasGranularityConflict(AllocationType alloc_a,
+                            AllocationType alloc_b) {
+  if ((int)alloc_a > (int)alloc_b)
+    SwapValues(alloc_a, alloc_b);
+
+  switch (alloc_a) {
+    case AllocationType::kFree:
+      return false;
+    case AllocationType::kBuffer:
+      return alloc_b == AllocationType::kImage ||
+             alloc_b == AllocationType::kImageOptimal;
+    case AllocationType::kImage:
+      return alloc_b == AllocationType::kImage ||
+             alloc_b == AllocationType::kImageLinear ||
+             alloc_b == AllocationType::kImageOptimal;
+    case AllocationType::kImageLinear: return false;
+      return alloc_b == AllocationType::kImageOptimal;
+    case AllocationType::kImageOptimal:
+      return false;
+    case AllocationType::kNone:
+      break;
+  }
+
+  NOT_REACHED();
+  return false;
+}
+
+void Free(MemoryPool* pool, const MemoryPool::GarbageMarker& marker) {
+  // Search for the block backing this allocation.
+  MemoryBlock* current = pool->head.get();
+  while (current) {
+    if (current->id == marker.block_id)
+      break;
+    current = current->next;
+  }
+
+  if (current == nullptr) {
+    LOG(ERROR) << "Could not find block " << marker.block_id << " in pool "
+               << pool->id;
+    NOT_REACHED();
+  }
+
+  current->alloc_type = AllocationType::kFree;
+
+  // We see if we can merge them with the neighbouring blocks.
+  if (current->prev && current->prev->alloc_type == AllocationType::kFree) {
+    MemoryBlock* prev = current->prev;
+    prev->next = current->next;
+    // Point it back.
+    if (current->next)
+      current->next->prev = prev;
+
+    prev->size = current->size;
+    delete current;
+    current = prev;
+  }
+
+  // See if we can merge it with the next block.
+  if (current->next && current->next->alloc_type == AllocationType::kFree) {
+    MemoryBlock* next = current->next;
+    current->next = next->next;
+    // Point it to the current.
+    if (current->next)
+      current->next->prev = current;
+    current->size += next->size;
+    delete next;
+  }
+
+  pool->allocated -= marker.size;
+}
+
+}  // namespace
+
+
+MemoryPool::~MemoryPool() {
+  if (valid())
+    Shutdown(this);
+}
 
 bool Init(Context* context, MemoryPool* pool,
           const InitMemoryPoolConfig& config) {
@@ -58,13 +195,15 @@ bool Init(Context* context, MemoryPool* pool,
   head->id = pool->next_block_id++;
   head->size = pool->size;
   head->offset = 0;
-  head->allocation_type = MemoryBlock::AllocationType::kFree;
+  head->alloc_type = AllocationType::kFree;
 
   pool->head = std::move(head);
   return true;
 }
 
 void Shutdown(MemoryPool* pool) {
+  ASSERT(pool->valid());
+
   if (pool->is_host_visible())
     vkUnmapMemory(pool->memory.context()->device.value(), *pool->memory);
   pool->memory.Clear();
@@ -76,12 +215,146 @@ void Shutdown(MemoryPool* pool) {
   *pool = {};
 }
 
-bool AllocateFrom(MemoryPool*, uint32_t , uint32_t , Allocation*) {
-  NOT_IMPLEMENTED();
-  return false;
+bool AllocateFromMemoryPool(MemoryPool* pool, const AllocateConfig& config,
+                            Allocation* out) {
+  VkDeviceSize free = pool->size - pool->allocated;
+  if (free < config.size)
+    return false;
+
+  MemoryBlock* current = nullptr;
+  MemoryBlock* best_fit = nullptr;
+  MemoryBlock* prev = nullptr;
+
+  VkDeviceSize padding = 0;
+  VkDeviceSize offset = 0;
+  VkDeviceSize aligned_size = 0;
+
+  // We iterate over the linked list.
+  for (current = pool->head.get();
+       current != nullptr;
+       prev = current, current = current->next) {
+    // If it's allocated or too small, we continue searching.
+    if (current->alloc_type != AllocationType::kFree ||
+        current->size < config.size) {
+      continue;
+    }
+
+    offset = Align(current->offset, config.align);
+
+    // Check for linear/optimal granularity conflict with previous allocation.
+    VkDeviceSize granularity = pool->granularity;
+    ASSERT(granularity > 0);
+    if (prev != nullptr && pool->granularity > 1 &&
+        AreOnTheSamePage(prev->offset, prev->size, offset, pool->granularity) &&
+        HasGranularityConflict(prev->alloc_type, config.alloc_type)) {
+      offset = Align(current->offset, pool->granularity);
+    }
+
+    // How much difference between the end of this block and the start of the
+    // aligned start.
+    padding = offset - current->offset;
+    aligned_size = padding + config.size;   // The actual block size we need.
+
+    // If with the alignement the block is too small, we need to continue.
+    if (aligned_size > current->size)
+      continue;
+
+    // If the alignment cases the pool to overflow, this pool won't cut it.
+    if (aligned_size + pool->allocated > pool->size)
+      return false;
+
+    // If we're going to have problems with the next resource, we can't use it.
+    if (granularity > 1 && current->next != nullptr) {
+      MemoryBlock* next = current->next;
+      if (AreOnTheSamePage(offset, config.size, next->offset, granularity) &&
+          HasGranularityConflict(config.alloc_type, next->alloc_type)) {
+        continue;
+      }
+    }
+
+    best_fit = current;
+    break;
+  }
+
+  // We couldn't find a valid block.
+  if (best_fit == nullptr)
+    return false;
+
+  // We see if we need to split the block.
+  // TODO(Cristian): Maybe define a minimum where we're interested in splitting
+  //                 for. For 1KB, doesn't seem worth splitting.
+  if (best_fit->size > config.size) {
+    auto new_block = new MemoryBlock();   // TODO: Review this!
+    *new_block = {};
+    new_block->id = pool->next_block_id++;
+    new_block->size = best_fit->size - aligned_size;
+    new_block->offset = offset + config.size;
+    new_block->alloc_type = AllocationType::kFree;
+
+    // Insert it after |best_fit|.
+    new_block->prev = best_fit;
+    new_block->next = std::move(best_fit->next);
+    if (new_block->next)
+      new_block->next->prev = new_block;
+    best_fit->next = new_block;
+  }
+
+  best_fit->alloc_type = config.alloc_type;
+  best_fit->size = config.size;
+
+  pool->allocated += aligned_size;
+
+  Allocation allocation = {};
+  allocation.pool_id = pool->id;
+  allocation.block_id = best_fit->id;
+  allocation.device_memory = pool->memory.value();
+  // NOTE: This could be different than the block offset.
+  allocation.offset = offset;
+  allocation.size = best_fit->size;
+  if (pool->is_host_visible())
+    allocation.data = pool->data + offset;
+
+  *out= std::move(allocation);
+  return true;
 }
 
-bool Free(MemoryPool*, Allocation* out);
+void MarkForFree(MemoryPool* pool, Allocation* allocation) {
+  ASSERT(allocation->pool_id == pool->id);
+  // We check that this allocation hasn't already been returned.
+  for (auto& marker : pool->garbage[pool->garbage_index]) {
+    if (marker.block_id == allocation->block_id) {
+      LOG(ERROR) << "Pool " << pool->id << ": Attempting to free block "
+                 << marker.block_id << " twice.";
+      NOT_REACHED();
+    }
+  }
+
+  // This is now freed, so it's no longer to be marked valid.
+
+  MemoryPool::GarbageMarker marker = {};
+  marker.block_id = allocation->block_id;
+  marker.size = allocation->size;
+  pool->garbage[pool->garbage_index].push_back(std::move(marker));
+  MarkAsInvalid(allocation);
+}
+
+void EmptyGarbage(MemoryPool* pool) {
+  pool->garbage_index = (pool->garbage_index + 1) % kNumFrames;
+
+  auto& garbage = pool->garbage[pool->garbage_index];
+  for (auto& block_id : garbage) {
+    Free(pool, block_id);
+  }
+
+  // Not free will be called again.
+  garbage.clear();
+
+  // If the pool is no longer allocates memory, we can deallocate it.
+  if (pool->allocated == 0) {
+    Shutdown(pool);
+    ASSERT(!pool->valid());
+  }
+}
 
 // Allocator -------------------------------------------------------------------
 
@@ -90,10 +363,13 @@ namespace {
 bool AllocateFromPools(Allocator* allocator, const AllocateConfig& config,
                        uint32_t memory_type_index, Allocation* out) {
   for (MemoryPool& pool : allocator->pools) {
+    if (!pool.valid())
+      continue;
+
     if (pool.memory_type_index != memory_type_index)
       continue;
 
-    if (AllocateFrom(&pool, config.size, config.align, out))
+    if (AllocateFromMemoryPool(&pool, config, out))
       return true;
   }
 
@@ -101,10 +377,33 @@ bool AllocateFromPools(Allocator* allocator, const AllocateConfig& config,
   return false;
 }
 
+MemoryPool* FindMemoryPool(Allocator* allocator, uint32_t pool_id) {
+  for (MemoryPool& pool : allocator->pools) {
+    if (pool.id == pool_id)
+      return &pool;
+  }
+  return nullptr;
+}
+
 }  // namespace
 
-bool AllocateFrom(Context* context, Allocator* allocator,
-                  const AllocateConfig& config, Allocation* out) {
+Allocator::~Allocator() = default;
+
+void Init(Allocator* allocator, uint32_t device_local_memory,
+          uint32_t host_visible_memory) {
+  ASSERT(allocator->pools.empty());
+
+  allocator->next_pool_id = 0;
+  allocator->device_local_memory_size = device_local_memory;
+  allocator->host_visible_memory_size = host_visible_memory;
+}
+
+void Shutdown(Allocator* allocator) {
+  *allocator = {};
+}
+
+bool Allocate(Context* context, Allocator* allocator,
+              const AllocateConfig& config, Allocation* out) {
   uint32_t memory_type_index = FindMemoryTypeIndex(
       context, config.memory_usage, config.memory_type_bits);
   if (memory_type_index == UINT32_MAX) {
@@ -130,10 +429,22 @@ bool AllocateFrom(Context* context, Allocator* allocator,
   if (!Init(context, &memory_pool, init_config))
     return false;
 
-  allocator->pools.push_back(std::move(memory_pool));
+  // We search for a slot where to put this is.
+  bool inserted = false;
+  for (MemoryPool& slot : allocator->pools) {
+    if (!slot.valid()) {
+      slot = std::move(memory_pool);
+      inserted = true;
+      break;
+    }
+  }
+
+  // If there wasn't any slot, we append it.
+  if (!inserted)
+    allocator->pools.push_back(std::move(memory_pool));
 
   // Allocate directly from the pool. If we can't we simply fail.
-  if (!AllocateFrom(&memory_pool, config.size, config.align, out)) {
+  if (!AllocateFromMemoryPool(&memory_pool, config, out)) {
     LOG(ERROR) << "Could not allocated from a new pool.";
     return false;
   }
@@ -141,78 +452,11 @@ bool AllocateFrom(Context* context, Allocator* allocator,
   return true;
 }
 
-namespace {
-
-
-#if 0
-
-bool AllocateFromPools(Context* context,
-                       Allocator* allocator,
-                       const AllocateConfig& config,
-                       Allocation* out) {
-  const auto& mem_properties = context->physical_device_info.memory_properties;
-
-  VkMemoryPropertyFlags required = 0;  // Device local by default.
-  if (config.host_visible) {
-    required = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+void EmptyGarbage(Allocator* allocator) {
+  for (auto& pool : allocator->pools) {
+    EmptyGarbage(&pool);
   }
-
-  // Device local is always preferred but not required.
-  VkMemoryPropertyFlags preferred = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-  // Iterate over pools looking for a preferred one.
-  for (MemoryPool& pool : allocator->pools) {
-    // If we need host visible and the pool doesn't suport it, continue.
-    if (config.host_visible && !pool.host_visible)
-      continue;
-
-    // We try to match the memory index in the pool with what we require.
-    if (((config.memory_types >> pool.memory_type_index) & 1) == 0)
-      continue;
-
-    // We check if it at least complies with the requirements.
-    VkMemoryPropertyFlags properties =
-        mem_properties.memoryTypes[pool.memory_type_index].propertyFlags;
-    if ((properties & required) != required)
-      continue;
-
-    if ((properties & preferred) != preferred)
-      continue;
-
-    // Is what we require and prefer. We try to allocate from the pool.
-    if (AllocateFrom(&pool, config.size, config.align, out))
-      return true;
-  }
-
-  // Non that we prefer, we at least look for a required one.
-  for (MemoryPool& pool : allocator->pools) {
-    // If we need host visible and the pool doesn't suport it, continue.
-    if (config.host_visible && !pool.host_visible)
-      continue;
-
-    // We try to match the memory index in the pool with what we require.
-    if (((config.memory_types >> pool.memory_type_index) & 1) == 0)
-      continue;
-
-    // We check if it at least complies with the requirements.
-    VkMemoryPropertyFlags properties =
-        mem_properties.memoryTypes[pool.memory_type_index].propertyFlags;
-    if ((properties & required) != required)
-      continue;
-
-    // Is what we require and prefer. We try to allocate from the pool.
-    if (AllocateFrom(&pool, config.size, config.align, out))
-      return true;
-  }
-
-  // We couldn't find a suitable memory pool.
-  return false;
 }
-
-#endif
-
-}  // namespace
 
 }  // namespace vulkan
 }  // namespace warhol

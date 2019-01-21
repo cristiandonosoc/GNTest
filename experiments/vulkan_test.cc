@@ -140,6 +140,11 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
     return false;
   std::cout << " DONE" << std::endl;
 
+  std::cout << "Creating allocator...";
+  if (!vulkan::CreateAllocator(context))
+    return false;
+  std::cout << " DONE" << std::endl;
+
   std::cout << "Creating a swap chain...";
   Pair<uint32_t> screen_size = {(uint32_t)sdl_context.width(),
                                 (uint32_t)sdl_context.height()};

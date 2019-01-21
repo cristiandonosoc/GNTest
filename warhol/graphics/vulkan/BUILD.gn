@@ -58,6 +58,8 @@ source_set("lib") {
     "image_utils.h",
     "memory.cc",
     "memory.h",
+    "memory_utils.cc",
+    "memory_utils.h",
     "utils.cc",
     "utils.h",
   ]

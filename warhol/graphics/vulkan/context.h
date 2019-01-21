@@ -6,9 +6,10 @@
 #include <string>
 #include <vector>
 
+#include "warhol/graphics/vulkan/allocator.h"
 #include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/handle.h"
-#include "warhol/graphics/vulkan/memory.h"
+#include "warhol/graphics/vulkan/memory_utils.h"
 
 #include "warhol/math/math.h"
 #include "warhol/utils/macros.h"
@@ -59,6 +60,8 @@ struct Context {
 
   DELETE_COPY_AND_ASSIGN(Context);
   DEFAULT_MOVE_AND_ASSIGN(Context);
+
+  Allocator allocator = {};
 
   Handle<VkInstance> instance = {};
   std::vector<const char*> extensions;
@@ -134,6 +137,8 @@ bool SetupDebugCall(Context*, PFN_vkDebugUtilsMessengerCallbackEXT callback);
 // |swap_chain_details| will be filled for the picked physical device.
 bool PickPhysicalDevice(Context*);
 bool CreateLogicalDevice(Context*);
+
+bool CreateAllocator(Context*);
 
 // A |device| must be created already.
 bool CreateSwapChain(Context*, Pair<uint32_t> screen_size);

@@ -63,3 +63,10 @@
   class_name& operator=(class_name&&) = delete;
 
 #define ARRAY_SIZE(array) (int)(sizeof((array)) / sizeof((array)[0]))
+
+#define SWAP(a, b) \
+  {                \
+    auto tmp = a;  \
+    a = b;         \
+    b = tmp;       \
+  }

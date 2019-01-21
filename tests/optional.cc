@@ -1,10 +1,11 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
+#include <warhol/utils/optional.h>
+
 #include <vector>
 
 #include <third_party/catch2/catch.hpp>
-#include <warhol/utils/optional.h>
 
 using namespace warhol;
 
