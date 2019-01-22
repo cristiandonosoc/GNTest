@@ -3,8 +3,7 @@
 
 #pragma once
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <sstream>
 
 #include "warhol/utils/location.h"
 
@@ -18,14 +17,14 @@ namespace warhol {
     }                                                   \
   } while (false)
 
-#define NOT_IMPLEMENTED()                                    \
-  do {                                                       \
-    ::warhol::AssertionFailed(FROM_HERE, "Not implemented"); \
+#define NOT_IMPLEMENTED(message)                                      \
+  do {                                                                \
+    ::warhol::AssertionFailed(FROM_HERE, "Not implemented", message); \
   } while (false)
 
-#define NOT_REACHED()                                     \
-  do {                                                    \
-    ::warhol::AssertionFailed(FROM_HERE, "Invalid path"); \
+#define NOT_REACHED(message)                                       \
+  do {                                                             \
+    ::warhol::AssertionFailed(FROM_HERE, "Invalid path", message); \
   } while (false)
 
 #else
@@ -35,6 +34,7 @@ namespace warhol {
 #define NOT_REACHED() do {} while (false)
 #endif
 
-void AssertionFailed(Location loc, const char* condition);
+void AssertionFailed(Location loc, const char* condition,
+                     const char* msg = nullptr);
 
 }  // namespace warhol

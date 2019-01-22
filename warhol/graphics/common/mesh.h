@@ -23,6 +23,8 @@ struct Vertex {
 size_t Hash(const Vertex&);
 
 struct Mesh {
+  size_t data_size() const { return vertices.size() * sizeof(Vertex); }
+
   DEFAULT_CONSTRUCTOR(Mesh);
   DELETE_COPY_AND_ASSIGN(Mesh);
   DEFAULT_MOVE_AND_ASSIGN(Mesh);

@@ -18,7 +18,7 @@ namespace vulkan {
 namespace {
 
 void MarkAsInvalid(Allocation* allocation) {
-  allocation->device_memory.clear();
+  allocation->memory.clear();
 }
 
 }  // namespace
@@ -30,9 +30,9 @@ Allocation::~Allocation() {
 }
 
 void Free(Allocation* allocation) {
-  // This can happen when Free was called not at the destr
+  // This can happen when Free was called not at the destroyer.
   if (!allocation->valid())
-    NOT_REACHED();
+    return;
 
   // The MemoryPool could have gotten reallocated.
   ASSERT(allocation->pool->valid());
@@ -51,10 +51,10 @@ AllocationTypeToString(AllocationType type) {
     case AllocationType::kImage: return "kImage";
     case AllocationType::kImageLinear: return "kImageLinear";
     case AllocationType::kImageOptimal: return "kImageOptimal";
-    case AllocationType::kNone: break;
+    case AllocationType::kNone: return "kNone";
   }
 
-  NOT_REACHED();
+  NOT_REACHED("Uknown AllocationType.");
   return nullptr;
 }
 
@@ -113,7 +113,7 @@ bool HasGranularityConflict(AllocationType alloc_a,
       break;
   }
 
-  NOT_REACHED();
+  NOT_REACHED("Invalid granularity check.");
   return false;
 }
 
@@ -129,7 +129,7 @@ void Free(MemoryPool* pool, const MemoryPool::GarbageMarker& marker) {
   if (current == nullptr) {
     LOG(ERROR) << "Could not find block " << marker.block_id << " in pool "
                << pool->id;
-    NOT_REACHED();
+    NOT_REACHED("Unfound blog. Look in logs.");
   }
 
   current->alloc_type = AllocationType::kFree;
@@ -176,13 +176,16 @@ bool Init(Context* context, MemoryPool* pool,
   pool->memory_usage = config.memory_usage;
   pool->size = config.size;
 
+  // TODO(Cristian): Handle granularity.";
+  pool->granularity = 1;
+
   auto memory = AllocMemory(context, pool->size, pool->memory_type_index);
   if (!memory.has_value())
     return false;
 
   pool->memory= std::move(memory);
 
-  if (pool->is_host_visible()) {
+  if (pool->host_visible()) {
     if (!VK_CALL(vkMapMemory, *context->device, *pool->memory, 0, pool->size,
                               0, (void**)&pool->data)) {
       return false;
@@ -198,13 +201,15 @@ bool Init(Context* context, MemoryPool* pool,
   head->alloc_type = AllocationType::kFree;
 
   pool->head = std::move(head);
+
+  /* LOG(DEBUG) << "Head: " << pool->head.get(); */
   return true;
 }
 
 void Shutdown(MemoryPool* pool) {
   ASSERT(pool->valid());
 
-  if (pool->is_host_visible())
+  if (pool->host_visible())
     vkUnmapMemory(pool->memory.context()->device.value(), *pool->memory);
   pool->memory.Clear();
 
@@ -215,9 +220,11 @@ void Shutdown(MemoryPool* pool) {
   *pool = {};
 }
 
-bool AllocateFromMemoryPool(MemoryPool* pool, const AllocateConfig& config,
-                            Allocation* out) {
+bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
+                            const AllocateConfig& config, Allocation* out) {
   VkDeviceSize free = pool->size - pool->allocated;
+  /* LOG(DEBUG) << "Pool size: " << ToKilobytes(free) */
+  /*            << ", required: " << ToKilobytes(config.size); */
   if (free < config.size)
     return false;
 
@@ -229,10 +236,16 @@ bool AllocateFromMemoryPool(MemoryPool* pool, const AllocateConfig& config,
   VkDeviceSize offset = 0;
   VkDeviceSize aligned_size = 0;
 
+  /* LOG(DEBUG) << "Current head: " << pool->head.get(); */
+
   // We iterate over the linked list.
   for (current = pool->head.get();
        current != nullptr;
        prev = current, current = current->next) {
+    /* LOG(DEBUG) << "Candidate block. Allocation Type: " */
+    /*            << AllocationTypeToString(current->alloc_type) */
+    /*            << ", size: " << ToKilobytes(current->size) << " KBs."; */
+
     // If it's allocated or too small, we continue searching.
     if (current->alloc_type != AllocationType::kFree ||
         current->size < config.size) {
@@ -302,19 +315,24 @@ bool AllocateFromMemoryPool(MemoryPool* pool, const AllocateConfig& config,
   best_fit->alloc_type = config.alloc_type;
   best_fit->size = config.size;
 
-  pool->allocated += aligned_size;
 
   Allocation allocation = {};
   allocation.pool_id = pool->id;
   allocation.block_id = best_fit->id;
-  allocation.device_memory = pool->memory.value();
+  allocation.memory = pool->memory.value();
   // NOTE: This could be different than the block offset.
   allocation.offset = offset;
   allocation.size = best_fit->size;
-  if (pool->is_host_visible())
+  if (pool->host_visible())
     allocation.data = pool->data + offset;
 
   *out= std::move(allocation);
+
+  LOG(DEBUG) << "Allocated successfully: " << ToKilobytes(aligned_size) << " KBs.";
+  LOG(NO_FRAME) << Print(*context, *pool);
+
+  pool->allocated += aligned_size;
+
   return true;
 }
 
@@ -325,16 +343,19 @@ void MarkForFree(MemoryPool* pool, Allocation* allocation) {
     if (marker.block_id == allocation->block_id) {
       LOG(ERROR) << "Pool " << pool->id << ": Attempting to free block "
                  << marker.block_id << " twice.";
-      NOT_REACHED();
+      NOT_REACHED("Double allocation. Look in logs.");
     }
   }
 
-  // This is now freed, so it's no longer to be marked valid.
+  LOG(DEBUG) << "Pool " << pool->id << ": Marking for free block "
+             << allocation->block_id;
 
   MemoryPool::GarbageMarker marker = {};
   marker.block_id = allocation->block_id;
   marker.size = allocation->size;
   pool->garbage[pool->garbage_index].push_back(std::move(marker));
+
+  // This is now freed, so it's no longer to be marked valid.
   MarkAsInvalid(allocation);
 }
 
@@ -356,20 +377,48 @@ void EmptyGarbage(MemoryPool* pool) {
   }
 }
 
+std::string Print(const Context& context, const MemoryPool& pool) {
+  std::stringstream ss;
+  ss << "Memory pool " << pool.id << "(Host Visible: " << pool.host_visible()
+     << ")" << std::endl;
+  ss << "Memory types: "
+     << MemoryTypeIndexToString(context, pool.memory_type_index) << std::endl;
+  ss << "Size: " << ToKilobytes(pool.size)
+     << " KBs, Allocated: " << ToKilobytes(pool.allocated)
+     << " KBs, Free: " << ToKilobytes(pool.free()) << " KBs." << std::endl;
+
+  ss << "Allocations: " << std::endl;
+  int count = 0;
+
+  MemoryBlock* current = nullptr;
+  for (current = pool.head.get(); current != nullptr; current = current->next) {
+    ss << count << ". Size: " << ToKilobytes(current->size)
+       << " KBs, Type: " << AllocationTypeToString(current->alloc_type)
+       << std::endl;
+    count++;
+  }
+
+  return ss.str();
+}
+
 // Allocator -------------------------------------------------------------------
 
 namespace {
 
-bool AllocateFromPools(Allocator* allocator, const AllocateConfig& config,
-                       uint32_t memory_type_index, Allocation* out) {
+bool AllocateFromPools(Context* context, Allocator* allocator,
+                       const AllocateConfig& config, uint32_t memory_type_index,
+                       Allocation* out) {
   for (MemoryPool& pool : allocator->pools) {
     if (!pool.valid())
       continue;
 
-    if (pool.memory_type_index != memory_type_index)
+    if (pool.memory_type_index != memory_type_index) {
+      /* LOG(DEBUG) << "Different type index (pool: " << pool.memory_type_index */
+      /*            << ", required: " << memory_type_index << ")."; */
       continue;
+    }
 
-    if (AllocateFromMemoryPool(&pool, config, out))
+    if (AllocateFromMemoryPool(context, &pool, config, out))
       return true;
   }
 
@@ -396,6 +445,7 @@ void Init(Allocator* allocator, uint32_t device_local_memory,
   allocator->next_pool_id = 0;
   allocator->device_local_memory_size = device_local_memory;
   allocator->host_visible_memory_size = host_visible_memory;
+  allocator->initialized = true;
 }
 
 void Shutdown(Allocator* allocator) {
@@ -404,16 +454,21 @@ void Shutdown(Allocator* allocator) {
 
 bool Allocate(Context* context, Allocator* allocator,
               const AllocateConfig& config, Allocation* out) {
+  ASSERT(allocator->initialized);
+  ASSERT(config.alloc_type != AllocationType::kNone);
+
   uint32_t memory_type_index = FindMemoryTypeIndex(
       context, config.memory_usage, config.memory_type_bits);
-  if (memory_type_index == UINT32_MAX) {
-    LOG(ERROR) << "Could not find a memory type index.";
-    return false;
-  }
+  ASSERT(memory_type_index != UINT32_MAX);
+
+  /* LOG(DEBUG) << "Going to allocate from pools."; */
 
   // See if we can allocate from one of the existent pools.
-  if (AllocateFromPools(allocator, config, memory_type_index, out))
+  if (AllocateFromPools(context ,allocator, config, memory_type_index, out))
     return true;
+
+  /* LOG(DEBUG) << "Could not allocate from any pool."; */
+  SCOPE_LOCATION();
 
   // Can't allocate from existent pools. Creating a new one.
   VkDeviceSize pool_size = (config.memory_usage == MemoryUsage::kGPUOnly)
@@ -429,23 +484,31 @@ bool Allocate(Context* context, Allocator* allocator,
   if (!Init(context, &memory_pool, init_config))
     return false;
 
+  /* LOG(DEBUG) << "Created memory pool. Current pool count: " << allocator->pools.size(); */
+
   // We search for a slot where to put this is.
-  bool inserted = false;
-  for (MemoryPool& slot : allocator->pools) {
+  int inserted_index = -1;
+  for (int i = 0; i < (int)allocator->pools.size(); i++) {
+    MemoryPool& slot = allocator->pools[i];
     if (!slot.valid()) {
       slot = std::move(memory_pool);
-      inserted = true;
+      inserted_index = i;
       break;
     }
   }
 
   // If there wasn't any slot, we append it.
-  if (!inserted)
+  if (inserted_index == -1) {
+    inserted_index = (int)allocator->pools.size();
     allocator->pools.push_back(std::move(memory_pool));
+  }
+
+  LOG(DEBUG) << "Inserted pool in slot " << inserted_index;
 
   // Allocate directly from the pool. If we can't we simply fail.
-  if (!AllocateFromMemoryPool(&memory_pool, config, out)) {
-    LOG(ERROR) << "Could not allocated from a new pool.";
+  if (!AllocateFromMemoryPool(context, &allocator->pools[inserted_index],
+                              config, out)) {
+    LOG(ERROR) << "Could not allocate from a new pool.";
     return false;
   }
 
@@ -456,6 +519,17 @@ void EmptyGarbage(Allocator* allocator) {
   for (auto& pool : allocator->pools) {
     EmptyGarbage(&pool);
   }
+}
+
+std::string Print(const Context& context, const Allocator& allocator) {
+  std::stringstream ss;
+  ss << "Allocator status. Pools: " << allocator.pools.size() << std::endl;
+
+  for (const MemoryPool& pool : allocator.pools) {
+    ss << Print(context, pool);
+  }
+
+  return ss.str();
 }
 
 }  // namespace vulkan

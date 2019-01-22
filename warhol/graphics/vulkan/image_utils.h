@@ -6,6 +6,7 @@
 #include "warhol/graphics/common/image.h"
 #include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/handle.h"
+#include "warhol/graphics/vulkan/memory.h"
 
 namespace warhol {
 namespace vulkan {
@@ -16,7 +17,8 @@ struct MemoryBacked;
 
 struct CreateImageConfig {
   VkImageCreateInfo create_info;
-  VkMemoryPropertyFlags properties;
+  MemoryUsage memory_usage = MemoryUsage::kNone;
+  /* VkMemoryPropertyFlags properties; */
 };
 MemoryBacked<VkImage>
 CreateImage(Context*, const CreateImageConfig&);

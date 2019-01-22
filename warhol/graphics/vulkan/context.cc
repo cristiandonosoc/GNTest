@@ -255,7 +255,7 @@ bool CreateLogicalDevice(Context* context) {
 
 bool CreateAllocator(Context* context) {
   Allocator allocator = {};
-  Init(&allocator, MEGABYTES(32), MEGABYTES(32));
+  Init(&allocator, MEGABYTES(256), MEGABYTES(256));
   context->allocator = std::move(allocator);
   return true;
 }
@@ -300,7 +300,7 @@ ChooseSwapChainPresentMode(std::vector<VkPresentModeKHR>& present_modes) {
 VkExtent2D ChooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& cap,
                                  Pair<uint32_t> screen_size) {
   // uint32_t::max means that the window manager lets us pick the extent.
-  if (cap.currentExtent.width != Limits::kUint32Max)
+  if (cap.currentExtent.width != UINT32_MAX)
     return cap.currentExtent;
 
   // We clamp our required extent to the bounds given by the GPU.
@@ -986,6 +986,8 @@ VkFormat FindDepthFormat(VkPhysicalDevice device,
 
 
 bool CreateDepthResources(Context* context) {
+  SCOPE_LOCATION();
+
   VkFormat depth_format =
       FindDepthFormat(context->physical_device,
                       VK_IMAGE_TILING_OPTIMAL,
@@ -1015,7 +1017,8 @@ bool CreateDepthResources(Context* context) {
   image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   image_info.samples = VK_SAMPLE_COUNT_1_BIT;
   image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  /* image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; */
+  image_config.memory_usage = MemoryUsage::kGPUOnly;
   MemoryBacked<VkImage> image = CreateImage(context, image_config);
   if (!image.has_value())
     return false;
@@ -1053,6 +1056,7 @@ constexpr size_t kUVOffset = 2 * 24 * sizeof(float);
 #endif
 
 bool CreateVertexBuffers(Context* context, const Mesh& mesh) {
+  LOG(DEBUG) << "Creating vertex buffer.";
   VkDeviceSize size = mesh.vertices.size() * sizeof(mesh.vertices[0]);
 
   // Create a staging buffer.
@@ -1061,18 +1065,19 @@ bool CreateVertexBuffers(Context* context, const Mesh& mesh) {
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-  MemoryBacked<VkBuffer> staging_memory;
-  if (!AllocBuffer(context, alloc_config, &staging_memory))
+  alloc_config.memory_usage = MemoryUsage::kCPUToGPU;
+  MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, alloc_config);
+  if (!staging_memory.has_value())
     return false;
 
   // Map the vertex data to the staging buffer.
-  void* memory;
-  if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.memory, 0, size,
-               0, &memory)) {
-    return false;
-  }
-  memcpy(memory, mesh.vertices.data(), size);
-  vkUnmapMemory(*context->device, *staging_memory.memory);
+  /* void* memory; */
+  /* if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.memory, 0, size, */
+  /*              0, &memory)) { */
+  /*   return false; */
+  /* } */
+  memcpy(staging_memory.data(), mesh.vertices.data(), size);
+  /* vkUnmapMemory(*context->device, *staging_memory.memory); */
 
   // Create the local memory and copy the memory to it.
   alloc_config = {};
@@ -1080,9 +1085,12 @@ bool CreateVertexBuffers(Context* context, const Mesh& mesh) {
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
   alloc_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  MemoryBacked<VkBuffer> vertices_memory;
-  if (!AllocBuffer(context, alloc_config, &vertices_memory) ||
-      !CopyBuffer(context, *staging_memory.handle, *vertices_memory.handle,
+  alloc_config.memory_usage = MemoryUsage::kGPUOnly;
+  MemoryBacked<VkBuffer> vertices_memory = AllocBuffer(context, alloc_config);
+  if (!vertices_memory.has_value())
+    return false;
+
+  if (!CopyBuffer(context, *staging_memory.handle, *vertices_memory.handle,
                   size)) {
     return false;
   }
@@ -1095,6 +1103,7 @@ bool CreateVertexBuffers(Context* context, const Mesh& mesh) {
 static size_t indices_count = 0;
 
 bool CreateIndicesBuffers(Context* context, const Mesh& mesh) {
+  LOG(DEBUG) << "Creating index buffer.";
   VkDeviceSize size = mesh.indices.size() * sizeof(mesh.indices[0]);
 
   // Create a staging buffer.
@@ -1103,18 +1112,20 @@ bool CreateIndicesBuffers(Context* context, const Mesh& mesh) {
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-  MemoryBacked<VkBuffer> staging_memory;
-  if (!AllocBuffer(context, alloc_config, &staging_memory))
+  alloc_config.memory_usage = MemoryUsage::kCPUToGPU;
+  MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, alloc_config);
+  if (!staging_memory.has_value())
     return false;
 
   // Map the vertex data to the staging buffer.
-  void* memory;
-  if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.memory, 0, size,
-               0, &memory)) {
-    return false;
-  }
-  memcpy(memory, mesh.indices.data(), size);
-  vkUnmapMemory(*context->device, *staging_memory.memory);
+  /* void* memory; */
+  /* if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.allocation,
+   * staging_memory.offset, staging_memory.size, */
+  /*              0, &memory)) { */
+  /*   return false; */
+  /* } */
+  memcpy(staging_memory.data(), mesh.indices.data(), size);
+  /* vkUnmapMemory(*context->device, *staging_memory.memory); */
 
   // Create the local memory and copy the memory to it.
   alloc_config = {};
@@ -1122,9 +1133,12 @@ bool CreateIndicesBuffers(Context* context, const Mesh& mesh) {
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
   alloc_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  MemoryBacked<VkBuffer> indices_memory;
-  if (!AllocBuffer(context, alloc_config, &indices_memory) ||
-      !CopyBuffer(context, *staging_memory.handle, *indices_memory.handle,
+  alloc_config.memory_usage = MemoryUsage::kGPUOnly;
+  MemoryBacked<VkBuffer> indices_memory = AllocBuffer(context, alloc_config);
+  if (!indices_memory.has_value())
+    return false;
+
+  if (!CopyBuffer(context, *staging_memory.handle, *indices_memory.handle,
                   size)) {
     return false;
   }
@@ -1158,15 +1172,16 @@ bool SetupUBO(Context* context , VkDeviceSize ubo_size) {
     alloc_config.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    MemoryBacked<VkBuffer> ubo;
-    if (!AllocBuffer(context, alloc_config, &ubo))
+    alloc_config.memory_usage = MemoryUsage::kCPUToGPU;
+    MemoryBacked<VkBuffer> ubo = AllocBuffer(context, alloc_config);
+    if (!ubo.has_value())
       return false;
 
-    ubo.device = *context->device;
-    if (!VK_CALL(vkMapMemory, *context->device, *ubo.memory, 0, ubo_size,
-                              0, &ubo.data)) {
-      return false;
-    }
+    /* ubo.device = *context->device; */
+    /* if (!VK_CALL(vkMapMemory, *context->device, *ubo.memory, 0, ubo_size, */
+    /*                           0, &ubo.data)) { */
+    /*   return false; */
+    /* } */
 
     context->uniform_buffers.emplace_back(std::move(ubo));
   }
@@ -1182,18 +1197,19 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-  MemoryBacked<VkBuffer> staging_memory;
-  if (!AllocBuffer(context, alloc_config, &staging_memory))
+  alloc_config.memory_usage = MemoryUsage::kCPUToGPU;
+  MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, alloc_config);
+  if (!staging_memory.has_value())
     return false;
 
-  // Map the vertex data to the staging buffer.
-  void* memory;
-  if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.memory,
-                            0, src.data_size, 0, &memory)) {
-    return false;
-  }
-  memcpy(memory, src.data.value, src.data_size);
-  vkUnmapMemory(*context->device, *staging_memory.memory);
+  /* // Map the vertex data to the staging buffer. */
+  /* void* memory; */
+  /* if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.memory, */
+  /*                           0, src.data_size, 0, &memory)) { */
+  /*   return false; */
+  /* } */
+  memcpy(staging_memory.data(), src.data.value, src.data_size);
+  /* vkUnmapMemory(*context->device, *staging_memory.memory); */
 
   // Allocate and image.
   CreateImageConfig image_config = {};
@@ -1210,7 +1226,8 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
   image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   image_info.samples = VK_SAMPLE_COUNT_1_BIT;
   image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  /* image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; */
+  image_config.memory_usage = MemoryUsage::kGPUOnly;
   // If we're creating mip levels, this image will also be a source for copy
   // operations.
   if (image_config.create_info.mipLevels > 1)

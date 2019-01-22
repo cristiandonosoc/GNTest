@@ -85,6 +85,7 @@ template<> const char* EnumToString(VkFormat);
 template<> const char* EnumToString(VkColorSpaceKHR);
 template<> const char* EnumToString(VkPresentModeKHR);
 template<> const char* EnumToString(VkImageLayout);
+template<> const char* EnumToString(VkMemoryPropertyFlagBits);
 
 // Checked Vulkan Call ---------------------------------------------------------
 

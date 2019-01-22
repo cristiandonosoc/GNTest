@@ -70,9 +70,10 @@ AllocMemory(Context* context, const VkMemoryRequirements& memory_reqs,
 
 // VkBuffer --------------------------------------------------------------------
 
-bool
-AllocBuffer(Context* context, const AllocBufferConfig& config,
-            MemoryBacked<VkBuffer>* out) {
+MemoryBacked<VkBuffer>
+AllocBuffer(Context* context, const AllocBufferConfig& config) {
+  ASSERT(config.memory_usage != MemoryUsage::kNone);
+
   VkBufferCreateInfo buffer_info = {};
   buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   buffer_info.size = config.size;
@@ -82,25 +83,38 @@ AllocBuffer(Context* context, const AllocBufferConfig& config,
   VkBuffer buffer;
   if (!VK_CALL(vkCreateBuffer, *context->device, &buffer_info, nullptr,
                                &buffer)) {
-    return false;
+    return {};
   }
   Handle<VkBuffer> buffer_handle(context, buffer);
 
   VkMemoryRequirements memory_reqs;
   vkGetBufferMemoryRequirements(*context->device, buffer, &memory_reqs);
 
-  Handle<VkDeviceMemory> memory_handle = AllocMemory(context, memory_reqs,
-                                                     config.properties);
-  if (!memory_handle.has_value())
-    return false;
+  AllocateConfig alloc_config = {};
+  alloc_config.size = memory_reqs.size;
+  alloc_config.align = memory_reqs.alignment;
+  alloc_config.memory_type_bits = memory_reqs.memoryTypeBits;
+  alloc_config.memory_usage = config.memory_usage;
+  alloc_config.alloc_type = AllocationType::kBuffer;
+  Allocation allocation = {};
+  if (!Allocate(context, &context->allocator, alloc_config, &allocation))
+    return {};
 
-  if (!VK_CALL(vkBindBufferMemory, *context->device, buffer, *memory_handle, 0))
-    return false;
+  /* Handle<VkDeviceMemory> memory_handle = AllocMemory(context, memory_reqs, */
+  /*                                                    config.properties); */
+  /* if (!memory_handle.has_value()) */
+  /*   return false; */
 
-  out->handle = std::move(buffer_handle);
-  out->memory = std::move(memory_handle);
+  if (!VK_CALL(vkBindBufferMemory, *context->device, buffer, *allocation.memory,
+               allocation.offset)) {
+    return {};
+  }
 
-  return true;
+  MemoryBacked<VkBuffer> result = {};
+  result.handle = std::move(buffer_handle);
+  result.allocation = std::move(allocation);
+
+  return result;
 }
 
 bool CopyBuffer(Context* context, VkBuffer src_buffer, VkBuffer dst_buffer,

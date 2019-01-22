@@ -16,7 +16,6 @@ namespace vulkan {
 
 MemoryBacked<VkImage> CreateImage(Context* context,
                                   const CreateImageConfig& config) {
-
   VkImage image;
   if (!VK_CALL(vkCreateImage, *context->device, &config.create_info, nullptr,
                               &image)) {
@@ -27,18 +26,28 @@ MemoryBacked<VkImage> CreateImage(Context* context,
   VkMemoryRequirements memory_reqs;
   vkGetImageMemoryRequirements(*context->device, image, &memory_reqs);
 
-  auto memory_handle = AllocMemory(context, memory_reqs, config.properties);
-  if (!memory_handle.has_value())
+  AllocateConfig alloc_config = {};
+  alloc_config.size = memory_reqs.size;
+  alloc_config.align = memory_reqs.alignment;
+  alloc_config.memory_type_bits = memory_reqs.memoryTypeBits;
+  alloc_config.memory_usage = config.memory_usage;
+  alloc_config.alloc_type = AllocationType::kImage;
+  Allocation allocation = {};
+  if (!Allocate(context, &context->allocator, alloc_config, &allocation))
     return {};
 
+  /* auto memory_handle = AllocMemory(context, memory_reqs, config.properties); */
+  /* if (!memory_handle.has_value()) */
+  /*   return {}; */
+
   if (!VK_CALL(vkBindImageMemory, *context->device, *image_handle,
-                                  *memory_handle, 0)) {
+                                  *allocation.memory, allocation.offset)) {
     return {};
   }
 
   MemoryBacked<VkImage> backed_image;
   backed_image.handle = std::move(image_handle);
-  backed_image.memory = std::move(memory_handle);
+  backed_image.allocation = std::move(allocation);
 
   return backed_image;
 }
@@ -308,7 +317,7 @@ VkFormat ToVulkan(Image::Format format) {
     case Image::Format::kLast: break;
   }
 
-  NOT_REACHED();
+  NOT_REACHED("Invalid image format.");
   return VK_FORMAT_UNDEFINED;
 }
 
@@ -320,7 +329,7 @@ VkImageType ToVulkan(Image::Type type) {
     case Image::Type::kLast: break;
   }
 
-  NOT_REACHED();
+  NOT_REACHED("Invalid image type.");
   return (VkImageType)0;
 }
 

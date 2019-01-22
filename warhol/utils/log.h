@@ -9,18 +9,25 @@
 
 namespace warhol {
 
-using LogLevel = int;
 // Remember to update kLogLevelStrings in log.cc
-constexpr LogLevel LOG_DEBUG = 0;
-constexpr LogLevel LOG_INFO = 1;
-constexpr LogLevel LOG_WARNING = 2;
-constexpr LogLevel LOG_ERROR = 3;
+/* using LogLevel = int; */
+/* constexpr LogLevel LOG_DEBUG = 0; */
+/* constexpr LogLevel LOG_INFO = 1; */
+/* constexpr LogLevel LOG_WARNING = 2; */
+/* constexpr LogLevel LOG_ERROR = 3; */
+
+enum class LogLevel {
+  kDEBUG,
+  kINFO,
+  kWARNING,
+  kERROR,
+  kNO_FRAME,
+};
 
 const char* LogLevelToString(LogLevel);
 
 class LogEntry {
  public:
-  LogEntry();
   LogEntry(LogLevel);
   LogEntry(LogLevel, const Location&);
   ~LogEntry();
@@ -31,7 +38,7 @@ class LogEntry {
   std::ostringstream os_;
 };
 
-#define LOG(level) ::warhol::LogEntry(::warhol::LOG_##level, FROM_HERE).stream()
+#define LOG(level) ::warhol::LogEntry(::warhol::LogLevel::k##level, FROM_HERE).stream()
 
 }  // namespace warhol
 

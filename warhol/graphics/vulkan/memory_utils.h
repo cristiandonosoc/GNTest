@@ -5,6 +5,7 @@
 
 #include <utility>
 
+#include "warhol/graphics/vulkan/allocator.h"
 #include "warhol/graphics/vulkan/handle.h"
 #include "warhol/graphics/vulkan/def.h"
 
@@ -32,10 +33,10 @@ AllocMemory(Context*, VkDeviceSize size, uint32_t memory_type_index);
 struct AllocBufferConfig {
   VkDeviceSize size;
   VkBufferUsageFlags usage;
-  VkMemoryPropertyFlags properties;
+  VkMemoryPropertyFlags properties;  // TODO: Remove
+  MemoryUsage memory_usage = MemoryUsage::kNone;
 };
-bool AllocBuffer(Context*, const AllocBufferConfig&,
-                 MemoryBacked<VkBuffer>* out);
+MemoryBacked<VkBuffer> AllocBuffer(Context*, const AllocBufferConfig&);
 
 // Copies one buffer and blocks waiting for the transfer.
 bool CopyBuffer(Context* context, VkBuffer src_buffer, VkBuffer dst_buffer,
@@ -55,14 +56,6 @@ template <typename HandleType>
 struct MemoryBacked {
   // Constructors
   MemoryBacked() = default;
-  ~MemoryBacked() {
-    if (data == nullptr)
-      return;
-
-    // If there is data, there should be a device associated with it.
-    ASSERT(device != VK_NULL_HANDLE && memory.has_value());
-    vkUnmapMemory(device, *memory);
-  }
 
   DELETE_COPY_AND_ASSIGN(MemoryBacked);
 
@@ -74,33 +67,34 @@ struct MemoryBacked {
     return *this;
   }
 
-  bool has_value() const { return handle.has_value() && memory.has_value(); }
-  bool host_visible() const { return data != nullptr; }
+  bool has_value() const {
+    return handle.has_value() && allocation.has_value();
+  }
+  bool host_visible() const { return allocation.host_visible(); }
+  void* data() { return allocation.data; }
 
   // Layout
   Handle<HandleType> handle;
-  Handle<VkDeviceMemory> memory;
+  Allocation allocation = {};
 
   // Not null if it's host visible.
   VkDeviceSize size;
-  void* data = nullptr;
 
   VkDevice device = VK_NULL_HANDLE;
 
   private:
    void Move(MemoryBacked* rhs) {
      handle = std::move(rhs->handle);
-     memory = std::move(rhs->memory);
+     allocation = std::move(rhs->allocation);
      size = rhs->size;
-     data = rhs->data;
      device = rhs->device;
 
      rhs->Reset();
    }
 
    void Reset() {
-     data = nullptr;
      device = VK_NULL_HANDLE;
+     allocation = {};
    }
 };
 

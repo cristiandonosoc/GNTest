@@ -35,7 +35,7 @@ class Status {
  private:
   const char* file_;
   int line_;
-  LogLevel level_ = LOG_ERROR;
+  LogLevel level_ = LogLevel::kERROR;
   std::string err_msg_;
 };
 

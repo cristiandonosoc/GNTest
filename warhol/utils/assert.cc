@@ -5,19 +5,19 @@
 
 namespace warhol {
 
-void AssertionFailed(Location loc, const char* condition) {
-  printf("Assertion failed at %s (%s:%d):\n",
-         loc.function,
-         loc.file,
-         loc.line);
-  printf("\n    %s\n\n",
-         condition);
+void AssertionFailed(Location loc, const char* condition, const char* message) {
+  printf("Assertion failed at %s (%s:%d):\n", loc.function, loc.file, loc.line);
+
+  if (!message) {
+    printf("\n    %s\n\n", condition);
+  } else {
+    printf("\n    %s: %s\n\n", condition, message);
+  }
+
   LocationStack* stack = GetLocationStack();
   printf("Printing contextual stack of size: %d\n", stack->size);
   PrintLocationStack(*stack);
   exit(1);
 }
-
-
 
 }  // namespace warhol

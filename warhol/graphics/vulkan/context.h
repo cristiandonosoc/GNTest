@@ -15,7 +15,6 @@
 #include "warhol/utils/macros.h"
 #include "warhol/utils/optional.h"
 
-
 namespace warhol {
 
 struct Image;

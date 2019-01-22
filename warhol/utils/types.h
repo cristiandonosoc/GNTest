@@ -19,18 +19,14 @@ struct MemoryDefs {
 #define MEGABYTES(count) count * ::warhol::MemoryDefs::kMegabyte
 #define GIGABYTES(count) count * ::warhol::MemoryDefs::kGigabyte
 
-struct Limits {
-  static constexpr uint16_t kUint8Min = std::numeric_limits<uint8_t>::min();
-  static constexpr uint16_t kUint8Max = std::numeric_limits<uint8_t>::max();
-
-  static constexpr uint16_t kUint16Min = std::numeric_limits<uint16_t>::min();
-  static constexpr uint16_t kUint16Max = std::numeric_limits<uint16_t>::max();
-
-  static constexpr uint16_t kUint32Min = std::numeric_limits<uint32_t>::min();
-  static constexpr uint32_t kUint32Max = std::numeric_limits<uint32_t>::max();
-
-  static constexpr uint32_t kUint64Min = std::numeric_limits<uint64_t>::min();
-  static constexpr uint64_t kUint64Max = std::numeric_limits<uint64_t>::max();
-};
+inline float ToKilobytes(size_t bytes) {
+  return (float)bytes / ::warhol::MemoryDefs::kKilobyte;
+}
+inline float ToMegabytes(size_t bytes) {
+  return (float)bytes / ::warhol::MemoryDefs::kMegabyte;
+}
+inline float ToGigabytes(size_t bytes) {
+  return (float)bytes / ::warhol::MemoryDefs::kGigabyte;
+}
 
 }  // namespace warhol

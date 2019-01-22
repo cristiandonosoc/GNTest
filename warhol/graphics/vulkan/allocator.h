@@ -37,17 +37,12 @@ enum class AllocationType {
 };
 static const char* AllocationTypeToString(AllocationType);
 
-struct AllocateConfig {
-  uint32_t size = 0;
-  uint32_t align = 0;
-  uint32_t memory_type_bits = 0;
-  MemoryUsage memory_usage = MemoryUsage::kNone;
-  AllocationType alloc_type = AllocationType::kNone;
-};
-
 struct Allocation {
   bool valid() const { return pool != nullptr; }
   bool host_visible() const { return data != nullptr; }
+  bool has_value() const { return *memory!= VK_NULL_HANDLE; }
+
+  VkDeviceMemory operator*() { return *memory; }
 
   DEFAULT_CONSTRUCTOR(Allocation);
   DELETE_COPY_AND_ASSIGN(Allocation);
@@ -61,7 +56,7 @@ struct Allocation {
 
   // NOT-OWNING! Device memory associated with this block.
   // |VkDeviceMemory| is a handle (similar to a pointer).
-  ClearOnMove<VkDeviceMemory> device_memory = VK_NULL_HANDLE;
+  ClearOnMove<VkDeviceMemory> memory = VK_NULL_HANDLE;
 
   VkDeviceSize offset = 0;          // Offset into the memory pool.
   VkDeviceSize size = 0;            // Size of the block.
@@ -75,7 +70,7 @@ void Free(Allocation*);
 
 // Represents an allocated (or free) memory block within a MemoryPool.
 struct MemoryBlock {
-  uint32_t id = Limits::kUint32Max;
+  uint32_t id = UINT32_MAX;
   VkDeviceSize size = 0;
   VkDeviceSize offset = 0;
 
@@ -93,15 +88,16 @@ struct MemoryBlock {
 // Descripts in what state of allocation
 struct MemoryPool {
   bool valid() const { return memory.has_value(); }
-  bool is_host_visible() const { return memory_usage != MemoryUsage::kGPUOnly; }
+  bool host_visible() const { return memory_usage != MemoryUsage::kGPUOnly; }
+  VkDeviceSize free() const { return size - allocated; }
 
   DEFAULT_CONSTRUCTOR(MemoryPool);
   DELETE_COPY_AND_ASSIGN(MemoryPool);
   DEFAULT_MOVE_AND_ASSIGN(MemoryPool);
   ~MemoryPool();    // Calls Shutdown(this) if valid.
 
-  uint32_t id = Limits::kUint32Max;
-  uint32_t memory_type_index = Limits::kUint32Max;
+  uint32_t id = UINT32_MAX;
+  uint32_t memory_type_index = UINT32_MAX;
   MemoryUsage memory_usage = MemoryUsage::kNone;
   VkDeviceSize size = 0;            // In bytes.
   // Memory page alignment linear and optimal resources need to be apart with.
@@ -116,10 +112,10 @@ struct MemoryPool {
   // The pool is a linked list of allocated blocks.
   // If a block and its neighbour are free, they are merged into one block.
   std::unique_ptr<MemoryBlock> head = nullptr;
-  uint32_t next_block_id = Limits::kUint32Max;
+  uint32_t next_block_id = UINT32_MAX;
 
   // The allocations that have been returned.
-  uint32_t garbage_index = Limits::kUint32Max;
+  uint32_t garbage_index = UINT32_MAX;
   // They are block ids.
   struct GarbageMarker {
     uint32_t block_id;
@@ -135,7 +131,9 @@ struct InitMemoryPoolConfig {
   MemoryUsage memory_usage = MemoryUsage::kNone;
 };
 bool Init(Context*, MemoryPool*, const InitMemoryPoolConfig&);
-bool AllocateFromMemoryPool(MemoryPool*, const AllocateConfig&,
+
+struct AllocateConfig;
+bool AllocateFromMemoryPool(Context*, MemoryPool*, const AllocateConfig&,
                             Allocation* out);
 
 // This will invalidate *all* allocations.
@@ -144,6 +142,8 @@ void Shutdown(MemoryPool*);
 // Takes ownership of the allocation.
 void MarkForFree(MemoryPool*, Allocation*);
 void EmptyGarbage(MemoryPool*);
+
+std::string Print(const Context&, const MemoryPool&);
 
 // Allocator -------------------------------------------------------------------
 
@@ -155,7 +155,7 @@ struct Allocator {
   DEFAULT_MOVE_AND_ASSIGN(Allocator);
   ~Allocator();    // Calls Shutdown(this) if valid.
 
-  uint32_t next_pool_id = Limits::kUint32Max;
+  uint32_t next_pool_id = UINT32_MAX;
 
   // How big should each pool be when created (in bytes);
   uint32_t device_local_memory_size = 0;
@@ -169,6 +169,13 @@ struct Allocator {
 void Init(Allocator*, uint32_t device_local_memory,
           uint32_t host_visible_memory);
 
+struct AllocateConfig {
+  uint32_t size = 0;
+  uint32_t align = 0;
+  uint32_t memory_type_bits = 0;
+  MemoryUsage memory_usage = MemoryUsage::kNone;
+  AllocationType alloc_type = AllocationType::kNone;
+};
 bool Allocate(Context*, Allocator*, const AllocateConfig&, Allocation* out);
 // IMPORTANT: This will invalidate *all* allocations!
 void Shutdown(Allocator*);
@@ -177,6 +184,8 @@ void MarkForFree(Allocator*, Allocation);
 
 // Frees the garbage of the next frame to be used.
 void EmptyGarbage(Allocator*);
+
+std::string Print(const Context&, const Allocator&);
 
 }  // namespace vulkan
 }  // namespace warhol

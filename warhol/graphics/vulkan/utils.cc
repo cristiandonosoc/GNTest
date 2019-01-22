@@ -126,7 +126,7 @@ const char* EnumToString(VkResult res) {
     default: break;
   }
 
-  ASSERT(!"Unknown option");
+  NOT_REACHED("Unknown VkResult.");
   return "";
 }
 
@@ -141,7 +141,7 @@ const char* EnumToString(VkPhysicalDeviceType type) {
     default: break;
   }
 
-  ASSERT(!"Unknown option");
+  NOT_REACHED("Unknown VkPhysicalDeviceType");
   return nullptr;
 }
 
@@ -159,7 +159,7 @@ const char* EnumToString(VkDebugUtilsMessageSeverityFlagBitsEXT severity) {
     default: break;
   }
 
-  ASSERT("Unknown severity");
+  NOT_REACHED("Unknown severity");
   return nullptr;
 }
 
@@ -172,7 +172,7 @@ const char* EnumToString(VkDebugUtilsMessageTypeFlagsEXT type) {
     default: break;
   }
 
-  ASSERT("Unknown");
+  NOT_REACHED("Unknown VkDebugUtilsMessengerTypeFlagsEXT");
   return nullptr;
 }
 
@@ -511,7 +511,7 @@ const char* EnumToString(VkFormat format) {
     default: break;
   }
 
-  ASSERT("Unknown");
+  NOT_REACHED("Unknown VkFormat.");
   return nullptr;
 }
 
@@ -539,7 +539,7 @@ const char* EnumToString(VkColorSpaceKHR color_space) {
     default: break;
   }
 
-  ASSERT("Unknown");
+  NOT_REACHED("Unknown VkColorSpaceKHR.");
   return nullptr;
 }
 
@@ -557,7 +557,7 @@ const char* EnumToString(VkPresentModeKHR present_mode) {
     default: break;
   }
 
-  ASSERT("Unknown");
+  NOT_REACHED("Unknown present mode.");
   return nullptr;
 }
 
@@ -600,7 +600,28 @@ template<> const char* EnumToString(VkImageLayout layout) {
     default: break;
   }
 
-  NOT_REACHED();
+  NOT_REACHED("Unknown image layout.");
+  return nullptr;
+}
+
+template<> const char* EnumToString(VkMemoryPropertyFlagBits bits) {
+  switch (bits) {
+    case VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT:
+      return "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT";
+    case VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT:
+      return "VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT";
+    case VK_MEMORY_PROPERTY_HOST_COHERENT_BIT:
+      return "VK_MEMORY_PROPERTY_HOST_COHERENT_BIT";
+    case VK_MEMORY_PROPERTY_HOST_CACHED_BIT:
+      return "VK_MEMORY_PROPERTY_HOST_CACHED_BIT";
+    case VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT:
+      return "VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT";
+    case VK_MEMORY_PROPERTY_PROTECTED_BIT:
+      return "VK_MEMORY_PROPERTY_PROTECTED_BIT";
+    default: break;
+  }
+
+  NOT_REACHED("Unknown VkMemoryPropertyFlagBits.");
   return nullptr;
 }
 

@@ -22,8 +22,12 @@ struct ClearOnMove{
     return *this;
   }
 
+  bool has_value() const { value != 0; }
+
   T& operator*() { return value; }
   T* operator->() { return &value; }
+  const T& operator*() const { return value; }
+  const T* operator->() const { return &value; }
 
   void clear() { value = 0; }
 

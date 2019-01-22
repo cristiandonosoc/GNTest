@@ -204,6 +204,7 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
 
   Mesh mesh = {};
   mesh.vertices = vertices;
+  mesh.indices = indices;
   /* const float* begin = vertices.data(); */
   /* const float* end = begin + vertices.size(); */
 
@@ -219,7 +220,9 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   /* for (float f : vertices) { */
   /*   *ptr++ = f; */
   /* } */
-  mesh.indices = indices;
+
+  LOG(DEBUG) << "Loading model. Size: " << ToKilobytes(mesh.data_size())
+             << " KBs.";
 
   if (!vulkan::LoadModel(context, mesh))
     return false;
@@ -230,9 +233,9 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
     return false;
   std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating texture buffers...";
   Image image = Image::Create2DImageFromPath(Assets::TexturePath("chalet.jpg"));
   /* image.mip_levels = 2; */
+
 
 #if 0
   Image image = {};
@@ -251,8 +254,10 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   (*image.data)[2] = 0xff;
   (*image.data)[3] = 0xff;
 #endif
+  LOG(DEBUG) << "Loading image. Size: " << ToKilobytes(image.data_size)
+             << " KBs.";
 
-
+  std::cout << "Creating texture buffers...";
   if (!vulkan::CreateTextureBuffers(context, image))
     return false;
   std::cout << " DONE" << std::endl;
@@ -369,7 +374,7 @@ bool DrawFrame(const SDLContext& sdl_context,
   int current_frame = vk_context->current_frame;
   if (!VK_CALL(vkWaitForFences, *vk_context->device, 1,
                &vk_context->in_flight_fences[current_frame].value(),
-               VK_TRUE, Limits::kUint64Max)) {
+               VK_TRUE, UINT32_MAX)) {
     return false;
   }
 
@@ -377,7 +382,7 @@ bool DrawFrame(const SDLContext& sdl_context,
   VkResult res = vkAcquireNextImageKHR(
       *vk_context->device,
       *vk_context->swap_chain,
-      Limits::kUint64Max,  // No timeout.
+      UINT32_MAX,  // No timeout.
       *vk_context->image_available_semaphores[current_frame],
       VK_NULL_HANDLE,
       &image_index);
@@ -403,9 +408,8 @@ bool DrawFrame(const SDLContext& sdl_context,
   }
 
   // Copy the UBO
-  UBO* vk_ubo = (UBO*)vk_context->uniform_buffers[image_index].data;
+  UBO* vk_ubo = (UBO*)vk_context->uniform_buffers[image_index].data();
   *vk_ubo = ubo;
-
 
   if (!SubmitCommandBuffer(vk_context, image_index))
     return false;

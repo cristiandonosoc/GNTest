@@ -17,7 +17,7 @@ const char* MemoryUsageToString(MemoryUsage memory_usage) {
     case MemoryUsage::kGPUToCPU: return "GPUToCPU";
   }
 
-  NOT_REACHED();
+  NOT_REACHED("Unknown MemoryUsage.");
   return nullptr;
 }
 
@@ -46,7 +46,7 @@ uint32_t FindMemoryTypeIndex(Context* context, MemoryUsage memory_usage,
                    VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
       break;
     case MemoryUsage::kNone:
-      NOT_REACHED();
+      NOT_REACHED("No memory usage defined.");
   }
 
   // Search for required & preferred.
@@ -76,6 +76,30 @@ uint32_t FindMemoryTypeIndex(Context* context, MemoryUsage memory_usage,
   }
 
   return UINT32_MAX;
+}
+
+std::string MemoryTypeIndexToString(const Context& context, uint32_t memory_type_index) {
+  const auto& mem_properties = context.physical_device_info.memory_properties;
+  ASSERT(memory_type_index < mem_properties.memoryTypeCount);
+
+  auto flags = mem_properties.memoryTypes[memory_type_index].propertyFlags;
+
+  std::stringstream ss;
+
+  if (flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+    ss << "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, ";
+  if (flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+    ss << "VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, ";
+  if (flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+    ss << "VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ";
+  if (flags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
+    ss << "VK_MEMORY_PROPERTY_HOST_CACHED_BIT, ";
+  if (flags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
+    ss << "VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT, ";
+  if (flags & VK_MEMORY_PROPERTY_PROTECTED_BIT)
+    ss << "VK_MEMORY_PROPERTY_PROTECTED_BIT, ";
+
+  return ss.str();
 }
 
 }  // namespace vulkan
