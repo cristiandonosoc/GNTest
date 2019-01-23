@@ -38,7 +38,7 @@ enum class AllocationType {
 static const char* AllocationTypeToString(AllocationType);
 
 struct Allocation {
-  bool valid() const { return pool != nullptr; }
+  bool valid() const { return pool != nullptr && has_value(); }
   bool host_visible() const { return data != nullptr; }
   bool has_value() const { return *memory!= VK_NULL_HANDLE; }
 
@@ -112,10 +112,10 @@ struct MemoryPool {
   // The pool is a linked list of allocated blocks.
   // If a block and its neighbour are free, they are merged into one block.
   std::unique_ptr<MemoryBlock> head = nullptr;
-  uint32_t next_block_id = UINT32_MAX;
+  uint32_t next_block_id = 0;
 
   // The allocations that have been returned.
-  uint32_t garbage_index = UINT32_MAX;
+  uint32_t garbage_index = 0;
   // They are block ids.
   struct GarbageMarker {
     uint32_t block_id;
@@ -162,7 +162,8 @@ struct Allocator {
   uint32_t host_visible_memory_size = 0;
   bool initialized = false;
 
-  std::vector<MemoryPool> pools;
+  // Unique pointers so that they don't move in memory.
+  std::vector<std::unique_ptr<MemoryPool>> pools;
 };
 
 // The memory inputs are the sizes of the pools.
