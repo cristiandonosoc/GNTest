@@ -69,7 +69,12 @@ const std::vector<uint32_t> indices = {
     4, 5, 6, 6, 7, 4,
 };
 
-
+inline void Header(const char* header) {
+  std::cout << "\n*** " << header
+            << " **************************************************************"
+               "**************************\n\n";
+  std::flush(std::cout);
+}
 
 // TODO: Setup a better debug call.
 static VKAPI_ATTR VkBool32 VKAPI_CALL
@@ -106,24 +111,21 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   if (!vulkan::CheckValidationLayers(context->validation_layers))
     return false;
 
-  std::cout << "Creating context...";
+  Header("Creating context...");
   if (!vulkan::CreateContext(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Set debug callback....";
+  Header("Set debug callback....");
   if (!vulkan::SetupDebugCall(context, VulkanDebugCall))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating surface...";
+  Header("Creating surface...");
   VkSurfaceKHR surface;
   if (!SDL_Vulkan_CreateSurface(
           sdl_context.get_window(), *context->instance, &surface)) {
     LOG(ERROR) << "Could not create surface: " << SDL_GetError();
   }
   context->surface.Set(context, surface);
-  std::cout << " DONE" << std::endl;
 
   context->device_extensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -135,66 +137,55 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   vkGetPhysicalDeviceProperties(context->physical_device, &properties);
   LOG(INFO) << "Picked physical device: " << properties.deviceName;
 
-  std::cout << "Creating a logical device...";
+  Header("Creating a logical device...");
   if (!vulkan::CreateLogicalDevice(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating allocator...";
+  Header("Creating allocator...");
   if (!vulkan::CreateAllocator(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating a swap chain...";
+  Header("Creating a swap chain...");
   Pair<uint32_t> screen_size = {(uint32_t)sdl_context.width(),
                                 (uint32_t)sdl_context.height()};
   if (!vulkan::CreateSwapChain(context, screen_size))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating image views...";
+  Header("Creating image views...");
   if (!vulkan::CreateImageViews(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating a command pool for each framebuffer...";
+  Header("Creating a command pool for each framebuffer...");
   if (!vulkan::CreateCommandPool(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating depth buffers...";
+  Header("Creating depth buffers...");
   if (!vulkan::CreateDepthResources(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating a render pass...";
+  Header("Creating a render pass...");
   if (!vulkan::CreateRenderPass(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating descriptor set layout...";
+  Header("Creating descriptor set layout...");
   if (!vulkan::CreateDescriptorSetLayout(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating the pipeline layout...";
+  Header("Creating the pipeline layout...");
   if (!vulkan::CreatePipelineLayout(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating a graphics pipeline...";
+  Header("Creating a graphics pipeline...");
   context->vert_shader_path = Assets::VulkanShaderPath("demo.vert.spv");
   context->frag_shader_path = Assets::VulkanShaderPath("demo.frag.spv");
   if (!vulkan::CreateGraphicsPipeline(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating frame buffers...";
+  Header("Creating frame buffers...");
   if (!vulkan::CreateFrameBuffers(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Loading model..."; std::flush(std::cout);
+  Header("Loading model...");
   /* const char* model_name = "chalet.obj"; */
   /* auto model = LoadModel(Assets::ModelPath(model_name)); */
   /* if (!model) { */
@@ -226,12 +217,10 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
 
   if (!vulkan::LoadModel(context, mesh))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Setting up UBO..."; std::flush(std::cout);
+  Header("Setting up UBO...");
   if (!vulkan::SetupUBO(context, sizeof(UBO)))
     return false;
-  std::cout << " DONE" << std::endl;
 
   Image image = Image::Create2DImageFromPath(Assets::TexturePath("chalet.jpg"));
   /* image.mip_levels = 2; */
@@ -257,35 +246,29 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   LOG(DEBUG) << "Loading image. Size: " << ToKilobytes(image.data_size)
              << " KBs.";
 
-  std::cout << "Creating texture buffers...";
+  Header("Creating texture buffers...");
   if (!vulkan::CreateTextureBuffers(context, image))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating imate view...";
+  Header("Creating imate view...");
   if (!vulkan::CreateTextureImageView(context, image))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating texture sampler...";
+  Header("Creating texture sampler...");
   if (!vulkan::CreateTextureSampler(context, image))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating descriptor sets...";
+  Header("Creating descriptor sets...");
   if (!vulkan::CreateDescriptorSets(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creating command buffers....";
+  Header("Creating command buffers....");
   if (!vulkan::CreateCommandBuffers(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
-  std::cout << "Creagin synchronization objects...";
+  Header("Creagin synchronization objects...");
   if (!vulkan::CreateSyncObjects(context))
     return false;
-  std::cout << " DONE" << std::endl;
 
   LOG(INFO) << "Vulkan context creation successful!";
   return true;

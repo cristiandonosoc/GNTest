@@ -1,48 +1,48 @@
 # Copyright 2018, Cristián Donoso.
 # This code has a BSD license. See LICENSE.
 
-executable("voxel_renderer") {
-  sources = [
-    "voxel_renderer.cc",
-  ]
-
-  deps = [
-    "voxel:lib",
-    "//warhol",
-  ]
-}
-
-executable("work_queue") {
-  sources = [
-    "work_queue.cc",
-  ]
-
-  deps = [
-    "voxel:lib",
-    "//warhol",
-    "//warhol/multithreading",
-  ]
-}
-
-executable("osx") {
-  sources = [
-    "osx_main.cc",
-  ]
-
-  deps = [
-    "//warhol",
-  ]
-}
-
-executable("memory_blocks") {
-  sources = [
-    "memory_blocks.cc",
-  ]
-
-  deps = [
-    "//warhol/memory"
-  ]
-}
+#executable("voxel_renderer") {
+#  sources = [
+#    "voxel_renderer.cc",
+#  ]
+#
+#  deps = [
+#    "voxel:lib",
+#    "//warhol",
+#  ]
+#}
+#
+#executable("work_queue") {
+#  sources = [
+#    "work_queue.cc",
+#  ]
+#
+#  deps = [
+#    "voxel:lib",
+#    "//warhol",
+#    "//warhol/multithreading",
+#  ]
+#}
+#
+#executable("osx") {
+#  sources = [
+#    "osx_main.cc",
+#  ]
+#
+#  deps = [
+#    "//warhol",
+#  ]
+#}
+#
+#executable("memory_blocks") {
+#  sources = [
+#    "memory_blocks.cc",
+#  ]
+#
+#  deps = [
+#    "//warhol/memory"
+#  ]
+#}
 
 # Vulkan Test ------------------------------------------------------------------
 

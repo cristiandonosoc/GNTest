@@ -229,8 +229,8 @@ bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
                             const AllocateConfig& config, Allocation* out) {
   (void)context;
   VkDeviceSize free = pool->size - pool->allocated;
-  /* LOG(DEBUG) << "Pool size: " << ToKilobytes(free) */
-  /*            << ", required: " << ToKilobytes(config.size); */
+  /* LOG(DEBUG) << "Pool size: " << BytesToString(free) */
+  /*            << ", required: " << BytesToString(config.size); */
   if (free < config.size)
     return false;
 
@@ -250,7 +250,7 @@ bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
        prev = current, current = current->next) {
     /* LOG(DEBUG) << "Candidate block. Allocation Type: " */
     /*            << AllocationTypeToString(current->alloc_type) */
-    /*            << ", size: " << ToKilobytes(current->size) << " KBs."; */
+    /*            << ", size: " << BytesToString(current->size) << " KBs."; */
 
     // If it's allocated or too small, we continue searching.
     if (current->alloc_type != AllocationType::kFree ||
@@ -319,8 +319,8 @@ bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
   }
 
   best_fit->alloc_type = config.alloc_type;
-  best_fit->size = config.size;
-
+  best_fit->size = aligned_size;
+  best_fit->used_size = config.size;
 
   LOG(DEBUG) << "Allocated block " << best_fit->id << " from pool " << pool->id;
 
@@ -331,13 +331,13 @@ bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
   allocation.memory = pool->memory.value();
   // NOTE: This could be different than the block offset.
   allocation.offset = offset;
-  allocation.size = best_fit->size;
+  allocation.size = best_fit->used_size;
   if (pool->host_visible())
     allocation.data = pool->data + offset;
 
   *out= std::move(allocation);
 
-  LOG(DEBUG) << "Allocated successfully: " << ToKilobytes(aligned_size) << " KBs.";
+  LOG(DEBUG) << "Allocated successfully: " << BytesToString(aligned_size);
   LOG(NO_FRAME) << Print(*context, *pool);
 
   pool->allocated += aligned_size;
@@ -389,22 +389,33 @@ void EmptyGarbage(MemoryPool* pool) {
 
 std::string Print(const Context& context, const MemoryPool& pool) {
   std::stringstream ss;
-  ss << "Memory pool " << pool.id << "(Host Visible: " << pool.host_visible()
+  ss << "Memory pool " << pool.id << " (Host Visible: " << pool.host_visible()
      << ")" << std::endl;
   ss << "Memory types: "
      << MemoryTypeIndexToString(context, pool.memory_type_index) << std::endl;
-  ss << "Size: " << ToKilobytes(pool.size)
-     << " KBs, Allocated: " << ToKilobytes(pool.allocated)
-     << " KBs, Free: " << ToKilobytes(pool.free()) << " KBs." << std::endl;
+  ss << "Size: " << BytesToString(pool.size)
+     << ", Allocated: " << BytesToString(pool.allocated)
+     << ", Free: " << BytesToString(pool.free()) << std::endl;
 
-  ss << "Allocations: " << std::endl;
   int count = 0;
 
+  MemoryBlock* prev = nullptr;
   MemoryBlock* current = nullptr;
   for (current = pool.head.get(); current != nullptr; current = current->next) {
-    ss << count << ". Size: " << ToKilobytes(current->size)
-       << " KBs, Type: " << AllocationTypeToString(current->alloc_type)
-       << std::endl;
+    prev = current->prev;
+
+    ss << current->id
+       << ". Type: " << AllocationTypeToString(current->alloc_type)
+       << ", Size: " << BytesToString(current->size)
+       << " (Used: " << BytesToString(current->used_size) << ")"
+       << ", Offset: " << BytesToString(current->offset);
+
+    if (prev != nullptr) {
+      ss << ", Diff w/ prev: "
+         << BytesToString(current->offset - (prev->offset + prev->size));
+    }
+
+    ss << std::endl;
     count++;
   }
 

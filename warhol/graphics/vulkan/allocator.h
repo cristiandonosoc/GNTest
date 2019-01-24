@@ -71,7 +71,8 @@ void Free(Allocation*);
 // Represents an allocated (or free) memory block within a MemoryPool.
 struct MemoryBlock {
   uint32_t id = UINT32_MAX;
-  VkDeviceSize size = 0;
+  VkDeviceSize size = 0;        // |used_size| + alignment.
+  VkDeviceSize used_size = 0;
   VkDeviceSize offset = 0;
 
   // A block owns the next block.

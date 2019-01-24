@@ -19,14 +19,17 @@ source_set("utils") {
     "log.h",
     "macros.h",
     "optional.h",
+    "path.cc",
+    "path.h",
     "scope_trigger.h",
     "status.cc",
     "status.h",
     "string.cc",
     "string.h",
-    "path.cc",
-    "path.h",
+    "types.cc",
+    "types.h",
   ]
+
   deps = [
     "//third_party/stb",
   ]

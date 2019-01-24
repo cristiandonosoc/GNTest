@@ -1167,6 +1167,9 @@ bool SetupUBO(Context* context , VkDeviceSize ubo_size) {
   context->ubo_size = ubo_size;
   context->uniform_buffers.reserve(context->images.size());
   for (size_t i = 0; i < context->images.size(); i++) {
+    LOG(DEBUG) << "Allocating UBO " << i
+               << ", size: " << BytesToString(ubo_size);
+
     AllocBufferConfig alloc_config = {};
     alloc_config.size = ubo_size;
     alloc_config.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;

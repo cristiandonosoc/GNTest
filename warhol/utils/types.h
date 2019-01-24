@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-#include <limits>
+#include <string>
 
 namespace warhol {
 
@@ -15,9 +15,9 @@ struct MemoryDefs {
   static constexpr size_t kGigabyte = 1024 * 1024 * 1024;
 };
 
-#define KILOBYTES(count) count * ::warhol::MemoryDefs::kKilobyte
-#define MEGABYTES(count) count * ::warhol::MemoryDefs::kMegabyte
-#define GIGABYTES(count) count * ::warhol::MemoryDefs::kGigabyte
+#define KILOBYTES(count) (count * ::warhol::MemoryDefs::kKilobyte)
+#define MEGABYTES(count) (count * ::warhol::MemoryDefs::kMegabyte)
+#define GIGABYTES(count) (count * ::warhol::MemoryDefs::kGigabyte)
 
 inline float ToKilobytes(size_t bytes) {
   return (float)bytes / ::warhol::MemoryDefs::kKilobyte;
@@ -28,5 +28,7 @@ inline float ToMegabytes(size_t bytes) {
 inline float ToGigabytes(size_t bytes) {
   return (float)bytes / ::warhol::MemoryDefs::kGigabyte;
 }
+
+std::string BytesToString(size_t bytes);
 
 }  // namespace warhol
