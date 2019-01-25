@@ -31,4 +31,10 @@ source_set("warhol") {
     "//warhol/imgui",
     "//warhol/sdl2",
   ]
+
+  if (target_os == "linux") {
+    libs = [ "-lpthread" ]
+  }
+
+
 }
