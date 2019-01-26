@@ -401,7 +401,7 @@ bool DrawFrame(const SDLContext& sdl_context,
     return false;
 
   vk_context->current_frame++;
-  vk_context->current_frame %= vk_context->max_frames_in_flight;
+  vk_context->current_frame %= vulkan::kMaxFramesInFlight;
   return true;
 }
 

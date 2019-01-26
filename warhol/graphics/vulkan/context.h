@@ -51,15 +51,12 @@ struct SwapChainDetails {
 };
 
 struct Context {
-  Context();
-
-  // How many frames we can be processing concurrently.
-  int max_frames_in_flight = 2;
-  int current_frame = 0;
-
+  DEFAULT_CONSTRUCTOR(Context);
   DELETE_COPY_AND_ASSIGN(Context);
   DEFAULT_MOVE_AND_ASSIGN(Context);
+  ~Context();
 
+  int current_frame = 0;
   Allocator allocator = {};
 
   Handle<VkInstance> instance = {};

@@ -21,7 +21,10 @@
 namespace warhol {
 namespace vulkan {
 
-Context::Context() = default;
+Context::~Context() {
+  // Allocator has to be deleted before anything else.
+  Shutdown(&allocator);
+}
 
 // CreateContext & -------------------------------------------------------------
 
@@ -255,6 +258,7 @@ bool CreateLogicalDevice(Context* context) {
 
 bool CreateAllocator(Context* context) {
   Allocator allocator = {};
+  allocator.context = context;
   Init(&allocator, MEGABYTES(256), MEGABYTES(256));
   context->allocator = std::move(allocator);
   return true;
@@ -326,7 +330,8 @@ bool CreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
 
   uint32_t min_image_count = capabilities.capabilities.minImageCount;
   uint32_t max_image_count = capabilities.capabilities.maxImageCount;
-  uint32_t image_count = min_image_count + 1;
+  uint32_t image_count = kNumFrames;
+  ASSERT(kNumFrames >= min_image_count);
   // We clamp the value if necessary. max == 0 means no limit in image count.
   if (max_image_count > 0 && image_count > max_image_count)
     image_count = max_image_count;
@@ -1478,7 +1483,7 @@ bool CreateSyncObjects(Context* context) {
   // Start this fence in the signaled state.
   fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-  for (int i = 0; i < context->max_frames_in_flight; i++) {
+  for (int i = 0; i < kMaxFramesInFlight; i++) {
     VkSemaphore semaphores[2];
     VkFence fence;
     if (!VK_CALL(vkCreateSemaphore, *context->device, &semaphore_create_info,

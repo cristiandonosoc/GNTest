@@ -13,41 +13,6 @@
 namespace warhol {
 namespace vulkan {
 
-// Allocation ------------------------------------------------------------------
-
-namespace {
-
-void MarkAsInvalid(Allocation* allocation) {
-  allocation->pool = nullptr;
-  allocation->pool_id = UINT32_MAX;
-  allocation->block_id = UINT32_MAX;
-  allocation->memory.clear();
-  allocation->offset = 0;
-  allocation->size = 0;
-  allocation->data = nullptr;
-}
-
-}  // namespace
-
-Allocation::~Allocation() {
-  if (valid())
-    Free(this);
-}
-
-void Free(Allocation* allocation) {
-  // This can happen when Free was called not at the destroyer.
-  if (!allocation->valid())
-    return;
-
-  // The MemoryPool could have gotten reallocated.
-  ASSERT(allocation->pool->valid());
-  ASSERT(allocation->pool->id == allocation->pool_id);
-
-  MarkForFree(allocation->pool, allocation);
-}
-
-// MemoryBlock -----------------------------------------------------------------
-
 const char*
 AllocationTypeToString(AllocationType type) {
   switch (type) {
@@ -61,6 +26,19 @@ AllocationTypeToString(AllocationType type) {
 
   NOT_REACHED("Uknown AllocationType.");
   return nullptr;
+}
+
+// Allocation ------------------------------------------------------------------
+
+Allocation::~Allocation() {
+  if (!valid())
+    return;
+
+  // The MemoryPool could have gotten reallocated.
+  ASSERT(pool->valid());
+  ASSERT(pool_id == pool->id);
+
+  MarkForFree(pool, this);
 }
 
 // MemoryPool ------------------------------------------------------------------
@@ -148,6 +126,10 @@ void Free(MemoryPool* pool, const MemoryPool::GarbageMarker& marker) {
       current->next->prev = prev;
 
     prev->size = current->size;
+
+    LOG(DEBUG) << "Pool " << pool->id << ": Merged blocks " << prev->id
+               << " and " << current->id << " into " << current->id;
+
     delete current;
     current = prev;
   }
@@ -160,6 +142,10 @@ void Free(MemoryPool* pool, const MemoryPool::GarbageMarker& marker) {
     if (current->next)
       current->next->prev = current;
     current->size += next->size;
+
+    LOG(DEBUG) << "Pool " << pool->id << ": Merged blocks " << current->id
+               << " and " << next->id << " into " << current->id;
+
     delete next;
   }
 
@@ -170,17 +156,34 @@ void Free(MemoryPool* pool, const MemoryPool::GarbageMarker& marker) {
 
 
 MemoryPool::~MemoryPool() {
-  if (valid())
-    Shutdown(this);
+  if (!valid())
+    return;
+
+  if (host_visible()) {
+    vkUnmapMemory(memory.context()->device.value(), *memory);
+    data = nullptr;
+  }
+
+  memory.Clear();   // This will call vkFreeMemory.
+  /* vkFreeMemory(allocator->context->device.value(), *memory, nullptr); */
+
+  // Free all the blocks.
+  MemoryBlock* prev = nullptr;
+  MemoryBlock* current = head.get();
+  while (true) {
+    if (current->next == nullptr) {
+      delete current;
+      break;
+    }
+
+    prev = current;
+    current = current->next;
+    if (prev != head.get())
+      delete prev;
+  }
 }
 
-bool Init(Context* context, MemoryPool* pool,
-          const InitMemoryPoolConfig& config) {
-  pool->id = config.id;
-  pool->memory_type_index = config.memory_type_index;
-  pool->memory_usage = config.memory_usage;
-  pool->size = config.size;
-
+bool Init(Context* context, MemoryPool* pool) {
   // TODO(Cristian): Handle granularity.";
   pool->granularity = 1;
 
@@ -207,22 +210,12 @@ bool Init(Context* context, MemoryPool* pool,
 
   pool->head = std::move(head);
 
-  /* LOG(DEBUG) << "Head: " << pool->head.get(); */
   return true;
 }
 
 void Shutdown(MemoryPool* pool) {
   ASSERT(pool->valid());
 
-  if (pool->host_visible())
-    vkUnmapMemory(pool->memory.context()->device.value(), *pool->memory);
-  pool->memory.Clear();
-
-  // This will call all the chain destructors.
-  pool->head.reset();
-
-  // Once all the resources have been freed, we clear the values.
-  *pool = {};
 }
 
 bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
@@ -364,9 +357,6 @@ void MarkForFree(MemoryPool* pool, Allocation* allocation) {
   marker.block_id = allocation->block_id;
   marker.size = allocation->size;
   pool->garbage[pool->garbage_index].push_back(std::move(marker));
-
-  // This is now freed, so it's no longer to be marked valid.
-  MarkAsInvalid(allocation);
 }
 
 void EmptyGarbage(MemoryPool* pool) {
@@ -382,7 +372,8 @@ void EmptyGarbage(MemoryPool* pool) {
 
   // If the pool is no longer allocates memory, we can deallocate it.
   if (pool->allocated == 0) {
-    Shutdown(pool);
+    // Once all the resources have been freed, we clear the values.
+    *pool = {};
     ASSERT(!pool->valid());
   }
 }
@@ -457,7 +448,9 @@ MemoryPool* FindMemoryPool(Allocator* allocator, uint32_t pool_id) {
 
 }  // namespace
 
-Allocator::~Allocator() = default;
+Allocator::~Allocator() {
+  LOG(DEBUG) << __PRETTY_FUNCTION__;
+}
 
 void Init(Allocator* allocator, uint32_t device_local_memory,
           uint32_t host_visible_memory) {
@@ -470,6 +463,9 @@ void Init(Allocator* allocator, uint32_t device_local_memory,
 }
 
 void Shutdown(Allocator* allocator) {
+  for (auto& pool : allocator->pools) {
+    Shutdown(pool.get());
+  }
   *allocator = {};
 }
 
@@ -496,24 +492,23 @@ bool Allocate(Context* context, Allocator* allocator,
                                ? allocator->host_visible_memory_size
                                : allocator->device_local_memory_size;
 
-  auto memory_pool = std::make_unique<MemoryPool>();
-  *memory_pool = {};
-  InitMemoryPoolConfig init_config = {};
-  init_config.id = allocator->next_pool_id++;
-  init_config.memory_type_index = memory_type_index;
-  init_config.memory_usage = config.memory_usage;
-  init_config.size = pool_size;
-  if (!Init(context, memory_pool.get(), init_config))
-    return false;
+  auto pool = std::make_unique<MemoryPool>();
+  *pool = {};
 
-  /* LOG(DEBUG) << "Created memory pool. Current pool count: " << allocator->pools.size(); */
+  pool->id = allocator->next_pool_id++;
+  pool->allocator = allocator;
+  pool->memory_type_index = memory_type_index;
+  pool->memory_usage = config.memory_usage;
+  pool->size = pool_size;
+  if (!Init(context, pool.get()))
+    return false;
 
   // We search for a slot where to put this is.
   int inserted_index = -1;
   for (int i = 0; i < (int)allocator->pools.size(); i++) {
     auto& slot = allocator->pools[i];
     if (!slot->valid()) {
-      slot = std::move(memory_pool);
+      slot = std::move(pool);
       inserted_index = i;
       break;
     }
@@ -522,7 +517,7 @@ bool Allocate(Context* context, Allocator* allocator,
   // If there wasn't any slot, we append it.
   if (inserted_index == -1) {
     inserted_index = (int)allocator->pools.size();
-    allocator->pools.push_back(std::move(memory_pool));
+    allocator->pools.push_back(std::move(pool));
   }
 
   LOG(DEBUG) << "Inserted pool in slot " << inserted_index;

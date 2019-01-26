@@ -17,7 +17,8 @@ void AssertionFailed(Location loc, const char* condition, const char* message) {
   LocationStack* stack = GetLocationStack();
   printf("Printing contextual stack of size: %d\n", stack->size);
   PrintLocationStack(*stack);
-  exit(1);
+
+  abort();
 }
 
 }  // namespace warhol

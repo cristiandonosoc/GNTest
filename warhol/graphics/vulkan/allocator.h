@@ -18,6 +18,7 @@
 namespace warhol {
 namespace vulkan {
 
+struct Allocator;     // Defined later in file.
 struct Context;
 struct MemoryPool;    // Defined later in file.
 
@@ -63,9 +64,6 @@ struct Allocation {
   uint8_t* data = nullptr;          // If host visible, it's mapped here.
 };
 
-// Marks the allocation as invalid.
-void Free(Allocation*);
-
 // MemoryBlock -----------------------------------------------------------------
 
 // Represents an allocated (or free) memory block within a MemoryPool.
@@ -92,10 +90,12 @@ struct MemoryPool {
   bool host_visible() const { return memory_usage != MemoryUsage::kGPUOnly; }
   VkDeviceSize free() const { return size - allocated; }
 
-  DEFAULT_CONSTRUCTOR(MemoryPool);
+ DEFAULT_CONSTRUCTOR(MemoryPool);
   DELETE_COPY_AND_ASSIGN(MemoryPool);
   DEFAULT_MOVE_AND_ASSIGN(MemoryPool);
   ~MemoryPool();    // Calls Shutdown(this) if valid.
+
+  Allocator* allocator = nullptr;   // Not owning.
 
   uint32_t id = UINT32_MAX;
   uint32_t memory_type_index = UINT32_MAX;
@@ -112,6 +112,7 @@ struct MemoryPool {
 
   // The pool is a linked list of allocated blocks.
   // If a block and its neighbour are free, they are merged into one block.
+  // TODO(Cristian): Use a linked list structure instead of an adhoc one!
   std::unique_ptr<MemoryBlock> head = nullptr;
   uint32_t next_block_id = 0;
 
@@ -125,13 +126,7 @@ struct MemoryPool {
   std::vector<GarbageMarker> garbage[kNumFrames];
 };
 
-struct InitMemoryPoolConfig {
-  uint32_t id = 0;
-  uint32_t memory_type_index = UINT32_MAX;
-  VkDeviceSize size = 0;
-  MemoryUsage memory_usage = MemoryUsage::kNone;
-};
-bool Init(Context*, MemoryPool*, const InitMemoryPoolConfig&);
+bool Init(Context*, MemoryPool*);
 
 struct AllocateConfig;
 bool AllocateFromMemoryPool(Context*, MemoryPool*, const AllocateConfig&,
@@ -155,6 +150,8 @@ struct Allocator {
   DELETE_COPY_AND_ASSIGN(Allocator);
   DEFAULT_MOVE_AND_ASSIGN(Allocator);
   ~Allocator();    // Calls Shutdown(this) if valid.
+
+  Context* context = nullptr;   // not owning.
 
   uint32_t next_pool_id = UINT32_MAX;
 
