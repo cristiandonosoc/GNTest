@@ -36,7 +36,11 @@ const char* MemoryUsageToString(MemoryUsage);
 // Returns UINT32_MAX on error.
 uint32_t FindMemoryTypeIndex(Context*, MemoryUsage, uint32_t memory_type_bits);
 
-std::string MemoryTypeIndexToString(const Context&, uint32_t memory_type_index);
+VkMemoryPropertyFlags GetPropertyFlagsFromMemoryTypeIndex(Context*, uint32_t);
+
+std::string MemoryTypeIndexToString(Context*, uint32_t memory_type_index);
+
+
 
 }  // namespace vulkan
 }  // namespace warhol

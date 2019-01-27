@@ -38,7 +38,8 @@ uint32_t FindMemoryTypeIndex(Context* context, MemoryUsage memory_usage,
       break;
     case MemoryUsage::kCPUToGPU:
       required |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-      preferred |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+      preferred |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
       break;
     case MemoryUsage::kGPUToCPU:
       required |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
@@ -78,14 +79,21 @@ uint32_t FindMemoryTypeIndex(Context* context, MemoryUsage memory_usage,
   return UINT32_MAX;
 }
 
-std::string MemoryTypeIndexToString(const Context& context, uint32_t memory_type_index) {
-  const auto& mem_properties = context.physical_device_info.memory_properties;
+VkMemoryPropertyFlags
+GetPropertyFlagsFromMemoryTypeIndex(Context* context,
+                                    uint32_t memory_type_index) {
+  const auto& mem_properties = context->physical_device_info.memory_properties;
   ASSERT(memory_type_index < mem_properties.memoryTypeCount);
 
   auto flags = mem_properties.memoryTypes[memory_type_index].propertyFlags;
+  return flags;
+}
+
+std::string MemoryTypeIndexToString(Context* context,
+                                    uint32_t memory_type_index) {
+  auto flags = GetPropertyFlagsFromMemoryTypeIndex(context, memory_type_index);
 
   std::stringstream ss;
-
   if (flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     ss << "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, ";
   if (flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)

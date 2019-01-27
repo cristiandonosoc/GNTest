@@ -64,6 +64,24 @@ struct Allocation {
   uint8_t* data = nullptr;          // If host visible, it's mapped here.
 };
 
+void CopyIntoAllocation(Allocation*, uint8_t* data, size_t size);
+
+/*******************************************************************************
+ * MemoryPool & MemoryBlock implementation.
+ *
+ * This is the internal implementation about how the Allocator keeps track of
+ * all the allocations.
+ *
+ * It basically is a list of MemoryPools. Each memory type will get a different
+ * memory pool (device only, host visible, etc.).  Each pool is a normal block
+ * allocator (linked list of blocks). When a pool doesn't have enough space,
+ * a new one of that type will be allocated.
+ *
+ * When the allocations are freed, they are not really deallocated, but marked
+ * for deletion for the current frame. Deletion lists are double buffered, so
+ * that you're always deleting the other frames allocations.
+ ******************************************************************************/
+
 // MemoryBlock -----------------------------------------------------------------
 
 // Represents an allocated (or free) memory block within a MemoryPool.
@@ -90,7 +108,7 @@ struct MemoryPool {
   bool host_visible() const { return memory_usage != MemoryUsage::kGPUOnly; }
   VkDeviceSize free() const { return size - allocated; }
 
- DEFAULT_CONSTRUCTOR(MemoryPool);
+  DEFAULT_CONSTRUCTOR(MemoryPool);
   DELETE_COPY_AND_ASSIGN(MemoryPool);
   DEFAULT_MOVE_AND_ASSIGN(MemoryPool);
   ~MemoryPool();    // Calls Shutdown(this) if valid.
@@ -128,7 +146,7 @@ struct MemoryPool {
 
 bool Init(Context*, MemoryPool*);
 
-struct AllocateConfig;
+struct AllocateConfig;  // Defined later.
 bool AllocateFromMemoryPool(Context*, MemoryPool*, const AllocateConfig&,
                             Allocation* out);
 
@@ -139,7 +157,9 @@ void Shutdown(MemoryPool*);
 void MarkForFree(MemoryPool*, Allocation*);
 void EmptyGarbage(MemoryPool*);
 
-std::string Print(const Context&, const MemoryPool&);
+bool IsHostCoherent(MemoryPool*);
+
+std::string Print(Context*, MemoryPool*);
 
 // Allocator -------------------------------------------------------------------
 
@@ -147,9 +167,9 @@ struct Allocator {
   bool valid() const { return initialized; }
 
   DEFAULT_CONSTRUCTOR(Allocator);
+  DEFAULT_DESTRUCTOR(Allocator);
   DELETE_COPY_AND_ASSIGN(Allocator);
   DEFAULT_MOVE_AND_ASSIGN(Allocator);
-  ~Allocator();    // Calls Shutdown(this) if valid.
 
   Context* context = nullptr;   // not owning.
 
@@ -184,7 +204,7 @@ void MarkForFree(Allocator*, Allocation);
 // Frees the garbage of the next frame to be used.
 void EmptyGarbage(Allocator*);
 
-std::string Print(const Context&, const Allocator&);
+std::string Print(Context*, Allocator*);
 
 }  // namespace vulkan
 }  // namespace warhol

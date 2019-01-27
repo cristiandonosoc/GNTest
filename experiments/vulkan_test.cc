@@ -357,7 +357,7 @@ bool DrawFrame(const SDLContext& sdl_context,
   int current_frame = vk_context->current_frame;
   if (!VK_CALL(vkWaitForFences, *vk_context->device, 1,
                &vk_context->in_flight_fences[current_frame].value(),
-               VK_TRUE, UINT32_MAX)) {
+               VK_TRUE, UINT64_MAX)) {
     return false;
   }
 
@@ -365,7 +365,7 @@ bool DrawFrame(const SDLContext& sdl_context,
   VkResult res = vkAcquireNextImageKHR(
       *vk_context->device,
       *vk_context->swap_chain,
-      UINT32_MAX,  // No timeout.
+      UINT64_MAX,  // No timeout.
       *vk_context->image_available_semaphores[current_frame],
       VK_NULL_HANDLE,
       &image_index);

@@ -21,11 +21,6 @@
 namespace warhol {
 namespace vulkan {
 
-Context::~Context() {
-  // Allocator has to be deleted before anything else.
-  Shutdown(&allocator);
-}
-
 // CreateContext & -------------------------------------------------------------
 
 bool CreateContext(Context* context) {
@@ -407,7 +402,7 @@ bool CreateImageViews(Context* context) {
   return true;
 }
 
-// CreateTextureSamplea --------------------------------------------------------
+// CreateTextureSampler --------------------------------------------------------
 
 bool CreateTextureSampler(Context* context, const Image& image) {
   VkSamplerCreateInfo sampler_info = {};
@@ -1075,14 +1070,8 @@ bool CreateVertexBuffers(Context* context, const Mesh& mesh) {
   if (!staging_memory.has_value())
     return false;
 
-  // Map the vertex data to the staging buffer.
-  /* void* memory; */
-  /* if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.memory, 0, size, */
-  /*              0, &memory)) { */
-  /*   return false; */
-  /* } */
-  memcpy(staging_memory.data(), mesh.vertices.data(), size);
-  /* vkUnmapMemory(*context->device, *staging_memory.memory); */
+  CopyIntoAllocation(&staging_memory.allocation, (uint8_t*)mesh.vertices.data(),
+                     size);
 
   // Create the local memory and copy the memory to it.
   alloc_config = {};
@@ -1122,15 +1111,8 @@ bool CreateIndicesBuffers(Context* context, const Mesh& mesh) {
   if (!staging_memory.has_value())
     return false;
 
-  // Map the vertex data to the staging buffer.
-  /* void* memory; */
-  /* if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.allocation,
-   * staging_memory.offset, staging_memory.size, */
-  /*              0, &memory)) { */
-  /*   return false; */
-  /* } */
-  memcpy(staging_memory.data(), mesh.indices.data(), size);
-  /* vkUnmapMemory(*context->device, *staging_memory.memory); */
+  CopyIntoAllocation(&staging_memory.allocation, (uint8_t*)mesh.indices.data(),
+                     size);
 
   // Create the local memory and copy the memory to it.
   alloc_config = {};
@@ -1210,14 +1192,8 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
   if (!staging_memory.has_value())
     return false;
 
-  /* // Map the vertex data to the staging buffer. */
-  /* void* memory; */
-  /* if (!VK_CALL(vkMapMemory, *context->device, *staging_memory.memory, */
-  /*                           0, src.data_size, 0, &memory)) { */
-  /*   return false; */
-  /* } */
-  memcpy(staging_memory.data(), src.data.value, src.data_size);
-  /* vkUnmapMemory(*context->device, *staging_memory.memory); */
+  CopyIntoAllocation(&staging_memory.allocation, (uint8_t*)src.data.value,
+                     src.data_size);
 
   // Allocate and image.
   CreateImageConfig image_config = {};

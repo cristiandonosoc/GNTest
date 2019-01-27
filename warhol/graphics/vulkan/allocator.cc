@@ -9,6 +9,7 @@
 #include "warhol/utils/align.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
+#include "warhol/utils/string.h"
 
 namespace warhol {
 namespace vulkan {
@@ -39,6 +40,27 @@ Allocation::~Allocation() {
   ASSERT(pool_id == pool->id);
 
   MarkForFree(pool, this);
+}
+
+void CopyIntoAllocation(Allocation* allocation, uint8_t* data, size_t size) {
+  ASSERT(allocation->valid());
+  ASSERT(allocation->host_visible());
+
+  memcpy(allocation->data, data, size);
+
+  // If the binding is coherent, the device will see the change and we're done.
+  if (IsHostCoherent(allocation->pool))
+    return;
+
+  // TODO(Cristian): This actually crashes on OSX if memory...
+  Context* context = allocation->pool->allocator->context;
+  VkMappedMemoryRange range = {};
+  range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+  range.memory = *allocation->memory;
+  range.size = allocation->size;
+  range.offset = allocation->offset;
+  if (!VK_CALL(vkFlushMappedMemoryRanges, *context->device, 1, &range))
+    NOT_REACHED("Could not flush memory.");
 }
 
 // MemoryPool ------------------------------------------------------------------
@@ -165,7 +187,6 @@ MemoryPool::~MemoryPool() {
   }
 
   memory.Clear();   // This will call vkFreeMemory.
-  /* vkFreeMemory(allocator->context->device.value(), *memory, nullptr); */
 
   // Free all the blocks.
   MemoryBlock* prev = nullptr;
@@ -221,9 +242,8 @@ void Shutdown(MemoryPool* pool) {
 bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
                             const AllocateConfig& config, Allocation* out) {
   (void)context;
+  LOG(DEBUG) << "################## Allocating from pool #####################";
   VkDeviceSize free = pool->size - pool->allocated;
-  /* LOG(DEBUG) << "Pool size: " << BytesToString(free) */
-  /*            << ", required: " << BytesToString(config.size); */
   if (free < config.size)
     return false;
 
@@ -232,18 +252,13 @@ bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
   MemoryBlock* prev = nullptr;
 
   VkDeviceSize padding = 0;
-  VkDeviceSize offset = 0;
-  VkDeviceSize aligned_size = 0;
-
-  /* LOG(DEBUG) << "Current head: " << pool->head.get(); */
+  VkDeviceSize aligned_offset = 0;
+  VkDeviceSize padded_size = 0;
 
   // We iterate over the linked list.
   for (current = pool->head.get();
        current != nullptr;
        prev = current, current = current->next) {
-    /* LOG(DEBUG) << "Candidate block. Allocation Type: " */
-    /*            << AllocationTypeToString(current->alloc_type) */
-    /*            << ", size: " << BytesToString(current->size) << " KBs."; */
 
     // If it's allocated or too small, we continue searching.
     if (current->alloc_type != AllocationType::kFree ||
@@ -251,34 +266,36 @@ bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
       continue;
     }
 
-    offset = Align(current->offset, config.align);
+    aligned_offset = Align(current->offset, config.align);
 
     // Check for linear/optimal granularity conflict with previous allocation.
     VkDeviceSize granularity = pool->granularity;
     ASSERT(granularity > 0);
     if (prev != nullptr && pool->granularity > 1 &&
-        AreOnTheSamePage(prev->offset, prev->size, offset, pool->granularity) &&
+        AreOnTheSamePage(prev->offset, prev->size, aligned_offset,
+                         pool->granularity) &&
         HasGranularityConflict(prev->alloc_type, config.alloc_type)) {
-      offset = Align(current->offset, pool->granularity);
+      aligned_offset = Align(current->offset, pool->granularity);
     }
 
     // How much difference between the end of this block and the start of the
     // aligned start.
-    padding = offset - current->offset;
-    aligned_size = padding + config.size;   // The actual block size we need.
+    padding = aligned_offset - current->offset;
+    padded_size = padding + config.size;   // The actual block size we need.
 
     // If with the alignement the block is too small, we need to continue.
-    if (aligned_size > current->size)
+    if (padded_size > current->size)
       continue;
 
     // If the alignment cases the pool to overflow, this pool won't cut it.
-    if (aligned_size + pool->allocated > pool->size)
+    if (padded_size + pool->allocated > pool->size)
       return false;
 
     // If we're going to have problems with the next resource, we can't use it.
     if (granularity > 1 && current->next != nullptr) {
       MemoryBlock* next = current->next;
-      if (AreOnTheSamePage(offset, config.size, next->offset, granularity) &&
+      if (AreOnTheSamePage(aligned_offset, config.size, next->offset,
+                           granularity) &&
           HasGranularityConflict(config.alloc_type, next->alloc_type)) {
         continue;
       }
@@ -299,8 +316,9 @@ bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
     auto new_block = new MemoryBlock();   // TODO: Review this!
     *new_block = {};
     new_block->id = pool->next_block_id++;
-    new_block->size = best_fit->size - aligned_size;
-    new_block->offset = offset + config.size;
+    new_block->size = best_fit->size - padded_size;
+    /* new_block->offset = offset + config.size; */
+    new_block->offset = best_fit->offset + padded_size;
     new_block->alloc_type = AllocationType::kFree;
 
     // Insert it after |best_fit|.
@@ -312,10 +330,8 @@ bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
   }
 
   best_fit->alloc_type = config.alloc_type;
-  best_fit->size = aligned_size;
+  best_fit->size = padded_size;
   best_fit->used_size = config.size;
-
-  LOG(DEBUG) << "Allocated block " << best_fit->id << " from pool " << pool->id;
 
   Allocation allocation = {};
   allocation.pool_id = pool->id;
@@ -323,17 +339,19 @@ bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
   allocation.block_id = best_fit->id;
   allocation.memory = pool->memory.value();
   // NOTE: This could be different than the block offset.
-  allocation.offset = offset;
+  allocation.offset = aligned_offset;
   allocation.size = best_fit->used_size;
   if (pool->host_visible())
-    allocation.data = pool->data + offset;
+    allocation.data = pool->data + aligned_offset;
 
   *out= std::move(allocation);
 
-  LOG(DEBUG) << "Allocated successfully: " << BytesToString(aligned_size);
-  LOG(NO_FRAME) << Print(*context, *pool);
+  LOG(DEBUG) << "Allocated successfully: " << BytesToString(padded_size)
+             << std::hex << " at offset 0x" << best_fit->offset
+             << ", allocation offset 0x" << allocation.offset;
+  LOG(NO_FRAME) << Print(context, pool);
 
-  pool->allocated += aligned_size;
+  pool->allocated += padded_size;
 
   return true;
 }
@@ -378,28 +396,37 @@ void EmptyGarbage(MemoryPool* pool) {
   }
 }
 
-std::string Print(const Context& context, const MemoryPool& pool) {
+bool IsHostCoherent(MemoryPool* pool) {
+  auto flags = GetPropertyFlagsFromMemoryTypeIndex(pool->allocator->context,
+                                                   pool->memory_type_index);
+  return flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+}
+
+std::string Print(Context* context, MemoryPool* pool) {
   std::stringstream ss;
-  ss << "Memory pool " << pool.id << " (Host Visible: " << pool.host_visible()
+  ss << "Memory pool " << pool->id << " (Host Visible: " << pool->host_visible()
      << ")" << std::endl;
   ss << "Memory types: "
-     << MemoryTypeIndexToString(context, pool.memory_type_index) << std::endl;
-  ss << "Size: " << BytesToString(pool.size)
-     << ", Allocated: " << BytesToString(pool.allocated)
-     << ", Free: " << BytesToString(pool.free()) << std::endl;
+     << MemoryTypeIndexToString(context, pool->memory_type_index) << std::endl;
+  ss << "Size: " << BytesToString(pool->size)
+     << ", Allocated: " << BytesToString(pool->allocated)
+     << ", Free: " << BytesToString(pool->free()) << std::endl;
 
   int count = 0;
 
   MemoryBlock* prev = nullptr;
   MemoryBlock* current = nullptr;
-  for (current = pool.head.get(); current != nullptr; current = current->next) {
+  for (current = pool->head.get();
+       current != nullptr;
+       current = current->next) {
     prev = current->prev;
 
-    ss << current->id
-       << ". Type: " << AllocationTypeToString(current->alloc_type)
-       << ", Size: " << BytesToString(current->size)
-       << " (Used: " << BytesToString(current->used_size) << ")"
-       << ", Offset: " << BytesToString(current->offset);
+    ss << StringPrintf(
+        "%u. Type: %s, Size: %s (0x%lx), Used: %s (0x%lx), Offset: %s (0x%lx)",
+        current->id, AllocationTypeToString(current->alloc_type),
+        BytesToString(current->size).data(), current->size,
+        BytesToString(current->used_size).data(), current->used_size,
+        BytesToString(current->offset).data(),  current->offset);
 
     if (prev != nullptr) {
       ss << ", Diff w/ prev: "
@@ -424,11 +451,8 @@ bool AllocateFromPools(Context* context, Allocator* allocator,
     if (!pool->valid())
       continue;
 
-    if (pool->memory_type_index != memory_type_index) {
-      /* LOG(DEBUG) << "Different type index (pool: " << pool.memory_type_index */
-      /*            << ", required: " << memory_type_index << ")."; */
+    if (pool->memory_type_index != memory_type_index)
       continue;
-    }
 
     if (AllocateFromMemoryPool(context, pool.get(), config, out))
       return true;
@@ -447,10 +471,6 @@ MemoryPool* FindMemoryPool(Allocator* allocator, uint32_t pool_id) {
 }
 
 }  // namespace
-
-Allocator::~Allocator() {
-  LOG(DEBUG) << __PRETTY_FUNCTION__;
-}
 
 void Init(Allocator* allocator, uint32_t device_local_memory,
           uint32_t host_visible_memory) {
@@ -478,14 +498,9 @@ bool Allocate(Context* context, Allocator* allocator,
       context, config.memory_usage, config.memory_type_bits);
   ASSERT(memory_type_index != UINT32_MAX);
 
-  /* LOG(DEBUG) << "Going to allocate from pools."; */
-
   // See if we can allocate from one of the existent pools.
   if (AllocateFromPools(context ,allocator, config, memory_type_index, out))
     return true;
-
-  /* LOG(DEBUG) << "Could not allocate from any pool."; */
-  SCOPE_LOCATION();
 
   // Can't allocate from existent pools. Creating a new one.
   VkDeviceSize pool_size = (config.memory_usage == MemoryUsage::kGPUOnly)
@@ -538,12 +553,12 @@ void EmptyGarbage(Allocator* allocator) {
   }
 }
 
-std::string Print(const Context& context, const Allocator& allocator) {
+std::string Print(Context* context, Allocator* allocator) {
   std::stringstream ss;
-  ss << "Allocator status. Pools: " << allocator.pools.size() << std::endl;
+  ss << "Allocator status. Pools: " << allocator->pools.size() << std::endl;
 
-  for (const auto& pool : allocator.pools) {
-    ss << Print(context, *pool);
+  for (const auto& pool : allocator->pools) {
+    ss << Print(context, pool.get());
   }
 
   return ss.str();

@@ -54,10 +54,9 @@ struct Context {
   DEFAULT_CONSTRUCTOR(Context);
   DELETE_COPY_AND_ASSIGN(Context);
   DEFAULT_MOVE_AND_ASSIGN(Context);
-  ~Context();
+  DEFAULT_DESTRUCTOR(Context);
 
   int current_frame = 0;
-  Allocator allocator = {};
 
   Handle<VkInstance> instance = {};
   std::vector<const char*> extensions;
@@ -75,6 +74,9 @@ struct Context {
   Handle<VkDevice> device = {};
   VkQueue graphics_queue = VK_NULL_HANDLE;  // Freed with |device|.
   VkQueue present_queue = VK_NULL_HANDLE;   // Freed with |device|.
+
+  // NOTE: Allocator has to be the last thing to go before freeing the device.
+  Allocator allocator = {};
 
   Handle<VkSwapchainKHR> swap_chain = {};
   SwapChainDetails swap_chain_details = {};

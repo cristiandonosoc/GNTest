@@ -10,7 +10,8 @@ namespace warhol {
 // This will return the next address from |x| aligned to |align| bits.
 inline uint64_t Align(uint64_t x, uint64_t align) {
   uint64_t mask = align - 1;
-  return (x + mask) & ~mask;
+  uint64_t result = (x + mask) & ~mask;
+  return result;
 }
 
 }  // namespace
