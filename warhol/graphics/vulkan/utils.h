@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "warhol/graphics/vulkan/def.h"
+#include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
@@ -92,12 +93,17 @@ template<> const char* EnumToString(VkMemoryPropertyFlagBits);
 // This wraps the call into a call that checks and logs any errors.
 
 #define VK_CALL(func, ...) \
-  ::warhol::vulkan::CheckedCall(func, #func, FROM_HERE, __VA_ARGS__)
+  ::warhol::vulkan::CheckedCall(func, #func, FROM_HERE, false, __VA_ARGS__)
+
+// Will assert on false.
+#define VK_CHECK(func, ...) \
+  ::warhol::vulkan::CheckedCall(func, #func, FROM_HERE, true, __VA_ARGS__)
 
 template <typename Func, typename... Args>
 inline bool CheckedCall(Func func,
                         const char* func_str,
                         const Location& location,
+                        bool crash,
                         Args&&... args) {
   VkResult result = func(std::forward<Args>(args)...);
   if (result != VK_SUCCESS) {
@@ -108,6 +114,8 @@ inline bool CheckedCall(Func func,
             func_str,
             EnumToString(result));
     fflush(stderr);
+    if (crash)
+      NOT_REACHED("VK_CHECK failed. See logs.");
     return false;
   }
 

@@ -144,7 +144,7 @@ struct MemoryPool {
   std::vector<GarbageMarker> garbage[Definitions::kNumFrames];
 };
 
-bool Init(Context*, MemoryPool*);
+bool InitMemoryPool(Context*, MemoryPool*);
 
 struct AllocateConfig;  // Defined later.
 bool AllocateFromMemoryPool(Context*, MemoryPool*, const AllocateConfig&,
@@ -185,8 +185,8 @@ struct Allocator {
 };
 
 // The memory inputs are the sizes of the pools.
-void Init(Allocator*, uint32_t device_local_memory,
-          uint32_t host_visible_memory);
+void InitAllocator(Allocator*, uint32_t device_local_memory,
+                   uint32_t host_visible_memory);
 
 struct AllocateConfig {
   uint32_t size = 0;

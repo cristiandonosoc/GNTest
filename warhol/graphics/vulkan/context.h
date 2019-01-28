@@ -10,6 +10,7 @@
 #include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/handle.h"
 #include "warhol/graphics/vulkan/memory_utils.h"
+#include "warhol/graphics/vulkan/staging_manager.h"
 
 #include "warhol/math/math.h"
 #include "warhol/utils/macros.h"
@@ -77,6 +78,7 @@ struct Context {
 
   // NOTE: Allocator has to be the last thing to go before freeing the device.
   Allocator allocator = {};
+  StagingManager staging_manager = {};
 
   Handle<VkSwapchainKHR> swap_chain = {};
   SwapChainDetails swap_chain_details = {};
@@ -136,7 +138,7 @@ bool SetupDebugCall(Context*, PFN_vkDebugUtilsMessengerCallbackEXT callback);
 bool PickPhysicalDevice(Context*);
 bool CreateLogicalDevice(Context*);
 
-bool CreateAllocator(Context*);
+bool InitResourceManagement(Context*);
 
 // A |device| must be created already.
 bool CreateSwapChain(Context*, Pair<uint32_t> screen_size);

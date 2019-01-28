@@ -83,12 +83,14 @@ void Handle<VkFramebuffer>::InternalClear() {
 
 template <>
 void Handle<VkCommandPool>::InternalClear() {
+  LOG(DEBUG) << __PRETTY_FUNCTION__;
   if (has_value() && context_)
     vkDestroyCommandPool(*context_->device, handle_, nullptr);
 }
 
 template <>
 void Handle<VkCommandBuffer>::InternalClear() {
+  LOG(DEBUG) << __PRETTY_FUNCTION__;
   if (has_value() && context_) {
     vkFreeCommandBuffers(*context_->device, *context_->command_pool,
                          1, &handle_);

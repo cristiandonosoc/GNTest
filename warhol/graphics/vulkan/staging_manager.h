@@ -5,42 +5,57 @@
 
 #include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/memory_utils.h"
+#include "warhol/utils/log.h"
 
 namespace warhol {
 namespace vulkan {
 
 struct StagingBuffer {
+  DEFAULT_CONSTRUCTOR(StagingBuffer);
+  DEFAULT_MOVE_AND_ASSIGN(StagingBuffer);
+  ~StagingBuffer() { LOG(DEBUG) << __PRETTY_FUNCTION__; }
   uint8_t* data() const { return buffer.allocation.data; }
 
-  bool submitted = false;
   Handle<VkCommandBuffer> command_buffer = {};  // Not owning.
   MemoryBacked<VkBuffer> buffer = {};
   Handle<VkFence> fence = {};
+
+  VkDeviceSize offset = 0;
+  bool submitting = false;
 };
 
 // StagingManager is double buffered. This is so that if we haven't flushed
 // before the buffer is filled, we switch to the other and flush the first one.
 struct StagingManager {
-  // If max is hit, we switch buffers and flush.
-  int current_buffer = 0;
-  VkDeviceMemory memory;          // TODO(Cristian): Owning?
-  Handle<VkCommandPool> command_pool = {};
+  DEFAULT_CONSTRUCTOR(StagingManager);
+  ~StagingManager() { LOG(DEBUG) << __PRETTY_FUNCTION__; }
+  DEFAULT_MOVE_AND_ASSIGN(StagingManager);
 
+  // If max is hit, we switch buffers and flush.
+  Handle<VkCommandPool> command_pool = {};
   VkDeviceSize buffer_size = 0;
+
+  int current_buffer = 0;
   StagingBuffer buffers[Definitions::kNumFrames];
-  uint8_t* mapped_data = nullptr;
 };
 
-StagingManager* GetSingletonStagingBuffer();
-bool Init(Context*, StagingManager*);
-void Shutdown(StagingManager*);
-uint8_t* Stage(VkDeviceSize size, VkDeviceSize alignment,
-               VkCommandBuffer* command_buffer, VkBuffer* buffer,
-               VkDeviceSize* buffer_offset);
+bool InitStagingManager(Context*, StagingManager*);
 
-void Flush(StagingManager*);
-// Wait until the command buffer with the copy commands is done processing.
-void Wait(StagingManager*);
+struct StageToken {
+  bool valid() const;
+
+  VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+  VkBuffer buffer = VK_NULL_HANDLE;
+  VkDeviceSize size = 0;
+  VkDeviceSize offset  = 0;
+  uint8_t* data = nullptr;
+};
+
+StageToken Stage(Context*, StagingManager*, VkDeviceSize size,
+                 VkDeviceSize alignment);
+
+// NOTE: Can switch the |current_buffer| index.
+void Flush(Context*, StagingManager*);
 
 }  // namespace vulkan
 }  // namespace warhol

@@ -6,6 +6,7 @@
 #include "warhol/graphics/vulkan/commands.h"
 #include "warhol/graphics/vulkan/context.h"
 #include "warhol/graphics/vulkan/utils.h"
+#include "warhol/utils/align.h"
 #include "warhol/utils/macros.h"
 
 namespace warhol {
@@ -51,9 +52,27 @@ bool InitStagingBuffer(Context* context, StagingManager* manager,
 
     return true;
 }
+
+void WaitOnStage(Context* context, StagingBuffer* stage) {
+  if (stage->submitting == false)
+    return;
+
+  VK_CHECK(vkWaitForFences, *context->device, 1, &stage->fence.value(),
+                            VK_TRUE, UINT64_MAX);
+  VK_CHECK(vkResetFences, *context->device, 1, &stage->fence.value());
+
+  stage->offset = 0;
+  stage->submitting = false;
+
+  VkCommandBufferBeginInfo begin_info = {};
+  begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+  VK_CHECK(vkBeginCommandBuffer, *stage->command_buffer, &begin_info);
+}
+
 }  // namespace
 
-bool Init(Context* context, StagingManager* manager) {
+bool InitStagingManager(Context* context, StagingManager* manager) {
   // This command pool is to be used over and over.
   VkCommandPool command_pool_out;
   VkCommandPoolCreateInfo create_info = {};
@@ -68,13 +87,102 @@ bool Init(Context* context, StagingManager* manager) {
   manager->command_pool.Set(context, command_pool_out);
 
   // Allocate the buffer and associate the values.
-  for (int i = 0; ARRAY_SIZE(manager->buffers); i++) {
+  for (int i = 0; i < ARRAY_SIZE(manager->buffers); i++) {
     StagingBuffer staging_buffer = {};
     if (!InitStagingBuffer(context, manager, &staging_buffer))
       return false;
     manager->buffers[i] = std::move(staging_buffer);
   }
+  return true;
 }
 
+bool StageToken::valid() const {
+  return command_buffer != VK_NULL_HANDLE &&
+         buffer != VK_NULL_HANDLE &&
+         offset != 0;
+}
+
+namespace {
+
+inline StagingBuffer* CurrentStage(StagingManager* manager) {
+  return manager->buffers + manager->current_buffer;
+}
+
+}  // namespace
+
+
+StageToken
+Stage(Context* context, StagingManager* manager, VkDeviceSize size,
+      VkDeviceSize alignment) {
+  if (size > manager->buffer_size) {
+    LOG(ERROR) << "Cannot allocate " << BytesToString(size)
+               << " in GPU transfer buffer (Capacity: "
+               << BytesToString(manager->buffer_size) << ").";
+    return {};
+  }
+
+  StagingBuffer* stage = CurrentStage(manager);
+
+  // If the current staging buffer doesn't have enough space, we flush it.
+  VkDeviceSize aligned_offset = Align(stage->offset, alignment);
+  if ((aligned_offset + size) >= manager->buffer_size && !stage->submitting)
+    Flush(context, manager);
+
+  // IMPORTANT: Flush could have switched the |current_buffer| index!
+  stage = CurrentStage(manager);
+  if (stage->submitting)
+    WaitOnStage(context, stage);
+
+  // At this point we know that this StagingBuffer is empty, so we don't need
+  // to align.
+  stage->offset += size;
+
+  StageToken token = {};
+  token.command_buffer = *stage->command_buffer;
+  token.buffer = *stage->buffer.handle;
+  token.size = size;
+  token.offset = 0;
+  token.data = stage->data();
+
+  return token;
+}
+
+void Flush(Context* context, StagingManager* manager) {
+  StagingBuffer* stage = CurrentStage(manager);
+  if (stage->submitting || stage->offset == 0)
+    return;
+
+  VkMemoryBarrier barrier = {};
+  barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+  barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  barrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+                          VK_ACCESS_INDEX_READ_BIT;
+  vkCmdPipelineBarrier(*stage->command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                       VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0,
+                       1, &barrier,
+                       0, nullptr,
+                       0, nullptr);
+
+  vkEndCommandBuffer(*stage->command_buffer);
+
+  VkMappedMemoryRange memory_range = {};
+  memory_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+  memory_range.memory = *stage->buffer.allocation.memory;
+  memory_range.size = VK_WHOLE_SIZE;
+
+  VK_CHECK(vkFlushMappedMemoryRanges, *context->device, 1, &memory_range);
+
+  VkSubmitInfo submit_info = {};
+  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submit_info.commandBufferCount = 1;
+  submit_info.pCommandBuffers = &stage->command_buffer.value();
+
+  VK_CHECK(vkQueueSubmit, context->graphics_queue, 1, &submit_info,
+                          *stage->fence);
+  stage->submitting = true;
+
+  manager->current_buffer++;
+  manager->current_buffer %= ARRAY_SIZE(manager->buffers);
+}
 }  // namespace vulkan
 }  // namespace warhol

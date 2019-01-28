@@ -251,11 +251,18 @@ bool CreateLogicalDevice(Context* context) {
 
 // CreateAllocator -------------------------------------------------------------
 
-bool CreateAllocator(Context* context) {
+bool InitResourceManagement(Context* context) {
   Allocator allocator = {};
   allocator.context = context;
-  Init(&allocator, MEGABYTES(256), MEGABYTES(256));
+  InitAllocator(&allocator, MEGABYTES(256), MEGABYTES(256));
   context->allocator = std::move(allocator);
+
+  StagingManager manager = {};
+  manager.buffer_size = MEGABYTES(128);
+  if (!InitStagingManager(context, &manager))
+    return false;
+  context->staging_manager = std::move(manager);
+
   return true;
 }
 

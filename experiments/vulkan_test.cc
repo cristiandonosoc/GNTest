@@ -141,8 +141,8 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   if (!vulkan::CreateLogicalDevice(context))
     return false;
 
-  Header("Creating allocator...");
-  if (!vulkan::CreateAllocator(context))
+  Header("Initializing resource management...");
+  if (!vulkan::InitResourceManagement(context))
     return false;
 
   Header("Creating a swap chain...");

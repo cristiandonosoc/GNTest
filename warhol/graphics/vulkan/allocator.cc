@@ -204,7 +204,7 @@ MemoryPool::~MemoryPool() {
   }
 }
 
-bool Init(Context* context, MemoryPool* pool) {
+bool InitMemoryPool(Context* context, MemoryPool* pool) {
   // TODO(Cristian): Handle granularity.";
   pool->granularity = 1;
 
@@ -472,8 +472,8 @@ MemoryPool* FindMemoryPool(Allocator* allocator, uint32_t pool_id) {
 
 }  // namespace
 
-void Init(Allocator* allocator, uint32_t device_local_memory,
-          uint32_t host_visible_memory) {
+void InitAllocator(Allocator* allocator, uint32_t device_local_memory,
+                   uint32_t host_visible_memory) {
   ASSERT(allocator->pools.empty());
 
   allocator->next_pool_id = 0;
@@ -515,7 +515,7 @@ bool Allocate(Context* context, Allocator* allocator,
   pool->memory_type_index = memory_type_index;
   pool->memory_usage = config.memory_usage;
   pool->size = pool_size;
-  if (!Init(context, pool.get()))
+  if (!InitMemoryPool(context, pool.get()))
     return false;
 
   // We search for a slot where to put this is.
