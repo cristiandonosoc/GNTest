@@ -12,10 +12,10 @@
 namespace warhol {
 namespace vulkan {
 
-constexpr int kMaxFramesInFlight = 2;
-
-// TODO(Cristian): Actually use this when creating framebuffers.
-constexpr int kNumFrames = 2;
+struct Definitions {
+  static constexpr int kMaxFramesInFlight = 2;
+  static constexpr int kNumFrames = 2;
+};
 
 }  // namespace vulkan
 }  // namespace warhol

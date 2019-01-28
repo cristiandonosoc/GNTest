@@ -168,8 +168,6 @@ bool SetupUBO(Context* , VkDeviceSize ubo_size);
 
 bool CreateTextureBuffers(Context*, const Image&);
 
-bool CreateTextureImageView(Context*, const Image&);
-
 bool CreateTextureSampler(Context*, const Image&);
 
 // This wil also create the descriptor pools.

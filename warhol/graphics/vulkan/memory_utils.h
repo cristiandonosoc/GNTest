@@ -33,18 +33,13 @@ AllocMemory(Context*, VkDeviceSize size, uint32_t memory_type_index);
 struct AllocBufferConfig {
   VkDeviceSize size;
   VkBufferUsageFlags usage;
-  VkMemoryPropertyFlags properties;  // TODO: Remove
   MemoryUsage memory_usage = MemoryUsage::kNone;
 };
-MemoryBacked<VkBuffer> AllocBuffer(Context*, const AllocBufferConfig&);
+MemoryBacked<VkBuffer> AllocBuffer(Context*, AllocBufferConfig*);
 
 // Copies one buffer and blocks waiting for the transfer.
 bool CopyBuffer(Context* context, VkBuffer src_buffer, VkBuffer dst_buffer,
                 VkDeviceSize size);
-
-// VkImage ---------------------------------------------------------------------
-
-bool CopyBufferToImage(Context*, const Image&, VkBuffer src, VkImage dst);
 
 // MemoryBacked Handles --------------------------------------------------------
 //

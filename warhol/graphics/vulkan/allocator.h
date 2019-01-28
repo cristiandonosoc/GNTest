@@ -141,7 +141,7 @@ struct MemoryPool {
     uint32_t block_id;
     uint32_t size;
   };
-  std::vector<GarbageMarker> garbage[kNumFrames];
+  std::vector<GarbageMarker> garbage[Definitions::kNumFrames];
 };
 
 bool Init(Context*, MemoryPool*);

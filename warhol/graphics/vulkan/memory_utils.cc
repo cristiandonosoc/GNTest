@@ -71,13 +71,13 @@ AllocMemory(Context* context, const VkMemoryRequirements& memory_reqs,
 // VkBuffer --------------------------------------------------------------------
 
 MemoryBacked<VkBuffer>
-AllocBuffer(Context* context, const AllocBufferConfig& config) {
-  ASSERT(config.memory_usage != MemoryUsage::kNone);
+AllocBuffer(Context* context, AllocBufferConfig* config) {
+  ASSERT(config->memory_usage != MemoryUsage::kNone);
 
   VkBufferCreateInfo buffer_info = {};
   buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  buffer_info.size = config.size;
-  buffer_info.usage = config.usage;
+  buffer_info.size = config->size;
+  buffer_info.usage = config->usage;
   buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
   VkBuffer buffer;
@@ -94,16 +94,11 @@ AllocBuffer(Context* context, const AllocBufferConfig& config) {
   alloc_config.size = memory_reqs.size;
   alloc_config.align = memory_reqs.alignment;
   alloc_config.memory_type_bits = memory_reqs.memoryTypeBits;
-  alloc_config.memory_usage = config.memory_usage;
+  alloc_config.memory_usage = config->memory_usage;
   alloc_config.alloc_type = AllocationType::kBuffer;
   Allocation allocation = {};
   if (!Allocate(context, &context->allocator, alloc_config, &allocation))
     return {};
-
-  /* Handle<VkDeviceMemory> memory_handle = AllocMemory(context, memory_reqs, */
-  /*                                                    config.properties); */
-  /* if (!memory_handle.has_value()) */
-  /*   return false; */
 
   if (!VK_CALL(vkBindBufferMemory, *context->device, buffer, *allocation.memory,
                allocation.offset)) {
@@ -133,36 +128,6 @@ bool CopyBuffer(Context* context, VkBuffer src_buffer, VkBuffer dst_buffer,
     return false;
   return true;
 }
-
-// VkImage ---------------------------------------------------------------------
-
-bool CopyBufferToImage(Context* context, const Image& image,
-                       VkBuffer src, VkImage dst) {
-  auto command_buffer = BeginSingleTimeCommands(context);
-  if (!command_buffer.has_value())
-    return false;
-
-  VkBufferImageCopy copy = {};
-  copy.bufferOffset = 0;
-  copy.bufferRowLength = 0;
-  copy.bufferImageHeight = 0;
-  copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  copy.imageSubresource.mipLevel = 0;
-  copy.imageSubresource.baseArrayLayer = 0;
-  copy.imageSubresource.layerCount = 1;
-  copy.imageOffset = {0, 0, 0};
-  copy.imageExtent = { (uint32_t)image.width, (uint32_t)image.height, 1 };
-
-  vkCmdCopyBufferToImage(*command_buffer, src, dst,
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
-
-  if (!EndSingleTimeCommands(context, *command_buffer))
-    return false;
-  return true;
-}
-
-
-
 
 }  // namespace vulkan
 }  // namespace warhol

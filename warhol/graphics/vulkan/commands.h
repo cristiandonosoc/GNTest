@@ -15,6 +15,11 @@ struct Context;
 // These are helpers about common functionality involving command buffers and
 // commands.
 
+Handle<VkCommandBuffer> CreateCommandBuffer(
+    Context*,
+    VkCommandPool,
+    VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
 // Will createa a one-off command buffer and call vkBeginCommandBuffer on it.
 Handle<VkCommandBuffer> BeginSingleTimeCommands(Context*);
 

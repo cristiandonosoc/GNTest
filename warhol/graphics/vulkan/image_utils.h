@@ -6,22 +6,19 @@
 #include "warhol/graphics/common/image.h"
 #include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/handle.h"
-#include "warhol/graphics/vulkan/memory.h"
+#include "warhol/graphics/vulkan/memory_utils.h"
 
 namespace warhol {
 namespace vulkan {
 
 struct Context;
-template <typename HandleType>
-struct MemoryBacked;
 
-struct CreateImageConfig {
+struct AllocImageConfig {
   VkImageCreateInfo create_info;
   MemoryUsage memory_usage = MemoryUsage::kNone;
-  /* VkMemoryPropertyFlags properties; */
 };
 MemoryBacked<VkImage>
-CreateImage(Context*, const CreateImageConfig&);
+AllocImage(Context*, AllocImageConfig*);
 
 // Returns VK_NULL_HANDLE
 struct CreateImageViewConfig {
@@ -30,7 +27,7 @@ struct CreateImageViewConfig {
   VkImageAspectFlags aspect_mask;
   uint32_t mip_levels = 1;
 };
-Handle<VkImageView> CreateImageView(Context*, const CreateImageViewConfig&);
+Handle<VkImageView> CreateImageView(Context*, CreateImageViewConfig*);
 
 struct TransitionImageLayoutConfig {
   VkFormat format;
@@ -38,9 +35,23 @@ struct TransitionImageLayoutConfig {
   VkImageLayout new_layout;
   uint32_t mip_levels = 1;
 };
-bool TransitionImageLayout(Context*, VkImage image,
-                           const TransitionImageLayoutConfig&);
+bool TransitionImageLayout(Context*, VkImage, TransitionImageLayoutConfig*);
 
+// CreateImage: AllocImage + CreateImageView + TransitionImageLayout.
+
+// NOTE: Will override |view_config.image| with the newly created VkImage.
+struct CreateImageConfig {
+  AllocImageConfig alloc_config = {};
+  CreateImageViewConfig view_config = {};
+  TransitionImageLayoutConfig transition_config = {};
+};
+struct CreateImageResult {
+  bool valid() const { return image.has_value() && image_view.has_value(); }
+
+  MemoryBacked<VkImage> image = {};
+  Handle<VkImageView> image_view = {};
+};
+CreateImageResult CreateImage(Context*, CreateImageConfig*);
 
 struct GenerateMipmapsConfig {
   VkImage image;
@@ -49,7 +60,9 @@ struct GenerateMipmapsConfig {
   uint32_t height;
   uint32_t mip_levels;
 };
-bool GenerateMipmaps(Context*, const GenerateMipmapsConfig&);
+bool GenerateMipmaps(Context*, GenerateMipmapsConfig*);
+
+bool CopyBufferToImage(Context*, const Image&, VkBuffer src, VkImage dst);
 
 bool HasStencilComponent(VkFormat);
 

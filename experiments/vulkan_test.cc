@@ -250,9 +250,9 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   if (!vulkan::CreateTextureBuffers(context, image))
     return false;
 
-  Header("Creating imate view...");
-  if (!vulkan::CreateTextureImageView(context, image))
-    return false;
+  /* Header("Creating imate view..."); */
+  /* if (!vulkan::CreateTextureImageView(context, image)) */
+  /*   return false; */
 
   Header("Creating texture sampler...");
   if (!vulkan::CreateTextureSampler(context, image))
@@ -401,7 +401,7 @@ bool DrawFrame(const SDLContext& sdl_context,
     return false;
 
   vk_context->current_frame++;
-  vk_context->current_frame %= vulkan::kMaxFramesInFlight;
+  vk_context->current_frame %= vulkan::Definitions::kMaxFramesInFlight;
   return true;
 }
 

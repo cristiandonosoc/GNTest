@@ -60,6 +60,8 @@ source_set("lib") {
     "memory.h",
     "memory_utils.cc",
     "memory_utils.h",
+    "staging_manager.cc",
+    "staging_manager.h",
     "utils.cc",
     "utils.h",
   ]

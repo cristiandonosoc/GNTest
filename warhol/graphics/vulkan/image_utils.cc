@@ -14,31 +14,27 @@ namespace vulkan {
 
 // Image Creation --------------------------------------------------------------
 
-MemoryBacked<VkImage> CreateImage(Context* context,
-                                  const CreateImageConfig& config) {
+MemoryBacked<VkImage>
+AllocImage(Context* context, AllocImageConfig* config) {
   VkImage image;
-  if (!VK_CALL(vkCreateImage, *context->device, &config.create_info, nullptr,
+  if (!VK_CALL(vkCreateImage, *context->device, &config->create_info, nullptr,
                               &image)) {
     return {};
   }
-  Handle<VkImage> image_handle(context, image);
 
-  VkMemoryRequirements memory_reqs;
+  Handle<VkImage> image_handle(context, image);
+  VkMemoryRequirements memory_reqs = {};
   vkGetImageMemoryRequirements(*context->device, image, &memory_reqs);
 
   AllocateConfig alloc_config = {};
   alloc_config.size = memory_reqs.size;
   alloc_config.align = memory_reqs.alignment;
   alloc_config.memory_type_bits = memory_reqs.memoryTypeBits;
-  alloc_config.memory_usage = config.memory_usage;
+  alloc_config.memory_usage = config->memory_usage;
   alloc_config.alloc_type = AllocationType::kImage;
   Allocation allocation = {};
   if (!Allocate(context, &context->allocator, alloc_config, &allocation))
     return {};
-
-  /* auto memory_handle = AllocMemory(context, memory_reqs, config.properties); */
-  /* if (!memory_handle.has_value()) */
-  /*   return {}; */
 
   if (!VK_CALL(vkBindImageMemory, *context->device, *image_handle,
                                   *allocation.memory, allocation.offset)) {
@@ -53,15 +49,15 @@ MemoryBacked<VkImage> CreateImage(Context* context,
 }
 
 Handle<VkImageView>
-CreateImageView(Context* context, const CreateImageViewConfig& config) {
+CreateImageView(Context* context, CreateImageViewConfig* config) {
   VkImageViewCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-  create_info.image = config.image;
+  create_info.image = config->image;
   create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-  create_info.format = config.format;
-  create_info.subresourceRange.aspectMask = config.aspect_mask;
+  create_info.format = config->format;
+  create_info.subresourceRange.aspectMask = config->aspect_mask;
   create_info.subresourceRange.baseMipLevel = 0;
-  create_info.subresourceRange.levelCount = config.mip_levels;
+  create_info.subresourceRange.levelCount = config->mip_levels;
   create_info.subresourceRange.baseArrayLayer = 0;
   create_info.subresourceRange.layerCount = 1;
 
@@ -142,13 +138,13 @@ GetImageAspectFlags(VkFormat format, VkImageLayout new_layout) {
 }  // namespace
 
 bool TransitionImageLayout(Context* context, VkImage image,
-                           const TransitionImageLayoutConfig& config) {
+                           TransitionImageLayoutConfig* config) {
   Handle<VkCommandBuffer> command_buffer = BeginSingleTimeCommands(context);
   if (!command_buffer.has_value())
     return false;
 
   TransitionMasks transition_masks;
-  if (!GetTransitionMasks(config.old_layout, config.new_layout,
+  if (!GetTransitionMasks(config->old_layout, config->new_layout,
                           &transition_masks)) {
     return false;
   }
@@ -156,15 +152,15 @@ bool TransitionImageLayout(Context* context, VkImage image,
   VkImageMemoryBarrier barrier = {};
   barrier.image = image;
   barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.oldLayout = config.old_layout;
-  barrier.newLayout = config.new_layout;
+  barrier.oldLayout = config->old_layout;
+  barrier.newLayout = config->new_layout;
   barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-  auto aspect_flags = GetImageAspectFlags(config.format, config.new_layout);
+  auto aspect_flags = GetImageAspectFlags(config->format, config->new_layout);
   barrier.subresourceRange.aspectMask = aspect_flags;
   barrier.subresourceRange.baseMipLevel = 0;
-  barrier.subresourceRange.levelCount = config.mip_levels;
+  barrier.subresourceRange.levelCount = config->mip_levels;
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount = 1;
 
@@ -189,6 +185,57 @@ bool HasStencilComponent(VkFormat format) {
          format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
+// CreateImage -----------------------------------------------------------------
+
+CreateImageResult
+CreateImage(Context* context, CreateImageConfig* config) {
+  auto image = AllocImage(context, &config->alloc_config);
+  if (!image.has_value())
+    return {};
+
+  config->view_config.image = *image.handle;
+  auto image_view = CreateImageView(context, &config->view_config);
+  if (!image_view.has_value())
+    return {};
+
+  if (!TransitionImageLayout(context, *image.handle,
+                             &config->transition_config)) {
+    return {};
+  }
+
+  CreateImageResult result = {};
+  result.image = std::move(image);
+  result.image_view = std::move(image_view);
+  return result;
+}
+
+// CopyBufferToImage -----------------------------------------------------------
+
+bool CopyBufferToImage(Context* context, const Image& image,
+                       VkBuffer src, VkImage dst) {
+  auto command_buffer = BeginSingleTimeCommands(context);
+  if (!command_buffer.has_value())
+    return false;
+
+  VkBufferImageCopy copy = {};
+  copy.bufferOffset = 0;
+  copy.bufferRowLength = 0;
+  copy.bufferImageHeight = 0;
+  copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  copy.imageSubresource.mipLevel = 0;
+  copy.imageSubresource.baseArrayLayer = 0;
+  copy.imageSubresource.layerCount = 1;
+  copy.imageOffset = {0, 0, 0};
+  copy.imageExtent = { (uint32_t)image.width, (uint32_t)image.height, 1 };
+
+  vkCmdCopyBufferToImage(*command_buffer, src, dst,
+                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+
+  if (!EndSingleTimeCommands(context, *command_buffer))
+    return false;
+  return true;
+}
+
 // GenerateMipmaps -------------------------------------------------------------
 
 namespace {
@@ -209,8 +256,8 @@ bool CheckForFilteringSupport(VkPhysicalDevice device, VkFormat format) {
 
 }  // namespace
 
-bool GenerateMipmaps(Context* context, const GenerateMipmapsConfig& config) {
-  if (!CheckForFilteringSupport(context->physical_device, config.format)) {
+bool GenerateMipmaps(Context* context, GenerateMipmapsConfig* config) {
+  if (!CheckForFilteringSupport(context->physical_device, config->format)) {
     LOG(ERROR) << "No linear filtering support.";
     return false;
   }
@@ -221,7 +268,7 @@ bool GenerateMipmaps(Context* context, const GenerateMipmapsConfig& config) {
 
   VkImageMemoryBarrier barrier = {};
   barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.image = config.image;
+  barrier.image = config->image;
   barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -230,10 +277,10 @@ bool GenerateMipmaps(Context* context, const GenerateMipmapsConfig& config) {
   barrier.subresourceRange.layerCount = 1;
   barrier.subresourceRange.levelCount = 1;
 
-  int mip_width = config.width;
-  int mip_height = config.height;
+  int mip_width = config->width;
+  int mip_height = config->height;
 
-  for (uint32_t i = 1; i < config.mip_levels; i++) {
+  for (uint32_t i = 1; i < config->mip_levels; i++) {
     // We prepare each mip map for destination, marking the current one to be
     // a src transfer, while keeping the next one as dst.
     barrier.subresourceRange.baseMipLevel = i - 1;
@@ -265,8 +312,8 @@ bool GenerateMipmaps(Context* context, const GenerateMipmapsConfig& config) {
     blit.dstSubresource.layerCount = 1;
     blit.dstSubresource.baseArrayLayer = 0;
     vkCmdBlitImage(*command_buffer,
-                   config.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                   config.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                   config->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                   config->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                    1, &blit,
                    VK_FILTER_LINEAR);
 
@@ -290,7 +337,7 @@ bool GenerateMipmaps(Context* context, const GenerateMipmapsConfig& config) {
   }
 
   // We need to transfer the last mip level to shader read.
-  barrier.subresourceRange.baseMipLevel = config.mip_levels - 1;
+  barrier.subresourceRange.baseMipLevel = config->mip_levels - 1;
   barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
   barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;

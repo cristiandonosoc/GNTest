@@ -9,31 +9,37 @@
 namespace warhol {
 namespace vulkan {
 
-Handle<VkCommandBuffer> BeginSingleTimeCommands(Context* context) {
+Handle<VkCommandBuffer> CreateCommandBuffer(Context* context,
+                                            VkCommandPool pool,
+                                            VkCommandBufferLevel level) {
   // Allocate a temporary command buffer for these copy operations.
   VkCommandBufferAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  alloc_info.level = level;
   alloc_info.commandBufferCount = 1;
-  // TODO(Cristian): Have a separate command pool for these transient commands.
-  alloc_info.commandPool = *context->command_pool;
+  alloc_info.commandPool = pool;
 
   VkCommandBuffer command_buffer;
   if (!VK_CALL(vkAllocateCommandBuffers, *context->device, &alloc_info,
                &command_buffer)) {
     return {};
   }
-  // In order to ensure freeing.
-  Handle<VkCommandBuffer> command_buffer_handle(context, command_buffer);
+
+  return Handle<VkCommandBuffer>(context, command_buffer);
+}
+
+Handle<VkCommandBuffer> BeginSingleTimeCommands(Context* context) {
+  auto command_buffer = CreateCommandBuffer(
+      context, *context->command_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
   // This command buffer will be used only once.
   VkCommandBufferBeginInfo begin_info = {};
   begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-  if (!VK_CALL(vkBeginCommandBuffer, command_buffer, &begin_info))
+  if (!VK_CALL(vkBeginCommandBuffer, *command_buffer, &begin_info))
     return {};
-  return command_buffer_handle;
+
+  return command_buffer;
 }
 
 bool EndSingleTimeCommands(Context* context, VkCommandBuffer command_buffer) {

@@ -325,8 +325,8 @@ bool CreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
 
   uint32_t min_image_count = capabilities.capabilities.minImageCount;
   uint32_t max_image_count = capabilities.capabilities.maxImageCount;
-  uint32_t image_count = kNumFrames;
-  ASSERT(kNumFrames >= min_image_count);
+  uint32_t image_count = Definitions::kNumFrames;
+  ASSERT(image_count >= min_image_count);
   // We clamp the value if necessary. max == 0 means no limit in image count.
   if (max_image_count > 0 && image_count > max_image_count)
     image_count = max_image_count;
@@ -392,7 +392,7 @@ bool CreateImageViews(Context* context) {
     config.image = context->images[i];
     config.format = context->swap_chain_details.format.format;
     config.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
-    auto image_view = CreateImageView(context, config);
+    auto image_view = CreateImageView(context, &config);
     if (!image_view.has_value())
       return false;
 
@@ -1002,8 +1002,8 @@ bool CreateDepthResources(Context* context) {
   }
 
   // Allocate and image.
-  CreateImageConfig image_config = {};
-  VkImageCreateInfo& image_info = image_config.create_info;
+  AllocImageConfig alloc_image_config = {};
+  VkImageCreateInfo& image_info = alloc_image_config.create_info;
   image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   image_info.format = depth_format;
   image_info.imageType = VK_IMAGE_TYPE_2D;
@@ -1017,30 +1017,30 @@ bool CreateDepthResources(Context* context) {
   image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   image_info.samples = VK_SAMPLE_COUNT_1_BIT;
   image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  /* image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; */
-  image_config.memory_usage = MemoryUsage::kGPUOnly;
-  MemoryBacked<VkImage> image = CreateImage(context, image_config);
-  if (!image.has_value())
-    return false;
+  alloc_image_config.memory_usage = MemoryUsage::kGPUOnly;
 
-  CreateImageViewConfig config = {};
-  config.image = *image.handle;
-  config.format = depth_format;
-  config.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
-  auto image_view = CreateImageView(context, config);
-  if (!image_view.has_value())
-    return false;
+  CreateImageViewConfig image_view_config = {};
+  /* image_view_config.image = *image.handle; */
+  image_view_config.format = depth_format;
+  image_view_config.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-  TransitionImageLayoutConfig transition = {};
-  transition.format = depth_format;
-  transition.old_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-  transition.new_layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-  if (!TransitionImageLayout(context, *image.handle, transition))
+  TransitionImageLayoutConfig transition_config = {};
+  transition_config.format = depth_format;
+  transition_config.old_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+  transition_config.new_layout =
+      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+  CreateImageConfig create_image_config = {};
+  create_image_config.alloc_config = std::move(alloc_image_config);
+  create_image_config.view_config = std::move(image_view_config);
+  create_image_config.transition_config = std::move(transition_config);
+  auto created_image = CreateImage(context, &create_image_config);
+  if (!created_image.valid())
     return false;
 
   context->depth_format = depth_format;
-  context->depth_image = std::move(image);
-  context->depth_image_view = std::move(image_view);
+  context->depth_image = std::move(created_image.image);
+  context->depth_image_view = std::move(created_image.image_view);
 
   return true;
 }
@@ -1063,10 +1063,8 @@ bool CreateVertexBuffers(Context* context, const Mesh& mesh) {
   AllocBufferConfig alloc_config = {};
   alloc_config.size = size;
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   alloc_config.memory_usage = MemoryUsage::kCPUToGPU;
-  MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, alloc_config);
+  MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, &alloc_config);
   if (!staging_memory.has_value())
     return false;
 
@@ -1078,9 +1076,8 @@ bool CreateVertexBuffers(Context* context, const Mesh& mesh) {
   alloc_config.size = size;
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-  alloc_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   alloc_config.memory_usage = MemoryUsage::kGPUOnly;
-  MemoryBacked<VkBuffer> vertices_memory = AllocBuffer(context, alloc_config);
+  MemoryBacked<VkBuffer> vertices_memory = AllocBuffer(context, &alloc_config);
   if (!vertices_memory.has_value())
     return false;
 
@@ -1104,10 +1101,8 @@ bool CreateIndicesBuffers(Context* context, const Mesh& mesh) {
   AllocBufferConfig alloc_config = {};
   alloc_config.size = size;
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   alloc_config.memory_usage = MemoryUsage::kCPUToGPU;
-  MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, alloc_config);
+  MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, &alloc_config);
   if (!staging_memory.has_value())
     return false;
 
@@ -1119,9 +1114,8 @@ bool CreateIndicesBuffers(Context* context, const Mesh& mesh) {
   alloc_config.size = size;
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-  alloc_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   alloc_config.memory_usage = MemoryUsage::kGPUOnly;
-  MemoryBacked<VkBuffer> indices_memory = AllocBuffer(context, alloc_config);
+  MemoryBacked<VkBuffer> indices_memory = AllocBuffer(context, &alloc_config);
   if (!indices_memory.has_value())
     return false;
 
@@ -1160,10 +1154,8 @@ bool SetupUBO(Context* context , VkDeviceSize ubo_size) {
     AllocBufferConfig alloc_config = {};
     alloc_config.size = ubo_size;
     alloc_config.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     alloc_config.memory_usage = MemoryUsage::kCPUToGPU;
-    MemoryBacked<VkBuffer> ubo = AllocBuffer(context, alloc_config);
+    MemoryBacked<VkBuffer> ubo = AllocBuffer(context, &alloc_config);
     if (!ubo.has_value())
       return false;
 
@@ -1180,29 +1172,27 @@ bool SetupUBO(Context* context , VkDeviceSize ubo_size) {
 
 // CreateTextureBuffers --------------------------------------------------------
 
-bool CreateTextureBuffers(Context* context, const Image& src) {
+bool CreateTextureBuffers(Context* context, const Image& image) {
   // Create a staging buffer.
   AllocBufferConfig alloc_config = {};
-  alloc_config.size = src.data_size,
+  alloc_config.size = image.data_size,
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  alloc_config.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   alloc_config.memory_usage = MemoryUsage::kCPUToGPU;
-  MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, alloc_config);
+  MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, &alloc_config);
   if (!staging_memory.has_value())
     return false;
 
-  CopyIntoAllocation(&staging_memory.allocation, (uint8_t*)src.data.value,
-                     src.data_size);
+  CopyIntoAllocation(&staging_memory.allocation, (uint8_t*)image.data.value,
+                     image.data_size);
 
   // Allocate and image.
-  CreateImageConfig image_config = {};
-  VkImageCreateInfo& image_info = image_config.create_info;
+  AllocImageConfig alloc_image_config = {};
+  VkImageCreateInfo& image_info = alloc_image_config.create_info;
   image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  image_info.format = ToVulkan(src.format);
-  image_info.imageType = ToVulkan(src.type);
-  image_info.extent = { (uint32_t)src.width, (uint32_t)src.height, 1 };
-  image_info.mipLevels = src.mip_levels;
+  image_info.format = ToVulkan(image.format);
+  image_info.imageType = ToVulkan(image.type);
+  image_info.extent = { (uint32_t)image.width, (uint32_t)image.height, 1 };
+  image_info.mipLevels = image.mip_levels;
   image_info.arrayLayers = 1;
   image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
   image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
@@ -1210,28 +1200,36 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
   image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   image_info.samples = VK_SAMPLE_COUNT_1_BIT;
   image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  /* image_config.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; */
-  image_config.memory_usage = MemoryUsage::kGPUOnly;
+  alloc_image_config.memory_usage = MemoryUsage::kGPUOnly;
   // If we're creating mip levels, this image will also be a source for copy
   // operations.
-  if (image_config.create_info.mipLevels > 1)
-    image_config.create_info.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-  MemoryBacked<VkImage> image = CreateImage(context, image_config);
-  if (!image.has_value())
-    return false;
+  if (alloc_image_config.create_info.mipLevels > 1)
+    alloc_image_config.create_info.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
-  // We need to transition the image layout to receive data.
+  CreateImageViewConfig image_view_config = {};
+  /* image_view_config.image = *context->texture.handle; */
+  image_view_config.format = ToVulkan(image.format);
+  image_view_config.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+  image_view_config.mip_levels = image.mip_levels;
+
   TransitionImageLayoutConfig transition_config = {};
   transition_config.format = VK_FORMAT_B8G8R8A8_UNORM;
   transition_config.old_layout = VK_IMAGE_LAYOUT_UNDEFINED;
   transition_config.new_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  transition_config.mip_levels = src.mip_levels;
-  if (!TransitionImageLayout(context, *image.handle, transition_config))
+  transition_config.mip_levels = image.mip_levels;
+
+  CreateImageConfig create_image_config = {};
+  create_image_config.alloc_config = std::move(alloc_image_config);
+  create_image_config.view_config = std::move(image_view_config);
+  create_image_config.transition_config = std::move(transition_config);
+
+  auto created_image = CreateImage(context, &create_image_config);
+  if (!created_image.valid())
     return false;
 
   // Now we copy the data to the image.
-  if (!CopyBufferToImage(context, src, *staging_memory.handle,
-                         *image.handle)) {
+  if (!CopyBufferToImage(context, image, *staging_memory.handle,
+                         *created_image.image.handle)) {
     return false;
   }
 
@@ -1241,31 +1239,16 @@ bool CreateTextureBuffers(Context* context, const Image& src) {
   // Generating the mipmaps will take care of the transition to
   // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL for us.
   GenerateMipmapsConfig mipmap_config = {};
-  mipmap_config.image = *image.handle;
-  mipmap_config.format = ToVulkan(src.format);
-  mipmap_config.width = src.width;
-  mipmap_config.height = src.height;
-  mipmap_config.mip_levels = src.mip_levels;
-  if (!GenerateMipmaps(context, mipmap_config))
+  mipmap_config.image = *created_image.image.handle;
+  mipmap_config.format = ToVulkan(image.format);
+  mipmap_config.width = image.width;
+  mipmap_config.height = image.height;
+  mipmap_config.mip_levels = image.mip_levels;
+  if (!GenerateMipmaps(context, &mipmap_config))
     return false;
 
-  context->texture = std::move(image);
-  return true;
-}
-
-// CreateTextureImageView ------------------------------------------------------
-
-bool CreateTextureImageView(Context* context, const Image& src_image) {
-  CreateImageViewConfig config = {};
-  config.image = *context->texture.handle;
-  config.format = ToVulkan(src_image.format);
-  config.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
-  config.mip_levels = src_image.mip_levels;
-  auto image_view = CreateImageView(context, config);
-  if (!image_view.has_value())
-    return false;
-
-  context->texture_view = std::move(image_view);
+  context->texture = std::move(created_image.image);
+  context->texture_view = std::move(created_image.image_view);
   return true;
 }
 
@@ -1459,7 +1442,7 @@ bool CreateSyncObjects(Context* context) {
   // Start this fence in the signaled state.
   fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-  for (int i = 0; i < kMaxFramesInFlight; i++) {
+  for (int i = 0; i < Definitions::kMaxFramesInFlight; i++) {
     VkSemaphore semaphores[2];
     VkFence fence;
     if (!VK_CALL(vkCreateSemaphore, *context->device, &semaphore_create_info,

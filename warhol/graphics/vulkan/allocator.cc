@@ -378,7 +378,7 @@ void MarkForFree(MemoryPool* pool, Allocation* allocation) {
 }
 
 void EmptyGarbage(MemoryPool* pool) {
-  pool->garbage_index = (pool->garbage_index + 1) % kNumFrames;
+  pool->garbage_index = (pool->garbage_index + 1) % Definitions::kNumFrames;
 
   auto& garbage = pool->garbage[pool->garbage_index];
   for (auto& block_id : garbage) {
