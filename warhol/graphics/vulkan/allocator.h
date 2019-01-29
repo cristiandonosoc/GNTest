@@ -166,8 +166,8 @@ std::string Print(Context*, MemoryPool*);
 struct Allocator {
   bool valid() const { return initialized; }
 
-  DEFAULT_CONSTRUCTOR(Allocator);
-  DEFAULT_DESTRUCTOR(Allocator);
+  Allocator();
+  ~Allocator();
   DELETE_COPY_AND_ASSIGN(Allocator);
   DEFAULT_MOVE_AND_ASSIGN(Allocator);
 
@@ -185,7 +185,7 @@ struct Allocator {
 };
 
 // The memory inputs are the sizes of the pools.
-void InitAllocator(Allocator*, uint32_t device_local_memory,
+void InitAllocator(Context*, Allocator*, uint32_t device_local_memory,
                    uint32_t host_visible_memory);
 
 struct AllocateConfig {

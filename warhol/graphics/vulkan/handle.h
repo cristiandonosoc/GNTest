@@ -19,6 +19,12 @@ struct Handle {
   Handle(Context* context, HandleType handle)
       : context_(context), handle_(handle) {}
 
+  template <typename T>
+  Handle(Context* context, T extra_handle, HandleType handle)
+      : context_(context),
+        extra_handle_((void*)extra_handle),
+        handle_(handle) {}
+
   void Clear() {
     InternalClear();
     Reset();
@@ -30,14 +36,26 @@ struct Handle {
     handle_ = handle;
   }
 
+  template <typename T>
+  void SetWithExtraHandle(Context* context, T extra_handle, HandleType handle) {
+    InternalClear();
+    context_ = context;
+    extra_handle_ = (void*)extra_handle;
+    handle_ = handle;
+  }
+
   DELETE_COPY_AND_ASSIGN(Handle);
 
-  Handle(Handle&& rhs) : context_(rhs.context_), handle_(rhs.handle_) {
+  Handle(Handle&& rhs)
+      : context_(rhs.context_),
+        extra_handle_(rhs.extra_handle_),
+        handle_(rhs.handle_) {
     rhs.Reset();
   }
 
   Handle& operator=(Handle&& rhs) {
     context_ = rhs.context_;
+    extra_handle_ = rhs.extra_handle_;
     handle_ = rhs.handle_;
     rhs.Reset();
     return *this;
@@ -54,7 +72,8 @@ struct Handle {
   HandleType* operator->() { return &handle_; }
   HandleType& value() { return handle_; }
 
-  Context* context() { return context_; }
+  Context* context() const { return context_; }
+  void* extra_handle() const { return extra_handle_; }
 
  private:
   // This function creates the corresponding freeing of the resource.
@@ -64,10 +83,12 @@ struct Handle {
 
   void Reset() {
     context_ = nullptr;
+    extra_handle_ = nullptr;
     handle_ = VK_NULL_HANDLE;
   }
 
   Context* context_ = nullptr;
+  void* extra_handle_ = nullptr;
   HandleType handle_ = VK_NULL_HANDLE;
 };
 

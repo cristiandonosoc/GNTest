@@ -12,9 +12,11 @@
 namespace warhol {
 namespace vulkan {
 
+// StagingBuffer ---------------------------------------------------------------
+
 namespace {
 
-bool InitStagingBuffer(Context* context, StagingManager* manager,
+void InitStagingBuffer(Context* context, StagingManager* manager,
                        StagingBuffer* out) {
     // Memory back the buffer.
     AllocBufferConfig alloc_config = {};
@@ -22,35 +24,29 @@ bool InitStagingBuffer(Context* context, StagingManager* manager,
     alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     alloc_config.memory_usage = MemoryUsage::kCPUToGPU;
     auto buffer = AllocBuffer(context, &alloc_config);
-    if (!buffer.has_value())
-      return false;
+    ASSERT(buffer.has_value());
 
     // Create the command buffer.
     auto command_buffer = CreateCommandBuffer(context, *manager->command_pool);
-    if (!command_buffer.has_value())
-      return false;
+    ASSERT(command_buffer.has_value());
+    LOG(DEBUG) << "Extra handle: " << command_buffer.extra_handle();
 
     // Add a begin pass to the command buffer.
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    if (!VK_CALL(vkBeginCommandBuffer, *command_buffer, &begin_info))
-      return false;
+    VK_CHECK(vkBeginCommandBuffer, *command_buffer, &begin_info);
 
     // Create the fence.
     VkFence fence_out;
     VkFenceCreateInfo fence_create_info = {};
     fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    if (!VK_CALL(vkCreateFence, *context->device, &fence_create_info, nullptr,
-                 &fence_out)) {
-      return false;
-    }
+    VK_CHECK(vkCreateFence, *context->device, &fence_create_info, nullptr,
+                            &fence_out);
     Handle<VkFence> fence(context, fence_out);
 
     out->buffer = std::move(buffer);
     out->command_buffer = std::move(command_buffer);
     out->fence = std::move(fence);
-
-    return true;
 }
 
 void WaitOnStage(Context* context, StagingBuffer* stage) {
@@ -70,37 +66,20 @@ void WaitOnStage(Context* context, StagingBuffer* stage) {
   VK_CHECK(vkBeginCommandBuffer, *stage->command_buffer, &begin_info);
 }
 
+void Clear(StagingBuffer* stage) {
+  stage->fence.Clear();
+  stage->buffer.handle.Clear();
+  stage->command_buffer.Clear();
+
+  stage->offset = 0;
+  stage->submitting = false;
+}
+
 }  // namespace
 
-bool InitStagingManager(Context* context, StagingManager* manager) {
-  // This command pool is to be used over and over.
-  VkCommandPool command_pool_out;
-  VkCommandPoolCreateInfo create_info = {};
-  create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-  create_info.queueFamilyIndex =
-      context->physical_device_info.queue_family_indices.graphics;
-  if (!VK_CALL(vkCreateCommandPool, *context->device, &create_info, nullptr,
-               &command_pool_out)) {
-    return false;
-  }
-  manager->command_pool.Set(context, command_pool_out);
+StagingBuffer::~StagingBuffer() = default;
 
-  // Allocate the buffer and associate the values.
-  for (int i = 0; i < ARRAY_SIZE(manager->buffers); i++) {
-    StagingBuffer staging_buffer = {};
-    if (!InitStagingBuffer(context, manager, &staging_buffer))
-      return false;
-    manager->buffers[i] = std::move(staging_buffer);
-  }
-  return true;
-}
-
-bool StageToken::valid() const {
-  return command_buffer != VK_NULL_HANDLE &&
-         buffer != VK_NULL_HANDLE &&
-         offset != 0;
-}
+// StatingManager --------------------------------------------------------------
 
 namespace {
 
@@ -109,6 +88,43 @@ inline StagingBuffer* CurrentStage(StagingManager* manager) {
 }
 
 }  // namespace
+
+StagingManager::~StagingManager() {
+  for (size_t i = 0; i < ARRAY_SIZE(buffers); i++) {
+    Clear(&buffers[i]);
+  }
+}
+
+void InitStagingManager(Context* context, StagingManager* manager,
+                        VkDeviceSize buffer_size) {
+  manager->buffer_size = buffer_size;
+
+  LOG(DEBUG) << "Creating Staging Manager Command Pool.";
+
+  // This command pool is to be used over and over.
+  VkCommandPool command_pool_out;
+  VkCommandPoolCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+  create_info.queueFamilyIndex =
+      context->physical_device_info.queue_family_indices.graphics;
+  VK_CHECK(vkCreateCommandPool, *context->device, &create_info, nullptr,
+                                &command_pool_out);
+  manager->command_pool.Set(context, command_pool_out);
+
+  LOG(DEBUG) << "Initializing Staging Buffers.";
+
+  // Allocate the buffer and associate the values.
+  for (int i = 0; i < ARRAY_SIZE(manager->buffers); i++) {
+    InitStagingBuffer(context, manager, &manager->buffers[i]);
+  }
+}
+
+bool StageToken::valid() const {
+  return command_buffer != VK_NULL_HANDLE &&
+         buffer != VK_NULL_HANDLE &&
+         offset != 0;
+}
 
 
 StageToken
@@ -168,7 +184,7 @@ void Flush(Context* context, StagingManager* manager) {
   VkMappedMemoryRange memory_range = {};
   memory_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
   memory_range.memory = *stage->buffer.allocation.memory;
-  memory_range.size = VK_WHOLE_SIZE;
+  memory_range.size = (VkDeviceSize)VK_WHOLE_SIZE;
 
   VK_CHECK(vkFlushMappedMemoryRanges, *context->device, 1, &memory_range);
 

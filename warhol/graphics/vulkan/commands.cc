@@ -19,13 +19,13 @@ Handle<VkCommandBuffer> CreateCommandBuffer(Context* context,
   alloc_info.commandBufferCount = 1;
   alloc_info.commandPool = pool;
 
-  VkCommandBuffer command_buffer;
+  VkCommandBuffer command_buffer_out;
   if (!VK_CALL(vkAllocateCommandBuffers, *context->device, &alloc_info,
-               &command_buffer)) {
+               &command_buffer_out)) {
     return {};
   }
 
-  return Handle<VkCommandBuffer>(context, command_buffer);
+  return Handle<VkCommandBuffer>(context, pool, command_buffer_out);
 }
 
 Handle<VkCommandBuffer> BeginSingleTimeCommands(Context* context) {

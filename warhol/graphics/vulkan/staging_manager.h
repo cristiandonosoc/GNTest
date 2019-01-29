@@ -13,7 +13,7 @@ namespace vulkan {
 struct StagingBuffer {
   DEFAULT_CONSTRUCTOR(StagingBuffer);
   DEFAULT_MOVE_AND_ASSIGN(StagingBuffer);
-  ~StagingBuffer() { LOG(DEBUG) << __PRETTY_FUNCTION__; }
+  ~StagingBuffer();
   uint8_t* data() const { return buffer.allocation.data; }
 
   Handle<VkCommandBuffer> command_buffer = {};  // Not owning.
@@ -28,7 +28,7 @@ struct StagingBuffer {
 // before the buffer is filled, we switch to the other and flush the first one.
 struct StagingManager {
   DEFAULT_CONSTRUCTOR(StagingManager);
-  ~StagingManager() { LOG(DEBUG) << __PRETTY_FUNCTION__; }
+  ~StagingManager();
   DEFAULT_MOVE_AND_ASSIGN(StagingManager);
 
   // If max is hit, we switch buffers and flush.
@@ -39,7 +39,7 @@ struct StagingManager {
   StagingBuffer buffers[Definitions::kNumFrames];
 };
 
-bool InitStagingManager(Context*, StagingManager*);
+void InitStagingManager(Context*, StagingManager*, VkDeviceSize buffer_size);
 
 struct StageToken {
   bool valid() const;

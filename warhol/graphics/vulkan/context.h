@@ -76,7 +76,7 @@ struct Context {
   VkQueue graphics_queue = VK_NULL_HANDLE;  // Freed with |device|.
   VkQueue present_queue = VK_NULL_HANDLE;   // Freed with |device|.
 
-  // NOTE: Allocator has to be the last thing to go before freeing the device.
+  Handle<VkCommandPool> command_pool = {};
   Allocator allocator = {};
   StagingManager staging_manager = {};
 
@@ -104,7 +104,6 @@ struct Context {
 
   std::vector<Handle<VkFramebuffer>> frame_buffers;
 
-  Handle<VkCommandPool> command_pool = {};
   std::vector<VkCommandBuffer> command_buffers;   // Freed with |command_pool|.
   VkDeviceSize ubo_size;
   std::vector<MemoryBacked<VkBuffer>> uniform_buffers;

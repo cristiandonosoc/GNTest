@@ -242,7 +242,6 @@ void Shutdown(MemoryPool* pool) {
 bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
                             const AllocateConfig& config, Allocation* out) {
   (void)context;
-  LOG(DEBUG) << "################## Allocating from pool #####################";
   VkDeviceSize free = pool->size - pool->allocated;
   if (free < config.size)
     return false;
@@ -349,7 +348,7 @@ bool AllocateFromMemoryPool(Context* context, MemoryPool* pool,
   LOG(DEBUG) << "Allocated successfully: " << BytesToString(padded_size)
              << std::hex << " at offset 0x" << best_fit->offset
              << ", allocation offset 0x" << allocation.offset;
-  LOG(NO_FRAME) << Print(context, pool);
+  /* LOG(NO_FRAME) << Print(context, pool); */
 
   pool->allocated += padded_size;
 
@@ -472,10 +471,14 @@ MemoryPool* FindMemoryPool(Allocator* allocator, uint32_t pool_id) {
 
 }  // namespace
 
-void InitAllocator(Allocator* allocator, uint32_t device_local_memory,
-                   uint32_t host_visible_memory) {
+Allocator::Allocator() = default;
+Allocator::~Allocator() = default;
+
+void InitAllocator(Context* context, Allocator* allocator,
+                   uint32_t device_local_memory, uint32_t host_visible_memory) {
   ASSERT(allocator->pools.empty());
 
+  allocator->context = context;
   allocator->next_pool_id = 0;
   allocator->device_local_memory_size = device_local_memory;
   allocator->host_visible_memory_size = host_visible_memory;
