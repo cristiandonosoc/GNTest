@@ -3,6 +3,7 @@
 
 #include "warhol/graphics/vulkan/staging_manager.h"
 
+#include "warhol/graphics/common/image.h"
 #include "warhol/graphics/vulkan/commands.h"
 #include "warhol/graphics/vulkan/context.h"
 #include "warhol/graphics/vulkan/utils.h"
@@ -97,6 +98,7 @@ StagingManager::~StagingManager() {
 
 void InitStagingManager(Context* context, StagingManager* manager,
                         VkDeviceSize buffer_size) {
+  manager->context = context;
   manager->buffer_size = buffer_size;
 
   LOG(DEBUG) << "Creating Staging Manager Command Pool.";
@@ -128,7 +130,7 @@ bool StageToken::valid() const {
 
 
 StageToken
-Stage(Context* context, StagingManager* manager, VkDeviceSize size,
+Stage(StagingManager* manager, VkDeviceSize size,
       VkDeviceSize alignment) {
   if (size > manager->buffer_size) {
     LOG(ERROR) << "Cannot allocate " << BytesToString(size)
@@ -142,28 +144,63 @@ Stage(Context* context, StagingManager* manager, VkDeviceSize size,
   // If the current staging buffer doesn't have enough space, we flush it.
   VkDeviceSize aligned_offset = Align(stage->offset, alignment);
   if ((aligned_offset + size) >= manager->buffer_size && !stage->submitting)
-    Flush(context, manager);
+    Flush(manager);
 
   // IMPORTANT: Flush could have switched the |current_buffer| index!
   stage = CurrentStage(manager);
   if (stage->submitting)
-    WaitOnStage(context, stage);
-
-  // At this point we know that this StagingBuffer is empty, so we don't need
-  // to align.
-  stage->offset += size;
+    WaitOnStage(manager->context, stage);
 
   StageToken token = {};
   token.command_buffer = *stage->command_buffer;
   token.buffer = *stage->buffer.handle;
   token.size = size;
-  token.offset = 0;
+  token.offset = stage->offset;
   token.data = stage->data();
+
+  // At this point we know that this StagingBuffer is empty, so we don't need
+  // to align.
+  stage->offset += size;
+
+  LOG(DEBUG) << "Staged " << BytesToString(size)
+             << "(Current total: " << BytesToString(stage->offset);
+
+
 
   return token;
 }
 
-void Flush(Context* context, StagingManager* manager) {
+void CopyIntoStageToken(StageToken* token, void* src, VkDeviceSize size) {
+  memcpy(token->data + token->offset, src, size);
+}
+
+void
+CopyStageTokenToBuffer(StageToken* token, VkBuffer dst, VkDeviceSize offset) {
+  VkBufferCopy buffer_copy = {};
+  buffer_copy.srcOffset = token->offset;
+  buffer_copy.dstOffset = offset;
+  buffer_copy.size = token->size;
+  vkCmdCopyBuffer(token->command_buffer, token->buffer, dst, 1, &buffer_copy);
+}
+
+void
+CopyStageTokenToImage(StageToken* token, Image* image, VkImage dst) {
+  VkBufferImageCopy copy = {};
+  copy.bufferOffset = token->offset;
+  copy.bufferRowLength = 0;
+  copy.bufferImageHeight = 0;
+  copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  copy.imageSubresource.mipLevel = 0;
+  copy.imageSubresource.baseArrayLayer = 0;
+  copy.imageSubresource.layerCount = 1;
+  copy.imageOffset = {0, 0, 0};
+  copy.imageExtent = { (uint32_t)image->width, (uint32_t)image->height, 1 };
+
+  vkCmdCopyBufferToImage(token->command_buffer, token->buffer, dst,
+                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+}
+
+void Flush(StagingManager* manager) {
   StagingBuffer* stage = CurrentStage(manager);
   if (stage->submitting || stage->offset == 0)
     return;
@@ -186,6 +223,7 @@ void Flush(Context* context, StagingManager* manager) {
   memory_range.memory = *stage->buffer.allocation.memory;
   memory_range.size = (VkDeviceSize)VK_WHOLE_SIZE;
 
+  Context* context = manager->context;
   VK_CHECK(vkFlushMappedMemoryRanges, *context->device, 1, &memory_range);
 
   VkSubmitInfo submit_info = {};

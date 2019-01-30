@@ -10,6 +10,8 @@
 namespace warhol {
 namespace vulkan {
 
+struct Context;
+
 struct StagingBuffer {
   DEFAULT_CONSTRUCTOR(StagingBuffer);
   DEFAULT_MOVE_AND_ASSIGN(StagingBuffer);
@@ -27,9 +29,13 @@ struct StagingBuffer {
 // StagingManager is double buffered. This is so that if we haven't flushed
 // before the buffer is filled, we switch to the other and flush the first one.
 struct StagingManager {
-  DEFAULT_CONSTRUCTOR(StagingManager);
+  bool valid() const { return context != nullptr; }
+
+  StagingManager() = default;
   ~StagingManager();
   DEFAULT_MOVE_AND_ASSIGN(StagingManager);
+
+  Context* context;
 
   // If max is hit, we switch buffers and flush.
   Handle<VkCommandPool> command_pool = {};
@@ -50,12 +56,14 @@ struct StageToken {
   VkDeviceSize offset  = 0;
   uint8_t* data = nullptr;
 };
+StageToken Stage(StagingManager*, VkDeviceSize size, VkDeviceSize alignment);
 
-StageToken Stage(Context*, StagingManager*, VkDeviceSize size,
-                 VkDeviceSize alignment);
+void CopyIntoStageToken(StageToken*, void* src, VkDeviceSize size);
+void CopyStageTokenToBuffer(StageToken*, VkBuffer dst, VkDeviceSize dst_offset);
+void CopyStageTokenToImage(StageToken*, Image*, VkImage dst);
 
 // NOTE: Can switch the |current_buffer| index.
-void Flush(Context*, StagingManager*);
+void Flush(StagingManager*);
 
 }  // namespace vulkan
 }  // namespace warhol

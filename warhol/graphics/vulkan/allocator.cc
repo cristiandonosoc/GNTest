@@ -42,26 +42,26 @@ Allocation::~Allocation() {
   MarkForFree(pool, this);
 }
 
-void CopyIntoAllocation(Allocation* allocation, uint8_t* data, size_t size) {
-  ASSERT(allocation->valid());
-  ASSERT(allocation->host_visible());
+/* void CopyIntoAllocation(Allocation* allocation, uint8_t* data, size_t size) { */
+/*   ASSERT(allocation->valid()); */
+/*   ASSERT(allocation->host_visible()); */
 
-  memcpy(allocation->data, data, size);
+/*   memcpy(allocation->data, data, size); */
 
-  // If the binding is coherent, the device will see the change and we're done.
-  if (IsHostCoherent(allocation->pool))
-    return;
+/*   // If the binding is coherent, the device will see the change and we're done. */
+/*   if (IsHostCoherent(allocation->pool)) */
+/*     return; */
 
-  // TODO(Cristian): This actually crashes on OSX if memory...
-  Context* context = allocation->pool->allocator->context;
-  VkMappedMemoryRange range = {};
-  range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-  range.memory = *allocation->memory;
-  range.size = allocation->size;
-  range.offset = allocation->offset;
-  if (!VK_CALL(vkFlushMappedMemoryRanges, *context->device, 1, &range))
-    NOT_REACHED("Could not flush memory.");
-}
+/*   // TODO(Cristian): This actually crashes on OSX if memory... */
+/*   Context* context = allocation->pool->allocator->context; */
+/*   VkMappedMemoryRange range = {}; */
+/*   range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE; */
+/*   range.memory = *allocation->memory; */
+/*   range.size = allocation->size; */
+/*   range.offset = allocation->offset; */
+/*   if (!VK_CALL(vkFlushMappedMemoryRanges, *context->device, 1, &range)) */
+/*     NOT_REACHED("Could not flush memory."); */
+/* } */
 
 // MemoryPool ------------------------------------------------------------------
 
@@ -203,6 +203,27 @@ MemoryPool::~MemoryPool() {
       delete prev;
   }
 }
+
+// InitMemoryPool --------------------------------------------------------------
+
+namespace {
+
+Handle<VkDeviceMemory>
+AllocMemory(Context* context, VkDeviceSize size, uint32_t memory_type_index) {
+  VkMemoryAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.allocationSize = size;
+  alloc_info.memoryTypeIndex = memory_type_index;
+
+  VkDeviceMemory memory;
+  if (!VK_CALL(vkAllocateMemory, *context->device, &alloc_info, nullptr,
+                                 &memory)) {
+    return {};
+  }
+  return {context, memory};
+}
+
+}  // namespace
 
 bool InitMemoryPool(Context* context, MemoryPool* pool) {
   // TODO(Cristian): Handle granularity.";

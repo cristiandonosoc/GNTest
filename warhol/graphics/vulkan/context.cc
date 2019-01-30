@@ -249,15 +249,10 @@ bool CreateLogicalDevice(Context* context) {
   return true;
 }
 
-// CreateAllocator -------------------------------------------------------------
+// InitResourceManagement ------------------------------------------------------
 
 bool InitResourceManagement(Context* context) {
-  LOG(DEBUG) << __PRETTY_FUNCTION__;
-  LOG(DEBUG) << "Creating allocator.";
   InitAllocator(context, &context->allocator, MEGABYTES(256), MEGABYTES(256));
-
-  LOG(DEBUG) << "Creating staging manager.";
-
   InitStagingManager(context, &context->staging_manager, MEGABYTES(128));
 
   return true;
@@ -338,7 +333,6 @@ bool CreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
   VkSwapchainCreateInfoKHR create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
   create_info.surface = *context->surface;
-
   create_info.minImageCount = image_count;
   create_info.imageFormat = format.format;
   create_info.imageColorSpace = format.colorSpace;
@@ -478,7 +472,6 @@ bool CreateRenderPass(Context* context) {
   VkAttachmentReference depth_ref = {};
   depth_ref.attachment = 1;
   depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
 
   VkSubpassDescription subpass = {};
   // This is a graphics subpass.
@@ -1053,30 +1046,16 @@ bool CreateDepthResources(Context* context) {
 
 namespace {
 
-#if 0
-
-constexpr size_t kColorOffset = 2 * 12 * sizeof(float);
-constexpr size_t kUVOffset = 2 * 24 * sizeof(float);
-#endif
-
 bool CreateVertexBuffers(Context* context, const Mesh& mesh) {
   LOG(DEBUG) << "Creating vertex buffer.";
   VkDeviceSize size = mesh.vertices.size() * sizeof(mesh.vertices[0]);
 
-  // Create a staging buffer.
-  AllocBufferConfig alloc_config = {};
-  alloc_config.size = size;
-  alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  alloc_config.memory_usage = MemoryUsage::kCPUToGPU;
-  MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, &alloc_config);
-  if (!staging_memory.has_value())
-    return false;
-
-  CopyIntoAllocation(&staging_memory.allocation, (uint8_t*)mesh.vertices.data(),
-                     size);
+  StageToken stage_token = Stage(&context->staging_manager, size, 1);
+  CopyIntoStageToken(&stage_token, (void*)mesh.vertices.data(), size);
+  /* memcpy(stage_token.data, mesh.vertices.data(), size); */
 
   // Create the local memory and copy the memory to it.
-  alloc_config = {};
+  AllocBufferConfig alloc_config = {};
   alloc_config.size = size;
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -1085,12 +1064,8 @@ bool CreateVertexBuffers(Context* context, const Mesh& mesh) {
   if (!vertices_memory.has_value())
     return false;
 
-  if (!CopyBuffer(context, *staging_memory.handle, *vertices_memory.handle,
-                  size)) {
-    return false;
-  }
+  CopyStageTokenToBuffer(&stage_token, *vertices_memory.handle, 0);
 
-  // The staging buffers will be freed by Handle<>
   context->vertices = std::move(vertices_memory);
   return true;
 }
@@ -1101,20 +1076,24 @@ bool CreateIndicesBuffers(Context* context, const Mesh& mesh) {
   LOG(DEBUG) << "Creating index buffer.";
   VkDeviceSize size = mesh.indices.size() * sizeof(mesh.indices[0]);
 
-  // Create a staging buffer.
-  AllocBufferConfig alloc_config = {};
-  alloc_config.size = size;
-  alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  alloc_config.memory_usage = MemoryUsage::kCPUToGPU;
-  MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, &alloc_config);
-  if (!staging_memory.has_value())
-    return false;
+  StageToken stage_token = Stage(&context->staging_manager, size, 1);
+  CopyIntoStageToken(&stage_token, (void*)mesh.indices.data(), size);
+  /* memcpy(stage_token.data, mesh.indices.data(), size); */
 
-  CopyIntoAllocation(&staging_memory.allocation, (uint8_t*)mesh.indices.data(),
-                     size);
+  /* // Create a staging buffer. */
+  /* AllocBufferConfig alloc_config = {}; */
+  /* alloc_config.size = size; */
+  /* alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT; */
+  /* alloc_config.memory_usage = MemoryUsage::kCPUToGPU; */
+  /* MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, &alloc_config); */
+  /* if (!staging_memory.has_value()) */
+  /*   return false; */
+
+  /* CopyIntoAllocation(&staging_memory.allocation, (uint8_t*)mesh.indices.data(), */
+  /*                    size); */
 
   // Create the local memory and copy the memory to it.
-  alloc_config = {};
+  AllocBufferConfig alloc_config = {};
   alloc_config.size = size;
   alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -1123,10 +1102,11 @@ bool CreateIndicesBuffers(Context* context, const Mesh& mesh) {
   if (!indices_memory.has_value())
     return false;
 
-  if (!CopyBuffer(context, *staging_memory.handle, *indices_memory.handle,
-                  size)) {
-    return false;
-  }
+  /* if (!CopyBuffer(context, *staging_memory.handle, *indices_memory.handle, */
+  /*                 size)) { */
+  /*   return false; */
+  /* } */
+  CopyStageTokenToBuffer(&stage_token, *indices_memory.handle, 0);
 
   indices_count = mesh.indices.size();
 
@@ -1143,6 +1123,7 @@ bool LoadModel(Context* context, const Mesh& mesh) {
     return false;
   }
 
+  Flush(&context->staging_manager);
   return true;
 }
 
@@ -1176,27 +1157,30 @@ bool SetupUBO(Context* context , VkDeviceSize ubo_size) {
 
 // CreateTextureBuffers --------------------------------------------------------
 
-bool CreateTextureBuffers(Context* context, const Image& image) {
-  // Create a staging buffer.
-  AllocBufferConfig alloc_config = {};
-  alloc_config.size = image.data_size,
-  alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  alloc_config.memory_usage = MemoryUsage::kCPUToGPU;
-  MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, &alloc_config);
-  if (!staging_memory.has_value())
-    return false;
+bool CreateTextureBuffers(Context* context, Image* image) {
+  /* // Create a staging buffer. */
+  /* AllocBufferConfig alloc_config = {}; */
+  /* alloc_config.size = image.data_size, */
+  /* alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT; */
+  /* alloc_config.memory_usage = MemoryUsage::kCPUToGPU; */
+  /* MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, &alloc_config); */
+  /* if (!staging_memory.has_value()) */
+  /*   return false; */
 
-  CopyIntoAllocation(&staging_memory.allocation, (uint8_t*)image.data.value,
-                     image.data_size);
+  /* CopyIntoAllocation(&staging_memory.allocation, (uint8_t*)image.data.value, */
+  /*                    image.data_size); */
+  StageToken token = Stage(&context->staging_manager, image->data_size, 1);
+  CopyIntoStageToken(&token, (void*)image->data.value, image->data_size);
+  /* memcpy(token.data, image->data.value, image->data_size); */
 
   // Allocate and image.
   AllocImageConfig alloc_image_config = {};
   VkImageCreateInfo& image_info = alloc_image_config.create_info;
   image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  image_info.format = ToVulkan(image.format);
-  image_info.imageType = ToVulkan(image.type);
-  image_info.extent = { (uint32_t)image.width, (uint32_t)image.height, 1 };
-  image_info.mipLevels = image.mip_levels;
+  image_info.format = ToVulkan(image->format);
+  image_info.imageType = ToVulkan(image->type);
+  image_info.extent = { (uint32_t)image->width, (uint32_t)image->height, 1 };
+  image_info.mipLevels = image->mip_levels;
   image_info.arrayLayers = 1;
   image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
   image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
@@ -1212,15 +1196,15 @@ bool CreateTextureBuffers(Context* context, const Image& image) {
 
   CreateImageViewConfig image_view_config = {};
   /* image_view_config.image = *context->texture.handle; */
-  image_view_config.format = ToVulkan(image.format);
+  image_view_config.format = ToVulkan(image->format);
   image_view_config.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
-  image_view_config.mip_levels = image.mip_levels;
+  image_view_config.mip_levels = image->mip_levels;
 
   TransitionImageLayoutConfig transition_config = {};
   transition_config.format = VK_FORMAT_B8G8R8A8_UNORM;
   transition_config.old_layout = VK_IMAGE_LAYOUT_UNDEFINED;
   transition_config.new_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  transition_config.mip_levels = image.mip_levels;
+  transition_config.mip_levels = image->mip_levels;
 
   CreateImageConfig create_image_config = {};
   create_image_config.alloc_config = std::move(alloc_image_config);
@@ -1231,11 +1215,13 @@ bool CreateTextureBuffers(Context* context, const Image& image) {
   if (!created_image.valid())
     return false;
 
-  // Now we copy the data to the image.
-  if (!CopyBufferToImage(context, image, *staging_memory.handle,
-                         *created_image.image.handle)) {
-    return false;
-  }
+  /* // Now we copy the data to the image. */
+  /* if (!CopyBufferToImage(context, image, *staging_memory.handle, */
+  /*                        *created_image.image.handle)) { */
+  /*   return false; */
+  /* } */
+  CopyStageTokenToImage(&token, image, *created_image.image.handle);
+  Flush(&context->staging_manager);
 
   LOG(DEBUG) << "Generating mip maps.";
 
@@ -1244,10 +1230,10 @@ bool CreateTextureBuffers(Context* context, const Image& image) {
   // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL for us.
   GenerateMipmapsConfig mipmap_config = {};
   mipmap_config.image = *created_image.image.handle;
-  mipmap_config.format = ToVulkan(image.format);
-  mipmap_config.width = image.width;
-  mipmap_config.height = image.height;
-  mipmap_config.mip_levels = image.mip_levels;
+  mipmap_config.format = ToVulkan(image->format);
+  mipmap_config.width = image->width;
+  mipmap_config.height = image->height;
+  mipmap_config.mip_levels = image->mip_levels;
   if (!GenerateMipmaps(context, &mipmap_config))
     return false;
 

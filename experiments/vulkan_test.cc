@@ -222,7 +222,8 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
   if (!vulkan::SetupUBO(context, sizeof(UBO)))
     return false;
 
-  Image image = Image::Create2DImageFromPath(Assets::TexturePath("chalet.jpg"));
+  Image image =
+      Image::Create2DImageFromPath(Assets::TexturePath("awesomeface.png"));
   /* image.mip_levels = 2; */
 
 
@@ -247,7 +248,7 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
              << " KBs.";
 
   Header("Creating texture buffers...");
-  if (!vulkan::CreateTextureBuffers(context, image))
+  if (!vulkan::CreateTextureBuffers(context, &image))
     return false;
 
   /* Header("Creating imate view..."); */
@@ -272,6 +273,8 @@ bool SetupVulkan(const SDLContext& sdl_context, vulkan::Context* context) {
 
   LOG(INFO) << "Vulkan context creation successful!";
   return true;
+
+  /* Flush(&context->staging_manager); */
 }
 
 bool Update(const SDLContext& context, UBO* ubo) {

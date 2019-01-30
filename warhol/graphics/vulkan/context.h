@@ -121,8 +121,6 @@ struct Context {
   std::vector<Handle<VkFence>> in_flight_fences;
 };
 
-bool IsValid(const Context&);
-
 // |extensions| and |validation_layers| must already be set within context.
 // If successful, |context| will be correctly filled with a VkInstance.
 bool CreateContext(Context* context);
@@ -167,7 +165,7 @@ bool LoadModel(Context*, const Mesh&);
 
 bool SetupUBO(Context* , VkDeviceSize ubo_size);
 
-bool CreateTextureBuffers(Context*, const Image&);
+bool CreateTextureBuffers(Context*, Image*);
 
 bool CreateTextureSampler(Context*, const Image&);
 

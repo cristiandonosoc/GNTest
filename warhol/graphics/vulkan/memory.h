@@ -40,7 +40,5 @@ VkMemoryPropertyFlags GetPropertyFlagsFromMemoryTypeIndex(Context*, uint32_t);
 
 std::string MemoryTypeIndexToString(Context*, uint32_t memory_type_index);
 
-
-
 }  // namespace vulkan
 }  // namespace warhol

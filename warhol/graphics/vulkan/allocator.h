@@ -64,7 +64,7 @@ struct Allocation {
   uint8_t* data = nullptr;          // If host visible, it's mapped here.
 };
 
-void CopyIntoAllocation(Allocation*, uint8_t* data, size_t size);
+/* void CopyIntoAllocation(Allocation*, uint8_t* data, size_t size); */
 
 /*******************************************************************************
  * MemoryPool & MemoryBlock implementation.
