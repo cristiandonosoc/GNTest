@@ -52,10 +52,8 @@ executable("vulkan_test") {
   ]
 
   deps = [
-    "//third_party/tiny_obj_loader",
-    "//warhol/assets",
     "//warhol/debug:timing",
-    "//warhol/graphics/vulkan:lib",
+    "//warhol/graphics:vulkan_renderer",
     "//warhol/math",
     "//warhol/sdl2",
   ]

@@ -45,7 +45,7 @@ SDLContext::~SDLContext() {
 }
 
 bool SDLContext::InitOpenGL(uint32_t flags) {
-  ASSERT(impl_ == nullptr);
+  ASSERT(!impl_);
   impl_ = std::make_unique<SDLContextImpl>();
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
@@ -53,8 +53,8 @@ bool SDLContext::InitOpenGL(uint32_t flags) {
     return false;
   }
 
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
   impl_->window = SDL_CreateWindow("Warhol",
                                    SDL_WINDOWPOS_CENTERED,
                                    SDL_WINDOWPOS_CENTERED,
@@ -78,7 +78,7 @@ bool SDLContext::InitOpenGL(uint32_t flags) {
 }
 
 bool SDLContext::InitVulkan(uint32_t flags) {
-  ASSERT(impl_ == nullptr);
+  ASSERT(!impl_);
   impl_ = std::make_unique<SDLContextImpl>();
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {

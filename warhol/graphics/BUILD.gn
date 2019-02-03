@@ -1,0 +1,40 @@
+# Copyright 2018, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+source_set("renderer_common") {
+  sources = [
+    "renderer.cc",
+    "renderer.h",
+  ]
+
+  deps = [
+    "//warhol/utils",
+  ]
+}
+
+source_set("vulkan_renderer") {
+  sources = [
+    "renderer_backend_vulkan.cc",
+    "renderer_backend_vulkan.h",
+  ]
+
+  deps = [
+    ":renderer_common",
+
+    "//third_party/tiny_obj_loader",
+    "//warhol/assets",
+    "//warhol/debug:timing",
+    "//warhol/graphics/vulkan:lib",
+    "//warhol/math",
+    "//warhol/sdl2",
+  ]
+
+  data_deps = [
+    "//assets/shaders/vulkan:shaders",
+  ]
+
+
+
+}
+
+
