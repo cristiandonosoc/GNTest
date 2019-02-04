@@ -1,6 +1,10 @@
 # Copyright 2018, Cristián Donoso.
 # This code has a BSD license. See LICENSE.
 
+declare_args() {
+  vulkan_renderer_enabled = false
+}
+
 source_set("renderer_common") {
   sources = [
     "renderer.cc",
@@ -10,9 +14,17 @@ source_set("renderer_common") {
   deps = [
     "//warhol/utils",
   ]
+
+  defines = []
+  if (vulkan_renderer_enabled) {
+    defines += [ "WARHOL_VULKAN_ENABLED" ]
+  }
+
+  print(defines)
 }
 
 source_set("vulkan_renderer") {
+
   sources = [
     "renderer_backend_vulkan.cc",
     "renderer_backend_vulkan.h",

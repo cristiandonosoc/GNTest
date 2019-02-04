@@ -7,7 +7,6 @@
 
 #include <memory>
 
-#include "warhol/graphics/renderer_backend_vulkan.h"
 #include "warhol/utils/macros.h"
 
 namespace warhol {
@@ -15,6 +14,28 @@ namespace warhol {
 class SDLContext;
 
 struct Camera;
+struct Renderer;  // Defined later in file.
+
+struct BackendInterface {
+  bool valid() const { return renderer != nullptr && data != nullptr; }
+
+  BackendInterface();
+  ~BackendInterface();
+  DELETE_COPY_AND_ASSIGN(BackendInterface);
+  DECLARE_MOVE_AND_ASSIGN(BackendInterface);
+
+  Renderer* renderer;   // Not-owning.
+
+  // IMPORTANT: If you add more functions, remember to update the move ctor!
+  bool (*InitFunction)(BackendInterface*) = nullptr;
+  bool (*ShutdownFunction)(BackendInterface*) = nullptr;
+  bool (*DrawFrameFunction)(BackendInterface*, Camera*) = nullptr;
+
+  void* data = nullptr;
+};
+
+void Clear(BackendInterface*);
+
 
 struct Renderer {
   enum class BackendType : uint32_t {
@@ -37,14 +58,14 @@ struct Renderer {
   BackendType backend_type = BackendType::kLast;
   WindowManager window_manager = WindowManager::kLast;
 
-  std::unique_ptr<RendererBackendVulkan> vulkan_renderer;
+  SDLContext* sdl_context = nullptr;
+  BackendInterface backend_interface = {};
 };
 
-bool InitRendererWithVulkanAndSDL(Renderer*, SDLContext*);
+bool InitRenderer(Renderer*);
 bool ShutdownRenderer(Renderer*);
 
 void WindowSizeChanged(Renderer*, uint32_t width, uint32_t height);
-bool DrawFrame(Renderer*, SDLContext* sdl_context, Camera*);
-
+bool DrawFrame(Renderer*, Camera*);
 
 }  // namespace

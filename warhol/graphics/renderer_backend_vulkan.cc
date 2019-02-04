@@ -88,14 +88,25 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
   return VK_FALSE;
 }
 
+void CreateVulkanInterface(BackendInterface* bi) {
+  bi->InitFunction = InitVulkanRenderer;
+  bi->ShutdownFunction = ShutdownVulkanRenderer;
+  bi->DrawFrameFunction = DrawFrameVulkan;
+}
+
 }  // namespace
 
 RendererBackendVulkan::RendererBackendVulkan() = default;
 RendererBackendVulkan::~RendererBackendVulkan() = default;
 
-bool InitVulkanRendererBackendWithSDL(RendererBackendVulkan* vulkan_renderer,
-    SDLContext* sdl_context) {
-  ASSERT(vulkan_renderer);
+bool InitVulkanRenderer(BackendInterface* bi) {
+  ASSERT(!bi->valid());
+  CreateVulkanInterface(bi);
+  SDLContext* sdl_context = bi->renderer->sdl_context;
+
+  RendererBackendVulkan* vulkan_renderer = new RendererBackendVulkan();
+  bi->data = vulkan_renderer;
+
   vulkan_renderer->context = std::make_unique<vulkan::Context>();
   vulkan::Context* context = vulkan_renderer->context.get();
 
@@ -280,12 +291,15 @@ bool InitVulkanRendererBackendWithSDL(RendererBackendVulkan* vulkan_renderer,
   /* Flush(&context->staging_manager); */
 }
 
-// ShutdownVulkanBackend -------------------------------------------------------
+// ShutdownVulkanRenderer ------------------------------------------------------
 
-bool ShutdownVulkanBackend(Renderer* renderer,
-                           RendererBackendVulkan* vulkan_renderer) {
-  ASSERT(renderer->vulkan_renderer);
+bool ShutdownVulkanRenderer(BackendInterface* bi) {
+  if (!bi->valid())
+    return true;
+
+  RendererBackendVulkan* vulkan_renderer = (RendererBackendVulkan*)bi->data;
   vulkan::Context* vk_context = vulkan_renderer->context.get();
+  ASSERT(vk_context);
 
   if (!VK_CALL(vkDeviceWaitIdle, *vk_context->device)) {
     LOG(ERROR) << "Could not wait on device. Aborting.";
@@ -293,10 +307,31 @@ bool ShutdownVulkanBackend(Renderer* renderer,
   }
 
   // Reset vulkan renderer. This will free all resources.
-  renderer->vulkan_renderer.reset();
+  vulkan_renderer->context.reset();
+  delete vulkan_renderer;
+
+  Clear(bi);
 
   return true;
 }
+
+/* // ShutdownVulkanBackend ------------------------------------------------------- */
+
+/* bool ShutdownVulkanBackend(Renderer* renderer, */
+/*                            RendererBackendVulkan* vulkan_renderer) { */
+/*   ASSERT(renderer->vulkan_renderer); */
+/*   vulkan::Context* vk_context = vulkan_renderer->context.get(); */
+
+/*   if (!VK_CALL(vkDeviceWaitIdle, *vk_context->device)) { */
+/*     LOG(ERROR) << "Could not wait on device. Aborting."; */
+/*     return false; */
+/*   } */
+
+/*   // Reset vulkan renderer. This will free all resources. */
+/*   renderer->vulkan_renderer.reset(); */
+
+/*   return true; */
+/* } */
 
 // DrawFrameVulkan -------------------------------------------------------------
 
@@ -373,9 +408,10 @@ bool PresentQueue(SDLContext* sdl_context, vulkan::Context* vk_context,
 
 }  // namespace
 
-bool
-DrawFrameVulkan(RendererBackendVulkan* vulkan_renderer, SDLContext* sdl_context,
-                Camera* camera) {
+bool DrawFrameVulkan(BackendInterface* bi, Camera* camera) {
+  ASSERT(bi->valid());
+  SDLContext* sdl_context = bi->renderer->sdl_context;
+  RendererBackendVulkan* vulkan_renderer = (RendererBackendVulkan*)bi->data;
   vulkan::Context* vk_context = vulkan_renderer->context.get();
 
   int current_frame = vk_context->current_frame;
@@ -440,7 +476,5 @@ DrawFrameVulkan(RendererBackendVulkan* vulkan_renderer, SDLContext* sdl_context,
   }
 
 #endif
-
-
 
 }  // namespace warhol

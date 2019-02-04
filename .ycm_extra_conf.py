@@ -52,6 +52,8 @@ flags = [
 '-isystem', '/mnt/c/Programming/include',
 '-isystem', '/mnt/c/Programming/vulkan/Include',
 
+'-D', 'WARHOL_VULKAN_ENABLED',
+
 # Linux
 '-I', os.path.join('usr', 'include'),
 '-I', os.path.join('usr', 'local', 'include'),

@@ -11,6 +11,7 @@ namespace warhol {
 
 class SDLContext;
 
+struct BackendInterface;
 struct Camera;
 struct Renderer;
 
@@ -27,9 +28,8 @@ struct RendererBackendVulkan {
   std::unique_ptr<vulkan::Context> context;
 };
 
-bool InitVulkanRendererBackendWithSDL(RendererBackendVulkan*, SDLContext*);
-bool ShutdownVulkanBackend(Renderer*, RendererBackendVulkan*);
-
-bool DrawFrameVulkan(RendererBackendVulkan*, SDLContext*, Camera*);
+bool InitVulkanRenderer(BackendInterface*);
+bool ShutdownVulkanRenderer(BackendInterface*);
+bool DrawFrameVulkan(BackendInterface*, Camera*);
 
 }  // namespace warhol

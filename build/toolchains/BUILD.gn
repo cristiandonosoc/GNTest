@@ -53,7 +53,7 @@ toolchain("clang") {
   tool("cc") {
     depfile = "{{output}}.d"
     depsformat = "gcc"
-    command = "clang++ -xc -MMD -MF $depfile {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
+    command = "clang++ -xc -MMD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
     outputs = [
       "{{source_out_dir}}/{{source_name_part}}.o" ,
     ]
@@ -62,7 +62,7 @@ toolchain("clang") {
   tool("cxx") {
     depfile = "{{output}}.d"
     depsformat = "gcc"
-    command = "clang++ -xc++ -MMD -MF $depfile {{include_dirs}} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
+    command = "clang++ -xc++ -MMD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
     outputs = [
       "{{source_out_dir}}/{{source_name_part}}.o" ,
     ]

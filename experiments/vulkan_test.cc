@@ -62,7 +62,10 @@ int main() {
   {
     Timer timer = Timer::ManualTimer();
 
-    if (!InitRendererWithVulkanAndSDL(&renderer, &sdl_context)) {
+    renderer.sdl_context = &sdl_context;
+    renderer.backend_type = Renderer::BackendType::kVulkan;
+    renderer.window_manager = Renderer::WindowManager::kSDL;
+    if (!InitRenderer(&renderer)) {
       LOG(ERROR) << "Could not setup vulkan. Exiting.";
       return 1;
     }
@@ -94,7 +97,7 @@ int main() {
     /* if (!Update(sdl_context, &ubo)) */
     /*   break; */
 
-    if (!DrawFrame(&renderer, &sdl_context, &camera)) {
+    if (!DrawFrame(&renderer, &camera)) {
       LOG(ERROR) << "Error drawing with vulkan. Exiting.";
       break;
     }
