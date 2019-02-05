@@ -42,27 +42,6 @@ Allocation::~Allocation() {
   MarkForFree(pool, this);
 }
 
-/* void CopyIntoAllocation(Allocation* allocation, uint8_t* data, size_t size) { */
-/*   ASSERT(allocation->valid()); */
-/*   ASSERT(allocation->host_visible()); */
-
-/*   memcpy(allocation->data, data, size); */
-
-/*   // If the binding is coherent, the device will see the change and we're done. */
-/*   if (IsHostCoherent(allocation->pool)) */
-/*     return; */
-
-/*   // TODO(Cristian): This actually crashes on OSX if memory... */
-/*   Context* context = allocation->pool->allocator->context; */
-/*   VkMappedMemoryRange range = {}; */
-/*   range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE; */
-/*   range.memory = *allocation->memory; */
-/*   range.size = allocation->size; */
-/*   range.offset = allocation->offset; */
-/*   if (!VK_CALL(vkFlushMappedMemoryRanges, *context->device, 1, &range)) */
-/*     NOT_REACHED("Could not flush memory."); */
-/* } */
-
 // MemoryPool ------------------------------------------------------------------
 
 namespace {
@@ -136,6 +115,8 @@ void Free(MemoryPool* pool, const MemoryPool::GarbageMarker& marker) {
                << pool->id;
     NOT_REACHED("Unfound blog. Look in logs.");
   }
+
+  LOG(DEBUG) << "Freeing block " << marker.block_id << " in pool " << pool->id;
 
   current->alloc_type = AllocationType::kFree;
 

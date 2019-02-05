@@ -1052,7 +1052,6 @@ bool CreateVertexBuffers(Context* context, const Mesh& mesh) {
 
   StageToken stage_token = Stage(&context->staging_manager, size, 1);
   CopyIntoStageToken(&stage_token, (void*)mesh.vertices.data(), size);
-  /* memcpy(stage_token.data, mesh.vertices.data(), size); */
 
   // Create the local memory and copy the memory to it.
   AllocBufferConfig alloc_config = {};
@@ -1078,19 +1077,6 @@ bool CreateIndicesBuffers(Context* context, const Mesh& mesh) {
 
   StageToken stage_token = Stage(&context->staging_manager, size, 1);
   CopyIntoStageToken(&stage_token, (void*)mesh.indices.data(), size);
-  /* memcpy(stage_token.data, mesh.indices.data(), size); */
-
-  /* // Create a staging buffer. */
-  /* AllocBufferConfig alloc_config = {}; */
-  /* alloc_config.size = size; */
-  /* alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT; */
-  /* alloc_config.memory_usage = MemoryUsage::kCPUToGPU; */
-  /* MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, &alloc_config); */
-  /* if (!staging_memory.has_value()) */
-  /*   return false; */
-
-  /* CopyIntoAllocation(&staging_memory.allocation, (uint8_t*)mesh.indices.data(), */
-  /*                    size); */
 
   // Create the local memory and copy the memory to it.
   AllocBufferConfig alloc_config = {};
@@ -1102,10 +1088,6 @@ bool CreateIndicesBuffers(Context* context, const Mesh& mesh) {
   if (!indices_memory.has_value())
     return false;
 
-  /* if (!CopyBuffer(context, *staging_memory.handle, *indices_memory.handle, */
-  /*                 size)) { */
-  /*   return false; */
-  /* } */
   CopyStageTokenToBuffer(&stage_token, *indices_memory.handle, 0);
 
   indices_count = mesh.indices.size();
@@ -1144,12 +1126,6 @@ bool SetupUBO(Context* context , VkDeviceSize ubo_size) {
     if (!ubo.has_value())
       return false;
 
-    /* ubo.device = *context->device; */
-    /* if (!VK_CALL(vkMapMemory, *context->device, *ubo.memory, 0, ubo_size, */
-    /*                           0, &ubo.data)) { */
-    /*   return false; */
-    /* } */
-
     context->uniform_buffers.emplace_back(std::move(ubo));
   }
   return true;
@@ -1158,20 +1134,8 @@ bool SetupUBO(Context* context , VkDeviceSize ubo_size) {
 // CreateTextureBuffers --------------------------------------------------------
 
 bool CreateTextureBuffers(Context* context, Image* image) {
-  /* // Create a staging buffer. */
-  /* AllocBufferConfig alloc_config = {}; */
-  /* alloc_config.size = image.data_size, */
-  /* alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT; */
-  /* alloc_config.memory_usage = MemoryUsage::kCPUToGPU; */
-  /* MemoryBacked<VkBuffer> staging_memory = AllocBuffer(context, &alloc_config); */
-  /* if (!staging_memory.has_value()) */
-  /*   return false; */
-
-  /* CopyIntoAllocation(&staging_memory.allocation, (uint8_t*)image.data.value, */
-  /*                    image.data_size); */
   StageToken token = Stage(&context->staging_manager, image->data_size, 1);
   CopyIntoStageToken(&token, (void*)image->data.value, image->data_size);
-  /* memcpy(token.data, image->data.value, image->data_size); */
 
   // Allocate and image.
   AllocImageConfig alloc_image_config = {};
@@ -1215,11 +1179,6 @@ bool CreateTextureBuffers(Context* context, Image* image) {
   if (!created_image.valid())
     return false;
 
-  /* // Now we copy the data to the image. */
-  /* if (!CopyBufferToImage(context, image, *staging_memory.handle, */
-  /*                        *created_image.image.handle)) { */
-  /*   return false; */
-  /* } */
   CopyStageTokenToImage(&token, image, *created_image.image.handle);
   Flush(&context->staging_manager);
 

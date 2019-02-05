@@ -28,6 +28,7 @@ struct BackendInterface {
 
   // IMPORTANT: If you add more functions, remember to update the move ctor!
   bool (*InitFunction)(BackendInterface*) = nullptr;
+  bool (*ExecuteCommands)(BackendInterface*) = nullptr;
   bool (*ShutdownFunction)(BackendInterface*) = nullptr;
   bool (*DrawFrameFunction)(BackendInterface*, Camera*) = nullptr;
 

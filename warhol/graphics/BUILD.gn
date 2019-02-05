@@ -24,29 +24,14 @@ source_set("renderer_common") {
 }
 
 source_set("vulkan_renderer") {
-
-  sources = [
-    "renderer_backend_vulkan.cc",
-    "renderer_backend_vulkan.h",
-  ]
-
   deps = [
     ":renderer_common",
-
-    "//third_party/tiny_obj_loader",
-    "//warhol/assets",
-    "//warhol/debug:timing",
-    "//warhol/graphics/vulkan:lib",
-    "//warhol/math",
-    "//warhol/sdl2",
+    "//warhol/graphics/vulkan",
   ]
 
   data_deps = [
     "//assets/shaders/vulkan:shaders",
   ]
-
-
-
 }
 
 

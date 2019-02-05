@@ -1,7 +1,7 @@
 // Copyright 2019, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include "warhol/graphics/renderer_backend_vulkan.h"
+#include "warhol/graphics/vulkan/renderer_backend.h"
 
 #include <iostream>
 
@@ -20,6 +20,7 @@
 #include "warhol/utils/glm_impl.h"
 
 namespace warhol {
+namespace vulkan {
 
 namespace {
 
@@ -89,22 +90,25 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
 }
 
 void CreateVulkanInterface(BackendInterface* bi) {
-  bi->InitFunction = InitVulkanRenderer;
-  bi->ShutdownFunction = ShutdownVulkanRenderer;
-  bi->DrawFrameFunction = DrawFrameVulkan;
+  bi->InitFunction = InitRendererBackend;
+  bi->ExecuteCommands = ExecuteCommands;
+  bi->ShutdownFunction = ShutdownRendererBackend;
+  bi->DrawFrameFunction = DrawFrame;
 }
 
 }  // namespace
 
-RendererBackendVulkan::RendererBackendVulkan() = default;
-RendererBackendVulkan::~RendererBackendVulkan() = default;
+RendererBackend::RendererBackend() = default;
+RendererBackend::~RendererBackend() = default;
 
-bool InitVulkanRenderer(BackendInterface* bi) {
+// InitRendererBackend ---------------------------------------------------------
+
+bool InitRendererBackend(BackendInterface* bi) {
   ASSERT(!bi->valid());
   CreateVulkanInterface(bi);
   SDLContext* sdl_context = bi->renderer->sdl_context;
 
-  RendererBackendVulkan* vulkan_renderer = new RendererBackendVulkan();
+  RendererBackend* vulkan_renderer = new RendererBackend();
   bi->data = vulkan_renderer;
 
   vulkan_renderer->context = std::make_unique<vulkan::Context>();
@@ -291,13 +295,20 @@ bool InitVulkanRenderer(BackendInterface* bi) {
   /* Flush(&context->staging_manager); */
 }
 
-// ShutdownVulkanRenderer ------------------------------------------------------
+// ExecuteCommands -------------------------------------------------------------
 
-bool ShutdownVulkanRenderer(BackendInterface* bi) {
+bool ExecuteCommands(BackendInterface*) {
+  NOT_IMPLEMENTED();
+  return false;
+}
+
+// ShutdownRendererBackend -----------------------------------------------------
+
+bool ShutdownRendererBackend(BackendInterface* bi) {
   if (!bi->valid())
     return true;
 
-  RendererBackendVulkan* vulkan_renderer = (RendererBackendVulkan*)bi->data;
+  RendererBackend* vulkan_renderer = (RendererBackend*)bi->data;
   vulkan::Context* vk_context = vulkan_renderer->context.get();
   ASSERT(vk_context);
 
@@ -315,25 +326,7 @@ bool ShutdownVulkanRenderer(BackendInterface* bi) {
   return true;
 }
 
-/* // ShutdownVulkanBackend ------------------------------------------------------- */
-
-/* bool ShutdownVulkanBackend(Renderer* renderer, */
-/*                            RendererBackendVulkan* vulkan_renderer) { */
-/*   ASSERT(renderer->vulkan_renderer); */
-/*   vulkan::Context* vk_context = vulkan_renderer->context.get(); */
-
-/*   if (!VK_CALL(vkDeviceWaitIdle, *vk_context->device)) { */
-/*     LOG(ERROR) << "Could not wait on device. Aborting."; */
-/*     return false; */
-/*   } */
-
-/*   // Reset vulkan renderer. This will free all resources. */
-/*   renderer->vulkan_renderer.reset(); */
-
-/*   return true; */
-/* } */
-
-// DrawFrameVulkan -------------------------------------------------------------
+// DrawFrame -------------------------------------------------------------------
 
 namespace {
 
@@ -405,13 +398,12 @@ bool PresentQueue(SDLContext* sdl_context, vulkan::Context* vk_context,
   return true;
 }
 
-
 }  // namespace
 
-bool DrawFrameVulkan(BackendInterface* bi, Camera* camera) {
+bool DrawFrame(BackendInterface* bi, Camera* camera) {
   ASSERT(bi->valid());
   SDLContext* sdl_context = bi->renderer->sdl_context;
-  RendererBackendVulkan* vulkan_renderer = (RendererBackendVulkan*)bi->data;
+  RendererBackend* vulkan_renderer = (RendererBackend*)bi->data;
   vulkan::Context* vk_context = vulkan_renderer->context.get();
 
   int current_frame = vk_context->current_frame;
@@ -430,6 +422,9 @@ bool DrawFrameVulkan(BackendInterface* bi, Camera* camera) {
       VK_NULL_HANDLE,
       &image_index);
   ASSERT(res == VK_SUCCESS);
+
+  EmptyGarbage(&vk_context->allocator);
+  Flush(&vk_context->staging_manager);
 
   if (!VK_CALL(vkResetFences, *vk_context->device, 1,
               &vk_context->in_flight_fences[current_frame].value())) {
@@ -477,4 +472,5 @@ bool DrawFrameVulkan(BackendInterface* bi, Camera* camera) {
 
 #endif
 
+}  // namespace vulkan
 }  // namespace warhol

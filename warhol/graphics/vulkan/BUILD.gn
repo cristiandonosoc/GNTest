@@ -44,7 +44,11 @@ config("config") {
   }
 }
 
-source_set("lib") {
+source_set("vulkan") {
+  public = [
+    "renderer_backend.h",
+  ]
+
   sources = [
     "allocator.cc",
     "allocator.h",
@@ -60,6 +64,7 @@ source_set("lib") {
     "memory.h",
     "memory_utils.cc",
     "memory_utils.h",
+    "renderer_backend.cc",
     "staging_manager.cc",
     "staging_manager.h",
     "utils.cc",
@@ -72,7 +77,12 @@ source_set("lib") {
   ]
 
   deps = [
+    "//third_party/tiny_obj_loader",
+    "//warhol/assets",
+    "//warhol/debug:timing",
     "//warhol/graphics/common",
+    "//warhol/math",
+    "//warhol/sdl2",
     "//warhol/utils",
   ]
 }

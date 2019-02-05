@@ -17,9 +17,9 @@ namespace warhol {
     }                                                   \
   } while (false)
 
-#define NOT_IMPLEMENTED(message)                                      \
-  do {                                                                \
-    ::warhol::AssertionFailed(FROM_HERE, "Not implemented", message); \
+#define NOT_IMPLEMENTED()                                    \
+  do {                                                       \
+    ::warhol::AssertionFailed(FROM_HERE, "Not implemented"); \
   } while (false)
 
 #define NOT_REACHED(message)                                       \

@@ -6,7 +6,7 @@
 #include "warhol/utils/assert.h"
 
 #ifdef WARHOL_VULKAN_ENABLED
-#include "warhol/graphics/renderer_backend_vulkan.h"
+#include "warhol/graphics/vulkan/renderer_backend.h"
 #endif
 
 namespace warhol {
@@ -25,6 +25,7 @@ BackendInterface::~BackendInterface() {
 BackendInterface::BackendInterface(BackendInterface&& other)
     : renderer(other.renderer),
       InitFunction(other.InitFunction),
+      ExecuteCommands(other.ExecuteCommands),
       ShutdownFunction(other.ShutdownFunction),
       DrawFrameFunction(other.DrawFrameFunction),
       data(other.data) {
@@ -34,6 +35,7 @@ BackendInterface::BackendInterface(BackendInterface&& other)
 BackendInterface& BackendInterface::operator=(BackendInterface&& other) {
   renderer = other.renderer;
   InitFunction = other.InitFunction;
+  ExecuteCommands = other.ExecuteCommands;
   ShutdownFunction = other.ShutdownFunction;
   DrawFrameFunction = other.DrawFrameFunction;
   data = other.data;
@@ -44,6 +46,7 @@ BackendInterface& BackendInterface::operator=(BackendInterface&& other) {
 void Clear(BackendInterface* bi) {
   bi->renderer = nullptr;
   bi->InitFunction = nullptr;
+  bi->ExecuteCommands = nullptr;
   bi->ShutdownFunction = nullptr;
   bi->DrawFrameFunction = nullptr;
   bi->data = nullptr;
@@ -62,7 +65,7 @@ bool InitVulkan(Renderer* renderer) {
 #ifndef WARHOL_VULKAN_ENABLED
   NOT_REACHED("Vulkan support not compiled in.");
 #else
-  return InitVulkanRenderer(&renderer->backend_interface);
+  return vulkan::InitRendererBackend(&renderer->backend_interface);
 #endif
 }
 
