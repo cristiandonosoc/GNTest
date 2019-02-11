@@ -82,7 +82,7 @@ source_set("vulkan") {
     "//warhol/debug:timing",
     "//warhol/graphics/common",
     "//warhol/math",
-    "//warhol/sdl2",
     "//warhol/utils",
+    "//warhol/window:common",
   ]
 }

@@ -6,7 +6,7 @@
 namespace warhol {
 namespace vulkan {
 
-struct RendererBackend;
+struct VulkanRendererBackend;
 
 // Collection of functions that implement the low-level functionality exposed
 // by the vulkan renderer backend.
@@ -14,8 +14,8 @@ struct RendererBackend;
 // renderer_backend.cc as non-exported functions.
 
 
-void StartFrame(RendererBackend*);
-void EndFrame(RendererBackend*);
+void StartFrame(VulkanRendererBackend*);
+void EndFrame(VulkanRendererBackend*);
 
 }  // namespace vulkan
 }  // namespace warhol

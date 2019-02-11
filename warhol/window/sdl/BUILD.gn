@@ -1,4 +1,4 @@
-# Copyright 2018, Cristián Donoso.
+# Copyright 2019, Cristián Donoso.
 # This code has a BSD license. See LICENSE.
 
 declare_args() {
@@ -38,15 +38,10 @@ config("sdl2_config") {
   }
 }
 
-source_set("sdl2") {
+source_set("sdl") {
   sources = [
-    "def.h",  # This is the header to import generally.
-    "input.cc",
-    "input.h",
-    "sdl_context.cc",
-    "sdl_context.h",
-    # "utils.cc",
-    # "utils.h",
+    "window_manager.cc",
+    "window_manager.h",
   ]
 
   public_configs = [
@@ -55,16 +50,6 @@ source_set("sdl2") {
 
   deps = [
     "//warhol/input",
-    "//warhol/graphics/GL",
     "//warhol/utils",
-  ]
-}
-
-executable("sdl2_test") {
-  sources = [
-    "sdl2_test.cc",
-  ]
-  configs += [
-    ":sdl2_config",
   ]
 }

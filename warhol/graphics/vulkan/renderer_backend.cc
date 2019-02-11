@@ -16,7 +16,7 @@
 #include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/context.h"
 #include "warhol/graphics/vulkan/utils.h"
-#include "warhol/sdl2/sdl_context.h"
+#include "warhol/window/window_manager.h"
 #include "warhol/utils/glm_impl.h"
 
 namespace warhol {
@@ -89,34 +89,37 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
   return VK_FALSE;
 }
 
-void CreateVulkanInterface(BackendInterface* bi) {
-  bi->InitFunction = InitRendererBackend;
-  bi->ExecuteCommands = ExecuteCommands;
-  bi->ShutdownFunction = ShutdownRendererBackend;
-  bi->DrawFrameFunction = DrawFrame;
+void CreateVulkanInterface(RendererBackend* backend) {
+  backend->InitFunction = InitRendererBackend;
+  backend->ExecuteCommands = ExecuteCommands;
+  backend->ShutdownFunction = ShutdownRendererBackend;
+  backend->DrawFrameFunction = DrawFrame;
 }
 
 }  // namespace
 
-RendererBackend::RendererBackend() = default;
-RendererBackend::~RendererBackend() = default;
+VulkanRendererBackend::VulkanRendererBackend() = default;
+VulkanRendererBackend::~VulkanRendererBackend() = default;
 
 // InitRendererBackend ---------------------------------------------------------
 
-bool InitRendererBackend(BackendInterface* bi) {
-  ASSERT(!bi->valid());
-  CreateVulkanInterface(bi);
-  SDLContext* sdl_context = bi->renderer->sdl_context;
+bool InitRendererBackend(RendererBackend* backend) {
+  ASSERT(!backend->valid());
+  CreateVulkanInterface(backend);
 
-  RendererBackend* vulkan_renderer = new RendererBackend();
-  bi->data = vulkan_renderer;
+  VulkanRendererBackend* vulkan_renderer = new VulkanRendererBackend();
+  backend->data = vulkan_renderer;
 
   vulkan_renderer->context = std::make_unique<vulkan::Context>();
   vulkan::Context* context = vulkan_renderer->context.get();
 
-  VK_GET_PROPERTIES(SDL_Vulkan_GetInstanceExtensions,
-                    sdl_context->get_window(),
-                    context->extensions);
+  WindowManager* window = backend->renderer->window;
+
+  context->extensions = GetVulkanInstanceExtensions(window);
+
+  /* VK_GET_PROPERTIES(SDL_Vulkan_GetInstanceExtensions, */
+  /*                   sdl_context->get_window(), */
+  /*                   context->extensions); */
 #ifndef NDEBUG
   vulkan::AddDebugExtensions(&context->extensions);
 #endif
@@ -139,14 +142,15 @@ bool InitRendererBackend(BackendInterface* bi) {
 
   Header("Creating surface...");
   VkSurfaceKHR surface;
-  if (!SDL_Vulkan_CreateSurface(sdl_context->get_window(), *context->instance,
-                                &surface)) {
-    LOG(ERROR) << "Could not create surface: " << SDL_GetError();
+  if (!CreateVulkanSurface(window, &context->instance.value(), &surface)) {
+    /* if (!SDL_Vulkan_CreateSurface( */
+    /*         sdl_context->get_window(), *context->instance, &surface)) { */
+      LOG(ERROR) << "Could not create surface: " << SDL_GetError();
   }
   context->surface.Set(context, surface);
 
   context->device_extensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+      VK_KHR_SWAPCHAIN_EXTENSION_NAME,
   };
 
   if (!vulkan::PickPhysicalDevice(context))
@@ -164,8 +168,8 @@ bool InitRendererBackend(BackendInterface* bi) {
     return false;
 
   Header("Creating a swap chain...");
-  Pair<uint32_t> screen_size = {(uint32_t)sdl_context->width(),
-                                (uint32_t)sdl_context->height()};
+  Pair<uint32_t> screen_size = {(uint32_t)window->width,
+                                (uint32_t)window->height};
   if (!vulkan::CreateSwapChain(context, screen_size))
     return false;
 
@@ -293,23 +297,24 @@ bool InitRendererBackend(BackendInterface* bi) {
   return true;
 
   /* Flush(&context->staging_manager); */
-}
+  }
 
 // ExecuteCommands -------------------------------------------------------------
 
-bool ExecuteCommands(BackendInterface*) {
+bool ExecuteCommands(RendererBackend*) {
   NOT_IMPLEMENTED();
   return false;
 }
 
 // ShutdownRendererBackend -----------------------------------------------------
 
-bool ShutdownRendererBackend(BackendInterface* bi) {
-  if (!bi->valid())
+bool ShutdownRendererBackend(RendererBackend* backend) {
+  if (!backend->valid())
     return true;
 
-  RendererBackend* vulkan_renderer = (RendererBackend*)bi->data;
-  vulkan::Context* vk_context = vulkan_renderer->context.get();
+  VulkanRendererBackend* vulkan =
+      (VulkanRendererBackend*)backend->data;
+  vulkan::Context* vk_context = vulkan->context.get();
   ASSERT(vk_context);
 
   if (!VK_CALL(vkDeviceWaitIdle, *vk_context->device)) {
@@ -318,10 +323,10 @@ bool ShutdownRendererBackend(BackendInterface* bi) {
   }
 
   // Reset vulkan renderer. This will free all resources.
-  vulkan_renderer->context.reset();
-  delete vulkan_renderer;
+  vulkan->context.reset();
+  delete vulkan;
 
-  Clear(bi);
+  Clear(backend);
 
   return true;
 }
@@ -362,7 +367,7 @@ bool SubmitCommandBuffer(vulkan::Context* context, uint32_t image_index) {
                  *context->in_flight_fences[context->current_frame]);
 }
 
-bool PresentQueue(SDLContext* sdl_context, vulkan::Context* vk_context,
+bool PresentQueue(WindowManager* window, vulkan::Context* vk_context,
                   uint32_t image_index) {
   VkPresentInfoKHR present_info = {};
   present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -385,8 +390,8 @@ bool PresentQueue(SDLContext* sdl_context, vulkan::Context* vk_context,
   // this.
   VkResult res = vkQueuePresentKHR(vk_context->present_queue, &present_info);
   if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR) {
-    Pair<uint32_t> screen_size = {(uint32_t)sdl_context->width(),
-                                  (uint32_t)sdl_context->height()};
+    Pair<uint32_t> screen_size = {(uint32_t)window->width,
+                                  (uint32_t)window->height};
 
     LOG(INFO) << "Recreating swap chain to " << screen_size.ToString();
     return RecreateSwapChain(vk_context, screen_size);
@@ -400,10 +405,10 @@ bool PresentQueue(SDLContext* sdl_context, vulkan::Context* vk_context,
 
 }  // namespace
 
-bool DrawFrame(BackendInterface* bi, Camera* camera) {
-  ASSERT(bi->valid());
-  SDLContext* sdl_context = bi->renderer->sdl_context;
-  RendererBackend* vulkan_renderer = (RendererBackend*)bi->data;
+bool DrawFrame(RendererBackend* backend, Camera* camera) {
+  ASSERT(backend->valid());
+  WindowManager* window= backend->renderer->window;
+  auto* vulkan_renderer = (VulkanRendererBackend*)backend->data;
   vulkan::Context* vk_context = vulkan_renderer->context.get();
 
   int current_frame = vk_context->current_frame;
@@ -432,7 +437,7 @@ bool DrawFrame(BackendInterface* bi, Camera* camera) {
   }
 
   // Copy the UBO
-  float time = sdl_context->seconds();
+  float time = window->seconds;
   UBO* vk_ubo = (UBO*)vk_context->uniform_buffers[image_index].data();
   *vk_ubo = {};
   vk_ubo->model = glm::rotate(
@@ -445,7 +450,7 @@ bool DrawFrame(BackendInterface* bi, Camera* camera) {
   if (!SubmitCommandBuffer(vk_context, image_index))
     return false;
 
-  if (!PresentQueue(sdl_context, vk_context, image_index))
+  if (!PresentQueue(window, vk_context, image_index))
     return false;
 
   vk_context->current_frame++;

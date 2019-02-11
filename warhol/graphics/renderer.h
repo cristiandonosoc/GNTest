@@ -6,37 +6,28 @@
 #include <stdlib.h>
 
 #include <memory>
+#include <vector>
 
 #include "warhol/utils/macros.h"
 
+#include "warhol/graphics/renderer_backend.h"
+
 namespace warhol {
 
-class SDLContext;
+struct Mesh;
+struct WindowManager;
 
-struct Camera;
-struct Renderer;  // Defined later in file.
+struct RenderCommand {
+  enum class Type {
+    kRenderMesh,
+    kLast,
+  };
+  static const char* TypeToString(Type);
 
-struct BackendInterface {
-  bool valid() const { return renderer != nullptr && data != nullptr; }
-
-  BackendInterface();
-  ~BackendInterface();
-  DELETE_COPY_AND_ASSIGN(BackendInterface);
-  DECLARE_MOVE_AND_ASSIGN(BackendInterface);
-
-  Renderer* renderer;   // Not-owning.
-
-  // IMPORTANT: If you add more functions, remember to update the move ctor!
-  bool (*InitFunction)(BackendInterface*) = nullptr;
-  bool (*ExecuteCommands)(BackendInterface*) = nullptr;
-  bool (*ShutdownFunction)(BackendInterface*) = nullptr;
-  bool (*DrawFrameFunction)(BackendInterface*, Camera*) = nullptr;
-
-  void* data = nullptr;
+  Type type = Type::kLast;
+  Mesh* mesh;       // Not owning. Must outlive.
+  Camera* camera;   // Not owning. Must outlive.
 };
-
-void Clear(BackendInterface*);
-
 
 struct Renderer {
   enum class BackendType : uint32_t {
@@ -45,22 +36,17 @@ struct Renderer {
   };
   const char* BackendTypeToString(BackendType);
 
-  enum class WindowManager : uint32_t {
-    kSDL,
-    kLast,
-  };
-  const char* WindowManagerToString(WindowManager);
-
   Renderer();
   ~Renderer();
   DELETE_COPY_AND_ASSIGN(Renderer);
   DELETE_MOVE_AND_ASSIGN(Renderer);
 
   BackendType backend_type = BackendType::kLast;
-  WindowManager window_manager = WindowManager::kLast;
 
-  SDLContext* sdl_context = nullptr;
-  BackendInterface backend_interface = {};
+  WindowManager* window = nullptr;
+  RendererBackend backend = {};
+
+  std::vector<RenderCommand> render_commands;
 };
 
 bool InitRenderer(Renderer*);

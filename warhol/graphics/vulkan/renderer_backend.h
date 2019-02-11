@@ -10,7 +10,7 @@
 namespace warhol {
 
 class SDLContext;
-struct BackendInterface;
+struct RendererBackend;
 struct Camera;
 struct Renderer;
 
@@ -18,19 +18,19 @@ namespace vulkan {
 
 struct Context;
 
-struct RendererBackend {
-  RendererBackend();
-  ~RendererBackend();
-  DELETE_COPY_AND_ASSIGN(RendererBackend);
-  DELETE_MOVE_AND_ASSIGN(RendererBackend);
+struct VulkanRendererBackend {
+  VulkanRendererBackend();
+  ~VulkanRendererBackend();
+  DELETE_COPY_AND_ASSIGN(VulkanRendererBackend);
+  DELETE_MOVE_AND_ASSIGN(VulkanRendererBackend);
 
   std::unique_ptr<vulkan::Context> context;
 };
 
-bool InitRendererBackend(BackendInterface*);
-bool ExecuteCommands(BackendInterface*);
-bool ShutdownRendererBackend(BackendInterface*);
-bool DrawFrame(BackendInterface*, Camera*);
+bool InitRendererBackend(RendererBackend*);
+bool ExecuteCommands(RendererBackend*);
+bool ShutdownRendererBackend(RendererBackend*);
+bool DrawFrame(RendererBackend*, Camera*);
 
 }  // namespace vulkan
 }  // namespace warhol

@@ -9,8 +9,9 @@
 
 #include <warhol/debug/timer.h>
 #include <warhol/graphics/renderer.h>
+#include <warhol/input/input.h>
 #include <warhol/scene/camera.h>
-#include <warhol/sdl2/sdl_context.h>
+#include <warhol/window/window_manager.h>
 #include <warhol/utils/glm_impl.h>
 #include <warhol/utils/log.h>
 
@@ -29,12 +30,11 @@ struct ApplicationContext {
 /*   return true; */
 /* } */
 
-void HandleSDLEvents(ApplicationContext* app_context,
-                     SDLContext::Event* events,
-                     size_t event_count) {
+void HandleWindowEvents(ApplicationContext* app_context, WindowEvent* events,
+                        size_t event_count) {
   for (size_t i = 0; i < event_count; i++) {
-    SDLContext::Event& event = events[i];
-    if (event == SDLContext::Event::kQuit) {
+    WindowEvent& event = events[i];
+    if (event.type == WindowEvent::Type::kQuit) {
       app_context->running = false;
       break;
     }
@@ -45,14 +45,15 @@ void HandleSDLEvents(ApplicationContext* app_context,
 
 int main() {
   ApplicationContext app_context = {};
-  SDLContext sdl_context = {};
+  WindowManager window = {};
   Renderer renderer = {};
   Camera camera = {};
 
   {
     Timer timer = Timer::ManualTimer();
 
-    if (!sdl_context.InitVulkan(SDL_WINDOW_RESIZABLE))
+    window.type = WindowManager::Type::kSDLVulkan;
+    if (!InitWindowManager(&window, SDL_WINDOW_RESIZABLE))
       return 1;
 
     float timing = timer.End();
@@ -62,9 +63,8 @@ int main() {
   {
     Timer timer = Timer::ManualTimer();
 
-    renderer.sdl_context = &sdl_context;
+    renderer.window = &window;
     renderer.backend_type = Renderer::BackendType::kVulkan;
-    renderer.window_manager = Renderer::WindowManager::kSDL;
     if (!InitRenderer(&renderer)) {
       LOG(ERROR) << "Could not setup vulkan. Exiting.";
       return 1;
@@ -74,21 +74,21 @@ int main() {
     LOG(INFO) << "Initialized vulkan: " << timing << " ms.";
   }
 
-  LOG(INFO) << "Window size. WIDTH: " << sdl_context.width()
-            << ", HEIGHT: " << sdl_context.height();
+  LOG(INFO) << "Window size. WIDTH: " << window.width
+            << ", HEIGHT: " << window.height;
 
   camera.view = glm::lookAt(glm::vec3{2.0f, 2.0f, 2.0f}, {}, {0, 0, 0.1f});
   camera.projection =
       glm::perspective(glm::radians(45.0f),
-                       sdl_context.width() / (float)sdl_context.height(),
+                       (float)window.width / (float)window.height,
                        0.1f, 100.f);
 
   InputState input = InputState::Create();
   app_context.running = true;
   while (app_context.running) {
-    if (auto [events, event_count] = sdl_context.NewFrame(&input);
+    if (auto [events, event_count] = NewFrame(&window, &input);
         events != nullptr) {
-      HandleSDLEvents(&app_context, events, event_count);
+      HandleWindowEvents(&app_context, events, event_count);
     }
 
     if (input.keys_up[GET_KEY(Escape)])

@@ -55,7 +55,7 @@ executable("vulkan_test") {
     "//warhol/debug:timing",
     "//warhol/graphics:vulkan_renderer",
     "//warhol/math",
-    "//warhol/sdl2",
+    "//warhol/window:sdl",
   ]
 
   data_deps = [

@@ -9,6 +9,8 @@ source_set("renderer_common") {
   sources = [
     "renderer.cc",
     "renderer.h",
+    "renderer_backend.cc",
+    "renderer_backend.h",
   ]
 
   deps = [
@@ -19,8 +21,6 @@ source_set("renderer_common") {
   if (vulkan_renderer_enabled) {
     defines += [ "WARHOL_VULKAN_ENABLED" ]
   }
-
-  print(defines)
 }
 
 source_set("vulkan_renderer") {
@@ -28,10 +28,4 @@ source_set("vulkan_renderer") {
     ":renderer_common",
     "//warhol/graphics/vulkan",
   ]
-
-  data_deps = [
-    "//assets/shaders/vulkan:shaders",
-  ]
 }
-
-

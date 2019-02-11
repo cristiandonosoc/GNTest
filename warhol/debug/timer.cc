@@ -10,12 +10,12 @@
 #include <utility>
 
 #include "warhol/debug/time_logger.h"
-#include "warhol/sdl2/def.h"
+#include "warhol/platform/platform.h"
 
 namespace warhol {
 
 float CalculateTiming(uint64_t start, uint64_t end) {
-  static uint64_t freq = SDL_GetPerformanceFrequency();
+  static uint64_t freq = Platform::GetHighPerformanceFrequency();
   float seconds = (float)((double)(end - start) / freq);
   return seconds * 1000.0f;
 }
@@ -64,7 +64,7 @@ void Timer::Init() {
     case Type::kNone:
       assert(false);
     case Type::kManual:
-      start_ = SDL_GetPerformanceCounter();
+      start_ = Platform::GetHighPerformanceCounter();
       break;
     case Type::kLog:
       // Logging timers initialize logic is in the factory.
@@ -78,7 +78,7 @@ float Timer::End() {
   switch (type_) {
     case Type::kNone: assert(false);
     case Type::kManual:
-      return CalculateTiming(start_, SDL_GetPerformanceCounter());
+      return CalculateTiming(start_, Platform::GetHighPerformanceCounter());
     case Type::kLog: {
       if (id_ == 0)
         break;

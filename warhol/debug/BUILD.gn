@@ -20,7 +20,7 @@ source_set("timing"){
   ]
 
   deps = [
-    "//warhol/sdl2",
+    "//warhol/window:common",
     "//warhol/utils",
   ]
 }

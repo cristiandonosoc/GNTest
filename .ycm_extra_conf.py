@@ -52,6 +52,7 @@ flags = [
 '-isystem', '/mnt/c/Programming/include',
 '-isystem', '/mnt/c/Programming/vulkan/Include',
 
+'-D', 'WARHOL_SDL_ENABLED',
 '-D', 'WARHOL_VULKAN_ENABLED',
 
 # Linux

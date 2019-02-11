@@ -4,6 +4,7 @@
 #include "warhol/graphics/renderer.h"
 
 #include "warhol/utils/assert.h"
+#include "warhol/window/window_manager.h"
 
 #ifdef WARHOL_VULKAN_ENABLED
 #include "warhol/graphics/vulkan/renderer_backend.h"
@@ -11,45 +12,16 @@
 
 namespace warhol {
 
-// BackendInterface ------------------------------------------------------------
+// RenderCommand ---------------------------------------------------------------
 
-BackendInterface::BackendInterface() = default;
-BackendInterface::~BackendInterface() {
-  if (valid()) {
-    ASSERT(data);
-    ShutdownFunction(this);   // Frees data.
+const char* RenderCommand::TypeToString(RenderCommand::Type type) {
+  switch (type) {
+    case RenderCommand::Type::kRenderMesh: return "RenderMesh";
+    case RenderCommand::Type::kLast: return "Last";
   }
-  Clear(this);
-}
 
-BackendInterface::BackendInterface(BackendInterface&& other)
-    : renderer(other.renderer),
-      InitFunction(other.InitFunction),
-      ExecuteCommands(other.ExecuteCommands),
-      ShutdownFunction(other.ShutdownFunction),
-      DrawFrameFunction(other.DrawFrameFunction),
-      data(other.data) {
-  Clear(&other);
-}
-
-BackendInterface& BackendInterface::operator=(BackendInterface&& other) {
-  renderer = other.renderer;
-  InitFunction = other.InitFunction;
-  ExecuteCommands = other.ExecuteCommands;
-  ShutdownFunction = other.ShutdownFunction;
-  DrawFrameFunction = other.DrawFrameFunction;
-  data = other.data;
-  Clear(&other);
-  return *this;
-}
-
-void Clear(BackendInterface* bi) {
-  bi->renderer = nullptr;
-  bi->InitFunction = nullptr;
-  bi->ExecuteCommands = nullptr;
-  bi->ShutdownFunction = nullptr;
-  bi->DrawFrameFunction = nullptr;
-  bi->data = nullptr;
+  NOT_REACHED("Unknown RenderCommand::Type");
+  return nullptr;
 }
 
 // Renderer --------------------------------------------------------------------
@@ -65,18 +37,17 @@ bool InitVulkan(Renderer* renderer) {
 #ifndef WARHOL_VULKAN_ENABLED
   NOT_REACHED("Vulkan support not compiled in.");
 #else
-  return vulkan::InitRendererBackend(&renderer->backend_interface);
+  return vulkan::InitRendererBackend(&renderer->backend);
 #endif
 }
 
 }  // namespace
 
 bool InitRenderer(Renderer* renderer) {
-  ASSERT(renderer->window_manager != Renderer::WindowManager::kLast);
-  ASSERT(renderer->sdl_context != nullptr);
+  ASSERT(renderer->window->type != WindowManager::Type::kLast);
 
   // Set the back pointer.
-  renderer->backend_interface.renderer = renderer;
+  renderer->backend.renderer = renderer;
 
   switch (renderer->backend_type) {
     case Renderer::BackendType::kVulkan:
@@ -92,7 +63,7 @@ bool InitRenderer(Renderer* renderer) {
 // An null backend renderer can happen if Shutdown was called before the
 // destructor.
 bool ShutdownRenderer(Renderer* renderer) {
-  BackendInterface* bi = &renderer->backend_interface;
+  RendererBackend* bi = &renderer->backend;
   switch (renderer->backend_type) {
     case Renderer::BackendType::kVulkan:
       if (bi->valid())
@@ -102,14 +73,14 @@ bool ShutdownRenderer(Renderer* renderer) {
       NOT_REACHED("Unknown renderer backend.");
       break;
   }
-  Clear(&renderer->backend_interface);
+  Clear(&renderer->backend);
   return true;
 }
 
 // void WindowSizeChanged(Renderer* renderer, uint32_t width, uint32_t height) {}
 
 bool DrawFrame(Renderer* renderer, Camera* camera) {
-  BackendInterface* bi = &renderer->backend_interface;
+  RendererBackend* bi = &renderer->backend;
   ASSERT(bi->valid());
   switch (renderer->backend_type) {
     case Renderer::BackendType::kVulkan:
@@ -131,16 +102,6 @@ const char* Renderer::BackendTypeToString(Renderer::BackendType bt) {
   }
 
   NOT_REACHED("Unknown Backend Type.");
-  return nullptr;
-}
-
-const char* Renderer::WindowManagerToString(Renderer::WindowManager wm) {
-  switch (wm) {
-    case Renderer::WindowManager::kSDL: return "SDL";
-    case Renderer::WindowManager::kLast: return "Last";
-  }
-
-  NOT_REACHED("Unknown Window Manager.");
   return nullptr;
 }
 

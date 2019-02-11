@@ -9,7 +9,7 @@
 #include <mutex>
 #include <thread>
 
-#include "warhol/sdl2/def.h"
+#include "warhol/platform/platform.h"
 #include "warhol/utils/log.h"
 #include "warhol/utils/string.h"
 
@@ -34,7 +34,7 @@ TimeLogger::~TimeLogger() {
 void TimeLogger::StartEvent(uint64_t id, TimeLogger::Event::Description desc) {
   Event event = {};
   event.id = id;
-  event.counter = SDL_GetPerformanceCounter();
+  event.counter = Platform::GetHighPerformanceCounter();
   event.type = Event::Type::kStart;
   event.description = std::move(desc);
   events_[event_count_++] = std::move(event);
@@ -44,7 +44,7 @@ void TimeLogger::StartEvent(uint64_t id, TimeLogger::Event::Description desc) {
 void TimeLogger::EndEvent(uint64_t id) {
   Event event = {};
   event.id = id;
-  event.counter = SDL_GetPerformanceCounter();
+  event.counter = Platform::GetHighPerformanceCounter();
   event.type = Event::Type::kEnd;
   events_[event_count_++] = std::move(event);
   assert(event_count_ < kMaxEventQueue);
