@@ -10,7 +10,7 @@
 
 #include "warhol/utils/macros.h"
 
-#include "warhol/graphics/renderer_backend.h"
+#include "warhol/graphics/common/renderer_backend.h"
 
 namespace warhol {
 

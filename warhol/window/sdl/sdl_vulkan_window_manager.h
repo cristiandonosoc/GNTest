@@ -12,23 +12,25 @@ namespace warhol {
 
 struct InputState;
 struct WindowEvent;
+struct WindowManager;
 struct WindowManagerBackend;
 
 namespace sdl {
 
-struct SDLWindowManager {
+struct SDLVulkanWindowManager {
   // Amount of frames to keep track of in order to get an average frame time.
   static constexpr int kFrameTimesCounts = 128;
 
-  SDLWindowManager();
-  ~SDLWindowManager();
-  DELETE_COPY_AND_ASSIGN(SDLWindowManager);
-  DELETE_MOVE_AND_ASSIGN(SDLWindowManager);
+  SDLVulkanWindowManager();
+  ~SDLVulkanWindowManager();
+  DELETE_COPY_AND_ASSIGN(SDLVulkanWindowManager);
+  DELETE_MOVE_AND_ASSIGN(SDLVulkanWindowManager);
 
+  WindowManager* window_manager = nullptr;
   SDL_Window* window = nullptr;
-  SDL_GLContext gl_context = 0;
-  int width;
-  int height;
+
+  int width = 0;
+  int height = 0;
 
   // Total time since the start of the game.
   uint64_t total_time = 0;
@@ -37,7 +39,7 @@ struct SDLWindowManager {
 
   float frame_delta_accum = 0;  // The accumulated average.
   float frame_delta_average = 0;
-  float framerate = 0;
+  float frame_rate = 0;
 
   // TODO(Cristian): When we're interested, start tracking these times.
   float frame_times[kFrameTimesCounts];

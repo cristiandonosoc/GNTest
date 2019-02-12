@@ -1,7 +1,7 @@
 // Copyright 2019, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include "warhol/window/sdl/window_manager.h"
+#include "warhol/window/sdl/sdl_vulkan_window_manager.h"
 
 #include "warhol/input/input.h"
 #include "warhol/utils/assert.h"
@@ -14,21 +14,44 @@
 #endif
 
 namespace warhol {
+
+namespace {
+
+struct SetupInterface {
+  SetupInterface() {
+    WindowManagerBackend::Interface interface;
+
+    interface.Init = sdl::InitSDLVulkan;
+    interface.NewFrame = sdl::NewSDLFrame;
+    interface.Shutdown = sdl::ShutdownSDL;
+
+    interface.GetVulkanInstanceExtensions = sdl::GetVulkanInstanceExtensions;
+    interface.CreateVulkanSurface = sdl::CreateVulkanSurface;
+  }
+};
+
+}  // namespace
+
 namespace sdl {
 
 namespace {
 
-void SetupBackendInterface(WindowManagerBackend* backend) {
-  backend->NewFrameFunction = NewSDLFrame;
-  backend->ShutdownFunction = ShutdownSDL;
+// Passes the info from the backend to the unified WindowManager interface.
+void PassInfo(SDLVulkanWindowManager* from, WindowManager* to) {
+  to->width = from->width;
+  to->height = from->height;
+
+  to->frame_delta = from->frame_delta;
+  to->frame_delta_average = from->frame_delta_average;
+  to->frame_rate = from->frame_rate;
+  to->seconds = from->seconds;
 }
 
 }  // namespace
 
 bool InitSDLVulkan(WindowManagerBackend* backend, uint64_t flags) {
-  SetupBackendInterface(backend);
-
-  SDLWindowManager* sdl = new SDLWindowManager();
+  ASSERT(backend->window_manager);
+  SDLVulkanWindowManager* sdl = new SDLVulkanWindowManager();
   backend->data = sdl;
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
@@ -47,6 +70,7 @@ bool InitSDLVulkan(WindowManagerBackend* backend, uint64_t flags) {
     return false;
   }
   SDL_GetWindowSize(sdl->window, &sdl->width, &sdl->height);
+  PassInfo(sdl, backend->window_manager);
 
   return true;
 }
@@ -55,19 +79,19 @@ bool InitSDLVulkan(WindowManagerBackend* backend, uint64_t flags) {
 
 namespace {
 
-void CalculateFramerate(SDLWindowManager* sdl);
+void CalculateFramerate(SDLVulkanWindowManager* sdl);
 void HandleKeyUpEvent(const SDL_KeyboardEvent*, InputState*);
 void HandleKeysDown(InputState*);
 void HandleMouse(InputState*);
 void HandleMouseWheelEvent(const SDL_MouseWheelEvent*, InputState*);
-void HandleWindowEvent(SDLWindowManager*, const SDL_WindowEvent*);
+void HandleWindowEvent(SDLVulkanWindowManager*, const SDL_WindowEvent*);
 
 }  // namespace
 
 std::pair<WindowEvent*, size_t>
 NewSDLFrame(WindowManagerBackend* backend, InputState* input) {
   ASSERT(backend->data);
-  SDLWindowManager* sdl = (SDLWindowManager*)backend->data;
+  SDLVulkanWindowManager* sdl = (SDLVulkanWindowManager*)backend->data;
 
   sdl->events.clear();
   sdl->utf8_chars_inputted.clear();
@@ -103,7 +127,7 @@ NewSDLFrame(WindowManagerBackend* backend, InputState* input) {
 
 namespace {
 
-void CalculateFramerate(SDLWindowManager* sdl) {
+void CalculateFramerate(SDLVulkanWindowManager* sdl) {
   static uint64_t initial_time = SDL_GetPerformanceCounter();
 
   // Get the current time.
@@ -123,14 +147,14 @@ void CalculateFramerate(SDLWindowManager* sdl) {
       sdl->frame_delta - sdl->frame_times[sdl->frame_times_index];
   sdl->frame_times[sdl->frame_times_index] = sdl->frame_delta;
   sdl->frame_times_index =
-      (sdl->frame_times_index + 1) % SDLWindowManager::kFrameTimesCounts;
+      (sdl->frame_times_index + 1) % SDLVulkanWindowManager::kFrameTimesCounts;
   if (sdl->frame_delta_accum > 0.0) {
     sdl->frame_delta_average =
-        sdl->frame_delta_accum / SDLWindowManager::kFrameTimesCounts;
+        sdl->frame_delta_accum / SDLVulkanWindowManager::kFrameTimesCounts;
   } else {
     sdl->frame_delta_average = std::numeric_limits<float>::max();
   }
-  sdl->framerate = 1.0f / sdl->frame_delta_average;
+  sdl->frame_rate = 1.0f / sdl->frame_delta_average;
 }
 
 void
@@ -237,7 +261,7 @@ HandleMouseWheelEvent(const SDL_MouseWheelEvent* wheel_event,
 }
 
 void
-HandleWindowEvent(SDLWindowManager* sdl, const SDL_WindowEvent* window_event) {
+HandleWindowEvent(SDLVulkanWindowManager* sdl, const SDL_WindowEvent* window_event) {
   // Fow now we're interested in window changed.
   if (window_event->event == SDL_WINDOWEVENT_SIZE_CHANGED) {
     sdl->width = window_event->data1;
@@ -255,10 +279,8 @@ void ShutdownSDL(WindowManagerBackend* backend) {
     return;
 
   ASSERT(backend->data);
-  SDLWindowManager* sdl = (SDLWindowManager*)backend->data;
+  SDLVulkanWindowManager* sdl = (SDLVulkanWindowManager*)backend->data;
 
-  if (sdl->gl_context)
-    SDL_GL_DeleteContext(sdl->gl_context);
   if (sdl->window)
     SDL_DestroyWindow(sdl->window);
 

@@ -52,8 +52,8 @@ int main() {
   {
     Timer timer = Timer::ManualTimer();
 
-    window.type = WindowManager::Type::kSDLVulkan;
-    if (!InitWindowManager(&window, SDL_WINDOW_RESIZABLE))
+    if (!InitWindowManager(&window, WindowManagerBackend::Type::kSDLVulkan,
+                           SDL_WINDOW_RESIZABLE))
       return 1;
 
     float timing = timer.End();

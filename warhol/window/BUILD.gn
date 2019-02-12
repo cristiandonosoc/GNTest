@@ -25,6 +25,7 @@ source_set("common") {
 
   deps = [
     "//warhol/utils",
+    "//warhol/window/common",
   ]
 
   public_configs = [
@@ -32,9 +33,9 @@ source_set("common") {
   ]
 }
 
-source_set("sdl") {
+source_set("sdl_vulkan") {
   deps = [
     ":common",
-    "//warhol/window/sdl",
+    "//warhol/window/sdl:sdl_vulkan",
   ]
 }

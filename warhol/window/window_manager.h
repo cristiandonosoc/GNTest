@@ -1,4 +1,4 @@
-// Copyright 2018, Cristián Donoso.
+// Copyright 2019, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
 #pragma once
@@ -9,50 +9,14 @@
 #include <vector>
 
 #include "warhol/utils/macros.h"
+#include "warhol/window/common/window_manager_backend.h"
 
 namespace warhol {
 
-struct InputState;
-struct WindowManager;   // Defined later in file.
-
-struct WindowEvent {
-  enum class Type {
-    kQuit,
-    kWindowResize,
-    kLast,
-  };
-  static const char* TypeToString(Type);
-
-  Type type = Type::kLast;
-};
-
-
-struct WindowManagerBackend {
-  bool valid() const { return window_manager != nullptr && data != nullptr; }
-
-  WindowManagerBackend();
-  ~WindowManagerBackend();
-  DELETE_COPY_AND_ASSIGN(WindowManagerBackend);
-  DECLARE_MOVE_AND_ASSIGN(WindowManagerBackend);
-
-  std::pair<WindowEvent*, size_t>
-  (*NewFrameFunction)(WindowManagerBackend*, InputState*) = nullptr;
-  void (*ShutdownFunction)(WindowManagerBackend*) = nullptr;
-
-  WindowManager* window_manager = nullptr;
-  void* data = nullptr;  // Underlying memory of backend.
-};
-
 struct WindowManager {
   static constexpr size_t kRollingAverageFrames = 60;
+  WindowManagerBackend::Interface& interface() { return backend.interface; }
 
-  enum class Type {
-    kSDLVulkan,
-    kLast,
-  };
-  static const char* TypeToString(Type);
-
-  Type type = Type::kLast;
   WindowManagerBackend backend;
 
   size_t width = 0;
@@ -65,16 +29,8 @@ struct WindowManager {
 };
 
 // WindowManager must be already set with |type|.
-bool InitWindowManager(WindowManager*, uint64_t flags);
+bool InitWindowManager(WindowManager*, WindowManagerBackend::Type,
+                       uint64_t flags);
 std::pair<WindowEvent*, size_t> NewFrame(WindowManager*, InputState*);
-
-// *** VULKAN ONLY ***
-
-std::vector<const char*> GetVulkanInstanceExtensions(WindowManager*);
-
-// Will be casted to the right type in the .cc
-// This is so that we don't need to typedef the values and we don't create
-// unnecessary dependencies on the graphics libraries.
-bool CreateVulkanSurface(WindowManager*, void* vk_instance, void* surface_khr);
 
 }  // namespace warhol

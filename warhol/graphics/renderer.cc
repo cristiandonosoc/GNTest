@@ -44,7 +44,7 @@ bool InitVulkan(Renderer* renderer) {
 }  // namespace
 
 bool InitRenderer(Renderer* renderer) {
-  ASSERT(renderer->window->type != WindowManager::Type::kLast);
+  ASSERT(renderer->window->backend.type != WindowManagerBackend::Type::kLast);
 
   // Set the back pointer.
   renderer->backend.renderer = renderer;
@@ -63,11 +63,11 @@ bool InitRenderer(Renderer* renderer) {
 // An null backend renderer can happen if Shutdown was called before the
 // destructor.
 bool ShutdownRenderer(Renderer* renderer) {
-  RendererBackend* bi = &renderer->backend;
+  RendererBackend* backend = &renderer->backend;
   switch (renderer->backend_type) {
     case Renderer::BackendType::kVulkan:
-      if (bi->valid())
-        return bi->ShutdownFunction(bi);
+      if (backend->valid())
+        return backend->interface.ShutdownFunction(backend);
       break;
     case Renderer::BackendType::kLast:
       NOT_REACHED("Unknown renderer backend.");
@@ -80,11 +80,11 @@ bool ShutdownRenderer(Renderer* renderer) {
 // void WindowSizeChanged(Renderer* renderer, uint32_t width, uint32_t height) {}
 
 bool DrawFrame(Renderer* renderer, Camera* camera) {
-  RendererBackend* bi = &renderer->backend;
-  ASSERT(bi->valid());
+  RendererBackend* backend = &renderer->backend;
+  ASSERT(backend->valid());
   switch (renderer->backend_type) {
     case Renderer::BackendType::kVulkan:
-      return bi->DrawFrameFunction(bi, camera);
+      return backend->interface.DrawFrameFunction(backend, camera);
     case Renderer::BackendType::kLast:
       break;
   }

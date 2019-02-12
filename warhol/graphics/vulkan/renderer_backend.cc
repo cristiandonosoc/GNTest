@@ -12,6 +12,7 @@
 #include "warhol/scene/camera.h"
 #include "warhol/graphics/common/image.h"
 #include "warhol/graphics/common/mesh.h"
+#include "warhol/graphics/common/renderer_backend.h"
 #include "warhol/graphics/renderer.h"
 #include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/context.h"
@@ -23,6 +24,22 @@ namespace warhol {
 namespace vulkan {
 
 namespace {
+
+struct SetupInterface {
+  SetupInterface() {
+    RendererBackend::Interface interface;
+
+    interface.InitFunction = InitRendererBackend;
+    interface.ExecuteCommands = ExecuteCommands;
+    interface.ShutdownFunction = ShutdownRendererBackend;
+    interface.DrawFrameFunction = DrawFrame;
+    SetRendererBackendInterfaceTemplate(RendererBackend::Type::kVulkan,
+                                        std::move(interface));
+  }
+};
+
+// Setup the renderer backend once.
+SetupInterface setup_interface;
 
 struct UBO {
   glm::mat4 model;
@@ -89,13 +106,6 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
   return VK_FALSE;
 }
 
-void CreateVulkanInterface(RendererBackend* backend) {
-  backend->InitFunction = InitRendererBackend;
-  backend->ExecuteCommands = ExecuteCommands;
-  backend->ShutdownFunction = ShutdownRendererBackend;
-  backend->DrawFrameFunction = DrawFrame;
-}
-
 }  // namespace
 
 VulkanRendererBackend::VulkanRendererBackend() = default;
@@ -105,7 +115,6 @@ VulkanRendererBackend::~VulkanRendererBackend() = default;
 
 bool InitRendererBackend(RendererBackend* backend) {
   ASSERT(!backend->valid());
-  CreateVulkanInterface(backend);
 
   VulkanRendererBackend* vulkan_renderer = new VulkanRendererBackend();
   backend->data = vulkan_renderer;

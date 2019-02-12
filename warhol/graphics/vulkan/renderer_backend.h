@@ -9,10 +9,8 @@
 
 namespace warhol {
 
-class SDLContext;
 struct RendererBackend;
 struct Camera;
-struct Renderer;
 
 namespace vulkan {
 

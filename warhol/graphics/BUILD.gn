@@ -5,22 +5,30 @@ declare_args() {
   vulkan_renderer_enabled = false
 }
 
-source_set("renderer_common") {
-  sources = [
-    "renderer.cc",
-    "renderer.h",
-    "renderer_backend.cc",
-    "renderer_backend.h",
-  ]
-
-  deps = [
-    "//warhol/utils",
-  ]
-
+config("renderer_common_config") {
   defines = []
   if (vulkan_renderer_enabled) {
     defines += [ "WARHOL_VULKAN_ENABLED" ]
   }
+}
+
+source_set("renderer_common") {
+  public = [
+    "renderer.h",
+  ]
+
+  sources = [
+    "renderer.cc",
+  ]
+
+  deps = [
+    "//warhol/graphics/common",
+    "//warhol/utils",
+  ]
+
+  public_configs = [
+    ":renderer_common_config",
+  ]
 }
 
 source_set("vulkan_renderer") {

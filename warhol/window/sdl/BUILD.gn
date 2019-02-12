@@ -38,10 +38,10 @@ config("sdl2_config") {
   }
 }
 
-source_set("sdl") {
+source_set("sdl_vulkan") {
   sources = [
-    "window_manager.cc",
-    "window_manager.h",
+    "sdl_vulkan_window_manager.cc",
+    "sdl_vulkan_window_manager.h",
   ]
 
   public_configs = [
