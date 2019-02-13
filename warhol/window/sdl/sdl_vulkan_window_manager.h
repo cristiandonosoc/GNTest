@@ -49,19 +49,22 @@ struct SDLVulkanWindowManager {
   std::vector<char> utf8_chars_inputted;
 };
 
+// TODO(Cristian): There is no need for this functions to be defined in the
+//                 header. They could all be implemented in the .cc file.
+
 bool InitSDLVulkan(WindowManagerBackend*, uint64_t flags);
-std::pair<WindowEvent*, size_t> NewSDLFrame(WindowManagerBackend*, InputState*);
 void ShutdownSDL(WindowManagerBackend*);
+
+std::pair<WindowEvent*, size_t> NewSDLFrame(WindowManager*, InputState*);
 
 // *** VULKAN ONLY ***
 
-std::vector<const char*> GetVulkanInstanceExtensions(WindowManagerBackend*);
+std::vector<const char*> GetVulkanInstanceExtensions(WindowManager*);
 
 // Will be casted to the right type in the .cc
 // This is so that we don't need to typedef the values and we don't create
 // unnecessary dependencies on the graphics libraries.
-bool CreateVulkanSurface(WindowManagerBackend*, void* vk_instance,
-                         void* surface_khr);
+bool CreateVulkanSurface(WindowManager*, void* vk_instance, void* surface_khr);
 
 }  // namespace sdl
 }  // namespace warhol

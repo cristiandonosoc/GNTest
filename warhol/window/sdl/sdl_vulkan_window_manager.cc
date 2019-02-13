@@ -3,6 +3,8 @@
 
 #include "warhol/window/sdl/sdl_vulkan_window_manager.h"
 
+#include <SDL2/SDL_vulkan.h>
+
 #include "warhol/input/input.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
@@ -17,18 +19,27 @@ namespace warhol {
 
 namespace {
 
+
+bool Test(WindowManagerBackend* , uint64_t ) { return false; }
+
+
 struct SetupInterface {
   SetupInterface() {
     WindowManagerBackend::Interface interface;
 
-    interface.Init = sdl::InitSDLVulkan;
-    interface.NewFrame = sdl::NewSDLFrame;
+    /* interface.Init = sdl::InitSDLVulkan; */
+    interface.Init = Test;
     interface.Shutdown = sdl::ShutdownSDL;
 
+    interface.NewFrame = sdl::NewSDLFrame;
     interface.GetVulkanInstanceExtensions = sdl::GetVulkanInstanceExtensions;
     interface.CreateVulkanSurface = sdl::CreateVulkanSurface;
+
+    SetWindowManagerBackendInterfaceTemplate(
+        WindowManagerBackend::Type::kSDLVulkan, std::move(interface));
   }
 };
+SetupInterface setup_interface;
 
 }  // namespace
 
@@ -48,6 +59,11 @@ void PassInfo(SDLVulkanWindowManager* from, WindowManager* to) {
 }
 
 }  // namespace
+
+SDLVulkanWindowManager::SDLVulkanWindowManager() = default;
+SDLVulkanWindowManager::~SDLVulkanWindowManager() = default;
+
+// InitSDLVulkan ---------------------------------------------------------------
 
 bool InitSDLVulkan(WindowManagerBackend* backend, uint64_t flags) {
   ASSERT(backend->window_manager);
@@ -89,9 +105,10 @@ void HandleWindowEvent(SDLVulkanWindowManager*, const SDL_WindowEvent*);
 }  // namespace
 
 std::pair<WindowEvent*, size_t>
-NewSDLFrame(WindowManagerBackend* backend, InputState* input) {
-  ASSERT(backend->data);
-  SDLVulkanWindowManager* sdl = (SDLVulkanWindowManager*)backend->data;
+NewSDLFrame(WindowManager* window, InputState* input) {
+  WindowManagerBackend& backend = window->backend;
+  ASSERT(backend.data);
+  SDLVulkanWindowManager* sdl = (SDLVulkanWindowManager*)backend.data;
 
   sdl->events.clear();
   sdl->utf8_chars_inputted.clear();
@@ -260,8 +277,8 @@ HandleMouseWheelEvent(const SDL_MouseWheelEvent* wheel_event,
   input->mouse.wheel.y = wheel_event->y;
 }
 
-void
-HandleWindowEvent(SDLVulkanWindowManager* sdl, const SDL_WindowEvent* window_event) {
+void HandleWindowEvent(SDLVulkanWindowManager* sdl,
+                       const SDL_WindowEvent* window_event) {
   // Fow now we're interested in window changed.
   if (window_event->event == SDL_WINDOWEVENT_SIZE_CHANGED) {
     sdl->width = window_event->data1;
@@ -285,6 +302,49 @@ void ShutdownSDL(WindowManagerBackend* backend) {
     SDL_DestroyWindow(sdl->window);
 
   return;
+}
+
+// Vulkan API ------------------------------------------------------------------
+
+std::vector<const char*> GetVulkanInstanceExtensions(WindowManager* window) {
+  ASSERT(window->backend.valid());
+  ASSERT(window->backend.type == WindowManagerBackend::Type::kSDLVulkan);
+  auto* vulkan_sdl = (SDLVulkanWindowManager*)window->backend.data;
+
+  bool res;
+  uint32_t count = 0;
+  res = SDL_Vulkan_GetInstanceExtensions(vulkan_sdl->window, &count, nullptr);
+  if (!res)  {
+    LOG(ERROR) << "Could not get vulkan SDL extensions.";
+    return {};
+  }
+
+  std::vector<const char*> extensions(count);
+  res = SDL_Vulkan_GetInstanceExtensions(vulkan_sdl->window, &count,
+                                         extensions.data());
+  if (!res)  {
+    LOG(ERROR) << "Could not get vulkan SDL extensions.";
+    return {};
+  }
+
+  return extensions;
+}
+
+
+bool CreateVulkanSurface(WindowManager* window, void* vk_instance,
+                         void* surface_khr) {
+  ASSERT(window->backend.valid());
+  ASSERT(window->backend.type == WindowManagerBackend::Type::kSDLVulkan);
+  auto* vulkan_sdl = (SDLVulkanWindowManager*)window->backend.data;
+
+  VkInstance* instance = (VkInstance*)vk_instance;
+  VkSurfaceKHR* surface = (VkSurfaceKHR*)surface_khr;
+  if (!SDL_Vulkan_CreateSurface(vulkan_sdl->window, *instance, surface)) {
+    LOG(ERROR) << "Could not create Vulkan SDL surface: " << SDL_GetError();
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace sdl

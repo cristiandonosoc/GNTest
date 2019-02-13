@@ -5,8 +5,6 @@
 
 #include <iostream>
 
-// TODO: Move this to SDL.
-#include <SDL2/SDL_vulkan.h>
 
 #include "warhol/assets/assets.h"
 #include "warhol/scene/camera.h"
@@ -116,15 +114,18 @@ VulkanRendererBackend::~VulkanRendererBackend() = default;
 bool InitRendererBackend(RendererBackend* backend) {
   ASSERT(!backend->valid());
 
+  WindowManager* window = backend->renderer->window;
+  auto& window_interface = window->interface();
+
   VulkanRendererBackend* vulkan_renderer = new VulkanRendererBackend();
   backend->data = vulkan_renderer;
 
   vulkan_renderer->context = std::make_unique<vulkan::Context>();
   vulkan::Context* context = vulkan_renderer->context.get();
 
-  WindowManager* window = backend->renderer->window;
-
-  context->extensions = GetVulkanInstanceExtensions(window);
+  context->extensions = window_interface.GetVulkanInstanceExtensions(window);
+  if (context->extensions.empty())
+    return false;
 
   /* VK_GET_PROPERTIES(SDL_Vulkan_GetInstanceExtensions, */
   /*                   sdl_context->get_window(), */
@@ -151,11 +152,16 @@ bool InitRendererBackend(RendererBackend* backend) {
 
   Header("Creating surface...");
   VkSurfaceKHR surface;
-  if (!CreateVulkanSurface(window, &context->instance.value(), &surface)) {
-    /* if (!SDL_Vulkan_CreateSurface( */
-    /*         sdl_context->get_window(), *context->instance, &surface)) { */
-      LOG(ERROR) << "Could not create surface: " << SDL_GetError();
+
+  if (!window_interface.CreateVulkanSurface(window, &context->instance.value(),
+                                            &surface)) {
+    return false;
   }
+  /* if (!CreateVulkanSurface(window, &context->instance.value(), &surface)) { */
+  /*   /1* if (!SDL_Vulkan_CreateSurface( *1/ */
+  /*   /1*         sdl_context->get_window(), *context->instance, &surface)) { *1/ */
+  /*     LOG(ERROR) << "Could not create surface: " << SDL_GetError(); */
+  /* } */
   context->surface.Set(context, surface);
 
   context->device_extensions = {

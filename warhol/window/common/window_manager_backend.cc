@@ -20,6 +20,72 @@ gTemplates[(size_t)WindowManagerBackend::Type::kLast] = {};
 
 }  // namespace
 
+// WindowManagerBackend --------------------------------------------------------
+
+namespace {
+
+void Clear(WindowManagerBackend* backend) {
+  backend->window_manager = nullptr;
+  backend->data = nullptr;
+
+  backend->interface.Init = nullptr;
+  backend->interface.NewFrame = nullptr;
+  backend->interface.Shutdown = nullptr;
+
+  backend ->interface.GetVulkanInstanceExtensions = nullptr;
+  backend->interface.CreateVulkanSurface = nullptr;
+}
+
+void Move(WindowManagerBackend* from, WindowManagerBackend* to) {
+  to->window_manager = from->window_manager;
+  to->data = from->data;
+
+  to->interface.Init = from->interface.Init;
+  to->interface.NewFrame = from->interface.NewFrame;
+  to->interface.Shutdown = from->interface.Shutdown;
+
+  // Vulkan.
+  to->interface.GetVulkanInstanceExtensions =
+      from->interface.GetVulkanInstanceExtensions;
+  to->interface.CreateVulkanSurface = from->interface.CreateVulkanSurface;
+
+  Clear(from);
+}
+
+}  // namespace
+
+WindowManagerBackend::WindowManagerBackend() = default;
+WindowManagerBackend::~WindowManagerBackend() {
+  if (valid()) {
+    ASSERT(data);
+    interface.Shutdown(this);
+  }
+  Clear(this);
+}
+
+WindowManagerBackend::WindowManagerBackend(WindowManagerBackend&& other) {
+  Move(&other, this);
+}
+
+WindowManagerBackend&
+WindowManagerBackend::operator=(WindowManagerBackend&& other) {
+  if (this != &other) {
+    Move(&other, this);
+  }
+  return *this;
+}
+
+const char*
+WindowManagerBackend::TypeToString(WindowManagerBackend::Type type) {
+  switch (type) {
+    case WindowManagerBackend::Type::kSDLVulkan: return "SDLVulkan";
+    case WindowManagerBackend::Type::kLast: return "Last";
+  }
+
+  NOT_REACHED("Unknown WindowManagerBackend::Type.");
+  return nullptr;
+}
+
 void SetWindowManagerBackendInterfaceTemplate(WindowManagerBackend::Type type,
     WindowManagerBackend::Interface interface) {
   size_t index = (size_t)type;
@@ -42,6 +108,9 @@ WindowManagerBackend GetWindowManagerBackend(WindowManagerBackend::Type type) {
   ASSERT(index < (size_t)WindowManagerBackend::Type::kLast);
   WindowManagerBackendTemplate& window_template = gTemplates[index];
   ASSERT(window_template.set);
+
+  LOG(DEBUG) << "Getting interface for "
+             << WindowManagerBackend::TypeToString(type);
 
   WindowManagerBackend backend;
   backend.type = type;

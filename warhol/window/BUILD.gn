@@ -36,6 +36,9 @@ source_set("common") {
 source_set("sdl_vulkan") {
   deps = [
     ":common",
+  ]
+
+  public_deps = [
     "//warhol/window/sdl:sdl_vulkan",
   ]
 }

@@ -42,20 +42,23 @@ struct WindowManagerBackend {
   // IMPORTANT: If you add a function here, remember to handle it (specially
   //            constructors) in the .cc file.
   struct Interface {
+    // Lifetime.
     bool (*Init)(WindowManagerBackend*, uint64_t flags) = nullptr;
-    std::pair<WindowEvent*, size_t> (*NewFrame)(WindowManagerBackend*,
-                                                InputState*) = nullptr;
     void (*Shutdown)(WindowManagerBackend*) = nullptr;
+
+    // API
+    std::pair<WindowEvent*, size_t> (*NewFrame)(WindowManager*,
+                                                InputState*) = nullptr;
 
     // *** VULKAN SPECIFIC ***
     std::vector<const char*>
-    (*GetVulkanInstanceExtensions)(WindowManagerBackend*) = nullptr;
+    (*GetVulkanInstanceExtensions)(WindowManager*) = nullptr;
 
     // |vk_instance| & |surface_khr| must be casted to the right type in the
     // implementation.
     // This is so that we don't need to typedef the values and we don't create
     // unnecessary dependencies on the graphics libraries.
-    bool (*CreateVulkanSurface)(WindowManagerBackend*, void* vk_instance,
+    bool (*CreateVulkanSurface)(WindowManager*, void* vk_instance,
                                 void* surface_khr);
   };
 
