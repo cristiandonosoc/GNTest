@@ -12,11 +12,11 @@ namespace warhol {
 const char*
 LogLevelToString(LogLevel level) {
   switch (level) {
-    case LogLevel::kDEBUG: return "kDEBUG";
-    case LogLevel::kINFO: return "kINFO";
-    case LogLevel::kWARNING: return "kWARNING";
-    case LogLevel::kERROR: return "kERROR";
-    case LogLevel::kNO_FRAME: return "kNO_FRAME";
+    case LogLevel::kDEBUG: return "DEBUG";
+    case LogLevel::kINFO: return "INFO";
+    case LogLevel::kWARNING: return "WARNING";
+    case LogLevel::kERROR: return "ERROR";
+    case LogLevel::kNO_FRAME: return "NO_FRAME";
   }
 
   NOT_REACHED("Unknown LogLevel.");

@@ -77,4 +77,8 @@ void SetWindowManagerBackendInterfaceTemplate(
 // Initialize must be called before using this.
 WindowManagerBackend GetWindowManagerBackend(WindowManagerBackend::Type type);
 
+// Cleans up all the fields of a window manager.
+// Safe to call from a destructor.
+void Clear(WindowManagerBackend*);
+
 }  // namespace warhol

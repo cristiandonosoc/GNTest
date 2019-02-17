@@ -25,10 +25,5 @@ struct VulkanRendererBackend {
   std::unique_ptr<vulkan::Context> context;
 };
 
-bool InitRendererBackend(RendererBackend*);
-bool ExecuteCommands(RendererBackend*);
-bool ShutdownRendererBackend(RendererBackend*);
-bool DrawFrame(RendererBackend*, Camera*);
-
 }  // namespace vulkan
 }  // namespace warhol

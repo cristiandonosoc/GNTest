@@ -30,18 +30,14 @@ struct RenderCommand {
 };
 
 struct Renderer {
-  enum class BackendType : uint32_t {
-    kVulkan,
-    kLast,
-  };
-  const char* BackendTypeToString(BackendType);
+  bool valid() const { return window != nullptr && backend.valid(); }
+  RendererBackend::Type backend_type() const { return backend.type; }
+  RendererBackend::Interface& interface() { return backend.interface; }
 
   Renderer();
   ~Renderer();
   DELETE_COPY_AND_ASSIGN(Renderer);
   DELETE_MOVE_AND_ASSIGN(Renderer);
-
-  BackendType backend_type = BackendType::kLast;
 
   WindowManager* window = nullptr;
   RendererBackend backend = {};
@@ -49,8 +45,8 @@ struct Renderer {
   std::vector<RenderCommand> render_commands;
 };
 
-bool InitRenderer(Renderer*);
-bool ShutdownRenderer(Renderer*);
+bool InitRenderer(Renderer*, RendererBackend::Type);
+void ShutdownRenderer(Renderer*);
 
 void WindowSizeChanged(Renderer*, uint32_t width, uint32_t height);
 bool DrawFrame(Renderer*, Camera*);

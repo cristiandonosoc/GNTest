@@ -21,16 +21,26 @@
 namespace warhol {
 namespace vulkan {
 
+VulkanRendererBackend::VulkanRendererBackend() = default;
+VulkanRendererBackend::~VulkanRendererBackend() = default;
+
 namespace {
+
+bool InitRendererBackend(RendererBackend*);
+void ShutdownRendererBackend(RendererBackend*);
+bool ExecuteCommands(RendererBackend*);
+bool DrawFrame(RendererBackend*, Camera*);
+
+// Declaration of RendererBackend::Interface -----------------------------------
 
 struct SetupInterface {
   SetupInterface() {
     RendererBackend::Interface interface;
 
-    interface.InitFunction = InitRendererBackend;
+    interface.Init = InitRendererBackend;
+    interface.Shutdown = ShutdownRendererBackend;
     interface.ExecuteCommands = ExecuteCommands;
-    interface.ShutdownFunction = ShutdownRendererBackend;
-    interface.DrawFrameFunction = DrawFrame;
+    interface.DrawFrame = DrawFrame;
     SetRendererBackendInterfaceTemplate(RendererBackend::Type::kVulkan,
                                         std::move(interface));
   }
@@ -104,10 +114,6 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
   return VK_FALSE;
 }
 
-}  // namespace
-
-VulkanRendererBackend::VulkanRendererBackend() = default;
-VulkanRendererBackend::~VulkanRendererBackend() = default;
 
 // InitRendererBackend ---------------------------------------------------------
 
@@ -323,32 +329,25 @@ bool ExecuteCommands(RendererBackend*) {
 
 // ShutdownRendererBackend -----------------------------------------------------
 
-bool ShutdownRendererBackend(RendererBackend* backend) {
-  if (!backend->valid())
-    return true;
+void ShutdownRendererBackend(RendererBackend* backend) {
+  ASSERT(backend->valid());
 
   VulkanRendererBackend* vulkan =
       (VulkanRendererBackend*)backend->data;
   vulkan::Context* vk_context = vulkan->context.get();
   ASSERT(vk_context);
 
-  if (!VK_CALL(vkDeviceWaitIdle, *vk_context->device)) {
-    LOG(ERROR) << "Could not wait on device. Aborting.";
-    return false;
-  }
+  if (!VK_CALL(vkDeviceWaitIdle, *vk_context->device))
+    NOT_REACHED("Could not wait on device. Aborting.");
 
   // Reset vulkan renderer. This will free all resources.
   vulkan->context.reset();
   delete vulkan;
 
   Clear(backend);
-
-  return true;
 }
 
 // DrawFrame -------------------------------------------------------------------
-
-namespace {
 
 bool SubmitCommandBuffer(vulkan::Context* context, uint32_t image_index) {
   VkSubmitInfo submit_info = {};
@@ -418,9 +417,16 @@ bool PresentQueue(WindowManager* window, vulkan::Context* vk_context,
   return true;
 }
 
-}  // namespace
+bool Update(WindowManager* window, UBO* ubo) {
+  ubo->model = glm::rotate(glm::mat4{1.0f},
+                           window->seconds * glm::radians(90.0f),
+                           glm::vec3{0.0f, 0.0f, 1.0f});
+  return true;
+}
 
 bool DrawFrame(RendererBackend* backend, Camera* camera) {
+
+
   ASSERT(backend->valid());
   WindowManager* window= backend->renderer->window;
   auto* vulkan_renderer = (VulkanRendererBackend*)backend->data;
@@ -454,6 +460,8 @@ bool DrawFrame(RendererBackend* backend, Camera* camera) {
   // Copy the UBO
   float time = window->seconds;
   UBO* vk_ubo = (UBO*)vk_context->uniform_buffers[image_index].data();
+  Update(backend->renderer->window, vk_ubo);
+
   *vk_ubo = {};
   vk_ubo->model = glm::rotate(
       glm::mat4{1.0f}, time * glm::radians(90.0f), glm::vec3{0.0f, 0.0f, 1.0f});
@@ -491,6 +499,8 @@ bool DrawFrame(RendererBackend* backend, Camera* camera) {
   }
 
 #endif
+
+}  // namespace
 
 }  // namespace vulkan
 }  // namespace warhol

@@ -11,7 +11,7 @@ struct Camera;
 struct Renderer;
 
 struct RendererBackend {
-  bool valid() const { return renderer != nullptr && data != nullptr; }
+  bool valid() const;
 
   // DO NOT add numbers to this enum.
   enum class Type {
@@ -29,11 +29,10 @@ struct RendererBackend {
   Renderer* renderer;   // Not-owning.
 
   struct Interface {
-    // IMPORTANT: If you add more functions, remember to update the move ctor!
-    bool (*InitFunction)(RendererBackend*) = nullptr;
+    bool (*Init)(RendererBackend*) = nullptr;
+    void(*Shutdown)(RendererBackend*) = nullptr;
     bool (*ExecuteCommands)(RendererBackend*) = nullptr;
-    bool (*ShutdownFunction)(RendererBackend*) = nullptr;
-    bool (*DrawFrameFunction)(RendererBackend*, Camera*) = nullptr;
+    bool (*DrawFrame)(RendererBackend*, Camera*) = nullptr;
   };
   Interface interface = {};
 
@@ -42,8 +41,6 @@ struct RendererBackend {
   void* data = nullptr;
 };
 
-void Clear(RendererBackend*);
-
 // Each RendererBackend::Type will get a reference set.
 void SetRendererBackendInterfaceTemplate(RendererBackend::Type,
                                          RendererBackend::Interface);
@@ -51,5 +48,9 @@ void SetRendererBackendInterfaceTemplate(RendererBackend::Type,
 // Creates a un-initialiazed backend for |type|.
 // That type MUST have a set renderer interface.
 RendererBackend GetRendererBackend(RendererBackend::Type type);
+
+// Cleans up all the fields of a RendererBackend.
+// Safe to call from a destructor.
+void Clear(RendererBackend*);
 
 }  // namespace warhol

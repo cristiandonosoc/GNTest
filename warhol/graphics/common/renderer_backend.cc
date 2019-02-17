@@ -10,6 +10,8 @@ namespace warhol {
 
 namespace {
 
+// RendererBackend Setup Interface ---------------------------------------------
+
 // This will have one entry per backend type.
 struct BackendTemplate {
   bool set = false;
@@ -18,7 +20,7 @@ struct BackendTemplate {
 
 BackendTemplate gBackends[(size_t)RendererBackend::Type::kLast] = {};
 
-}
+}  // namespace
 
 void
 SetRendererBackendInterfaceTemplate(RendererBackend::Type type,
@@ -55,12 +57,9 @@ namespace {
 void Move(RendererBackend* from, RendererBackend* to) {
   to->type = from->type;
   to->renderer = from->renderer;
-  to->data = from->data;
 
-  to->interface.InitFunction = from->interface.InitFunction;
-  to->interface.ExecuteCommands = from->interface.ExecuteCommands;
-  to->interface.ShutdownFunction = from->interface.ShutdownFunction;
-  to->interface.DrawFrameFunction = from->interface.DrawFrameFunction;
+  to->interface = std::move(from->interface);
+  to->data = from->data;
 
   Clear(from);
 }
@@ -71,7 +70,7 @@ RendererBackend::RendererBackend() = default;
 RendererBackend::~RendererBackend() {
   if (valid()) {
     ASSERT(data);
-    interface.ShutdownFunction(this);   // Frees data.
+    interface.Shutdown(this);   // Frees data.
   }
   Clear(this);
 }
@@ -89,12 +88,15 @@ RendererBackend& RendererBackend::operator=(RendererBackend&& other) {
 void Clear(RendererBackend* backend) {
   backend->type = RendererBackend::Type::kLast;
   backend->renderer = nullptr;
-  backend->data = nullptr;
 
-  backend->interface.InitFunction = nullptr;
-  backend->interface.ExecuteCommands = nullptr;
-  backend->interface.ShutdownFunction = nullptr;
-  backend->interface.DrawFrameFunction = nullptr;
+  backend->interface = {};
+  backend->data = nullptr;
+}
+
+bool RendererBackend::valid() const {
+  if (type == Type::kLast || renderer == nullptr || data == nullptr)
+    return false;
+  return true;
 }
 
 const char* RendererBackend::TypeToString(RendererBackend::Type type) {

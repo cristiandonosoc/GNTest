@@ -4,6 +4,7 @@
 #include "warhol/graphics/renderer.h"
 
 #include "warhol/utils/assert.h"
+#include "warhol/utils/log.h"
 #include "warhol/window/window_manager.h"
 
 #ifdef WARHOL_VULKAN_ENABLED
@@ -28,81 +29,41 @@ const char* RenderCommand::TypeToString(RenderCommand::Type type) {
 
 Renderer::Renderer() = default;
 Renderer::~Renderer() {
-  ShutdownRenderer(this);
+  if (valid())
+    ShutdownRenderer(this);
 }
 
-namespace {
-
-bool InitVulkan(Renderer* renderer) {
-#ifndef WARHOL_VULKAN_ENABLED
-  NOT_REACHED("Vulkan support not compiled in.");
-#else
-  return vulkan::InitRendererBackend(&renderer->backend);
-#endif
-}
-
-}  // namespace
-
-bool InitRenderer(Renderer* renderer) {
+bool InitRenderer(Renderer* renderer, RendererBackend::Type type) {
   ASSERT(renderer->window->backend.type != WindowManagerBackend::Type::kLast);
 
-  // Set the back pointer.
-  renderer->backend.renderer = renderer;
-
-  switch (renderer->backend_type) {
-    case Renderer::BackendType::kVulkan:
-      return InitVulkan(renderer);
-    case Renderer::BackendType::kLast:
-      break;
+  if (type == RendererBackend::Type::kLast) {
+    LOG(ERROR) << "Unset RendererBackend.";
+    return false;
   }
 
-  NOT_REACHED("Unknown backend type.");
-  return false;
+
+  renderer->backend = GetRendererBackend(type);
+  renderer->backend.renderer = renderer;  // Set the back pointer.
+
+  // Initialize the backend.
+  auto& interface = renderer->backend.interface;
+  return interface.Init(&renderer->backend);
 }
 
 // An null backend renderer can happen if Shutdown was called before the
 // destructor.
-bool ShutdownRenderer(Renderer* renderer) {
-  RendererBackend* backend = &renderer->backend;
-  switch (renderer->backend_type) {
-    case Renderer::BackendType::kVulkan:
-      if (backend->valid())
-        return backend->interface.ShutdownFunction(backend);
-      break;
-    case Renderer::BackendType::kLast:
-      NOT_REACHED("Unknown renderer backend.");
-      break;
-  }
-  Clear(&renderer->backend);
-  return true;
+void ShutdownRenderer(Renderer* renderer) {
+  ASSERT(renderer->valid());
+  auto& interface = renderer->interface();
+  interface.Shutdown(&renderer->backend);
 }
 
 // void WindowSizeChanged(Renderer* renderer, uint32_t width, uint32_t height) {}
 
 bool DrawFrame(Renderer* renderer, Camera* camera) {
-  RendererBackend* backend = &renderer->backend;
-  ASSERT(backend->valid());
-  switch (renderer->backend_type) {
-    case Renderer::BackendType::kVulkan:
-      return backend->interface.DrawFrameFunction(backend, camera);
-    case Renderer::BackendType::kLast:
-      break;
-  }
-
-  NOT_REACHED("Invalid renderer backend.");
-  return false;
-}
-
-// Utils -----------------------------------------------------------------------
-
-const char* Renderer::BackendTypeToString(Renderer::BackendType bt) {
-  switch (bt) {
-    case Renderer::BackendType::kVulkan: return "Vulkan";
-    case Renderer::BackendType::kLast: return "Last";
-  }
-
-  NOT_REACHED("Unknown Backend Type.");
-  return nullptr;
+  ASSERT(renderer->valid());
+  auto& interface = renderer->interface();
+  return interface.DrawFrame(&renderer->backend, camera);
 }
 
 }  // namespace warhol

@@ -10,6 +10,13 @@ namespace warhol {
 
 // WindowManager ---------------------------------------------------------------
 
+WindowManager::WindowManager() = default;
+WindowManager::~WindowManager() {
+  if (valid())
+    ShutdownWindowManager(this);
+}
+
+
 bool InitWindowManager(WindowManager* window,
                        WindowManagerBackend::Type type,
                        uint64_t flags) {
@@ -21,15 +28,22 @@ bool InitWindowManager(WindowManager* window,
   window->backend = GetWindowManagerBackend(type);
   window->backend.window_manager = window;  // Set the backpointer.
 
+  // Initialize the backend.
   auto& interface = window->backend.interface;
   return interface.Init(&window->backend, flags);
 }
 
 std::pair<WindowEvent*, size_t>
 NewFrame(WindowManager* window, InputState* input) {
-  ASSERT(window->backend.valid());
+  ASSERT(window->valid());
   auto& interface = window->interface();
   return interface.NewFrame(window, input);
+}
+
+void ShutdownWindowManager(WindowManager* window) {
+  ASSERT(window->valid());
+  auto& interface = window->interface();
+  interface.Shutdown(&window->backend);
 }
 
 }  // namespace warhol

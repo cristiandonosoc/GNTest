@@ -24,12 +24,6 @@ struct ApplicationContext {
   bool window_size_changed = false;
 };
 
-/* bool Update(const SDLContext& context, UBO* ubo) { */
-/*   ubo->model = glm::rotate( */
-/*       glm::mat4{1.0f}, time * glm::radians(90.0f), glm::vec3{0.0f, 0.0f, 1.0f}); */
-/*   return true; */
-/* } */
-
 void HandleWindowEvents(ApplicationContext* app_context, WindowEvent* events,
                         size_t event_count) {
   for (size_t i = 0; i < event_count; i++) {
@@ -64,8 +58,7 @@ int main() {
     Timer timer = Timer::ManualTimer();
 
     renderer.window = &window;
-    renderer.backend_type = Renderer::BackendType::kVulkan;
-    if (!InitRenderer(&renderer)) {
+    if (!InitRenderer(&renderer, RendererBackend::Type::kVulkan)) {
       LOG(ERROR) << "Could not setup vulkan. Exiting.";
       return 1;
     }
@@ -94,19 +87,11 @@ int main() {
     if (input.keys_up[GET_KEY(Escape)])
       break;
 
-    /* if (!Update(sdl_context, &ubo)) */
-    /*   break; */
-
     if (!DrawFrame(&renderer, &camera)) {
       LOG(ERROR) << "Error drawing with vulkan. Exiting.";
       break;
     }
 
     SDL_Delay(10);
-  }
-
-  if (!ShutdownRenderer(&renderer)) {
-    LOG(ERROR) << "Could not shutdown renderer.";
-    exit(1);
   }
 }

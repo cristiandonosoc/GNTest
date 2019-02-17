@@ -24,30 +24,12 @@ gTemplates[(size_t)WindowManagerBackend::Type::kLast] = {};
 
 namespace {
 
-void Clear(WindowManagerBackend* backend) {
-  backend->window_manager = nullptr;
-  backend->data = nullptr;
-
-  backend->interface.Init = nullptr;
-  backend->interface.NewFrame = nullptr;
-  backend->interface.Shutdown = nullptr;
-
-  backend ->interface.GetVulkanInstanceExtensions = nullptr;
-  backend->interface.CreateVulkanSurface = nullptr;
-}
-
 void Move(WindowManagerBackend* from, WindowManagerBackend* to) {
+  to->type = from->type;
+  to->interface = std::move(from->interface);
+
   to->window_manager = from->window_manager;
   to->data = from->data;
-
-  to->interface.Init = from->interface.Init;
-  to->interface.NewFrame = from->interface.NewFrame;
-  to->interface.Shutdown = from->interface.Shutdown;
-
-  // Vulkan.
-  to->interface.GetVulkanInstanceExtensions =
-      from->interface.GetVulkanInstanceExtensions;
-  to->interface.CreateVulkanSurface = from->interface.CreateVulkanSurface;
 
   Clear(from);
 }
@@ -61,6 +43,13 @@ WindowManagerBackend::~WindowManagerBackend() {
     interface.Shutdown(this);
   }
   Clear(this);
+}
+
+void Clear(WindowManagerBackend* backend) {
+  backend->type = WindowManagerBackend::Type::kLast;
+  backend->interface = {};
+  backend->window_manager = nullptr;
+  backend->data = nullptr;
 }
 
 WindowManagerBackend::WindowManagerBackend(WindowManagerBackend&& other) {
@@ -115,6 +104,7 @@ WindowManagerBackend GetWindowManagerBackend(WindowManagerBackend::Type type) {
   WindowManagerBackend backend;
   backend.type = type;
   backend.interface = window_template.interface;
+  LOG(DEBUG) << "Before return: " << WindowManagerBackend::TypeToString(backend.type);
   return backend;
 }
 
