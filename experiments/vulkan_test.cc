@@ -58,10 +58,7 @@ int main() {
     Timer timer = Timer::ManualTimer();
 
     renderer.window = &window;
-    if (!InitRenderer(&renderer, RendererBackend::Type::kVulkan)) {
-      LOG(ERROR) << "Could not setup vulkan. Exiting.";
-      return 1;
-    }
+    InitRenderer(&renderer, RendererBackend::Type::kVulkan);
 
     float timing = timer.End();
     LOG(INFO) << "Initialized vulkan: " << timing << " ms.";
@@ -87,11 +84,7 @@ int main() {
     if (input.keys_up[GET_KEY(Escape)])
       break;
 
-    if (!DrawFrame(&renderer, &camera)) {
-      LOG(ERROR) << "Error drawing with vulkan. Exiting.";
-      break;
-    }
-
+    DrawFrame(&renderer, &camera);
     SDL_Delay(10);
   }
 }

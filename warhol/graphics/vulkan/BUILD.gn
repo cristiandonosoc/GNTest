@@ -65,6 +65,8 @@ source_set("vulkan") {
     "memory_utils.cc",
     "memory_utils.h",
     "renderer_backend.cc",
+    "renderer_backend_impl.cc",
+    "renderer_backend_impl.h",
     "staging_manager.cc",
     "staging_manager.h",
     "utils.cc",

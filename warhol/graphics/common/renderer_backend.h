@@ -29,10 +29,10 @@ struct RendererBackend {
   Renderer* renderer;   // Not-owning.
 
   struct Interface {
-    bool (*Init)(RendererBackend*) = nullptr;
-    void(*Shutdown)(RendererBackend*) = nullptr;
-    bool (*ExecuteCommands)(RendererBackend*) = nullptr;
-    bool (*DrawFrame)(RendererBackend*, Camera*) = nullptr;
+    void (*Init)(RendererBackend*) = nullptr;
+    void (*Shutdown)(RendererBackend*) = nullptr;
+    void (*ExecuteCommands)(RendererBackend*) = nullptr;
+    void (*DrawFrame)(RendererBackend*, Camera*) = nullptr;
   };
   Interface interface = {};
 

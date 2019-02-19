@@ -45,10 +45,10 @@ struct Renderer {
   std::vector<RenderCommand> render_commands;
 };
 
-bool InitRenderer(Renderer*, RendererBackend::Type);
+void InitRenderer(Renderer*, RendererBackend::Type);
 void ShutdownRenderer(Renderer*);
 
 void WindowSizeChanged(Renderer*, uint32_t width, uint32_t height);
-bool DrawFrame(Renderer*, Camera*);
+void DrawFrame(Renderer*, Camera*);
 
 }  // namespace

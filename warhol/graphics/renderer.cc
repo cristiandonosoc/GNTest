@@ -7,10 +7,6 @@
 #include "warhol/utils/log.h"
 #include "warhol/window/window_manager.h"
 
-#ifdef WARHOL_VULKAN_ENABLED
-#include "warhol/graphics/vulkan/renderer_backend.h"
-#endif
-
 namespace warhol {
 
 // RenderCommand ---------------------------------------------------------------
@@ -33,21 +29,16 @@ Renderer::~Renderer() {
     ShutdownRenderer(this);
 }
 
-bool InitRenderer(Renderer* renderer, RendererBackend::Type type) {
+void InitRenderer(Renderer* renderer, RendererBackend::Type type) {
   ASSERT(renderer->window->backend.type != WindowManagerBackend::Type::kLast);
-
-  if (type == RendererBackend::Type::kLast) {
-    LOG(ERROR) << "Unset RendererBackend.";
-    return false;
-  }
-
+  ASSERT(type != RendererBackend::Type::kLast);
 
   renderer->backend = GetRendererBackend(type);
   renderer->backend.renderer = renderer;  // Set the back pointer.
 
   // Initialize the backend.
   auto& interface = renderer->backend.interface;
-  return interface.Init(&renderer->backend);
+  interface.Init(&renderer->backend);
 }
 
 // An null backend renderer can happen if Shutdown was called before the
@@ -60,10 +51,10 @@ void ShutdownRenderer(Renderer* renderer) {
 
 // void WindowSizeChanged(Renderer* renderer, uint32_t width, uint32_t height) {}
 
-bool DrawFrame(Renderer* renderer, Camera* camera) {
+void DrawFrame(Renderer* renderer, Camera* camera) {
   ASSERT(renderer->valid());
   auto& interface = renderer->interface();
-  return interface.DrawFrame(&renderer->backend, camera);
+  interface.DrawFrame(&renderer->backend, camera);
 }
 
 }  // namespace warhol

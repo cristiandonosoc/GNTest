@@ -13,8 +13,8 @@ namespace warhol {
 namespace vulkan {
 
 struct Definitions {
-  static constexpr int kMaxFramesInFlight = 2;
-  static constexpr int kNumFrames = 2;
+  static constexpr uint32_t kMaxFramesInFlight = 2;
+  static constexpr uint32_t kNumFrames = 2;
 };
 
 }  // namespace vulkan

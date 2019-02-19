@@ -18,8 +18,7 @@
 
 namespace warhol {
 
-struct Image;
-struct Mesh;
+struct WindowManager;
 
 namespace vulkan {
 
@@ -83,43 +82,16 @@ struct Context {
   Handle<VkSwapchainKHR> swap_chain = {};
   SwapChainDetails swap_chain_details = {};
 
-  std::vector<VkImage> images;    // Freed with |swap_chain|.
-  std::vector<Handle<VkImageView>> image_views;
+  VkImage images[Definitions::kNumFrames];    // Freed with |swap_chain|.
+  Handle<VkImageView> image_views[Definitions::kNumFrames];
 
   VkFormat depth_format = VK_FORMAT_UNDEFINED;
   MemoryBacked<VkImage> depth_image;
   Handle<VkImageView> depth_image_view;
 
-  Handle<VkRenderPass> render_pass = {};
-
-  Handle<VkDescriptorSetLayout> descriptor_set_layout;
-  Handle<VkPipelineLayout> pipeline_layout = {};
-
-  Handle<VkDescriptorPool> descriptor_pool;
-  std::vector<VkDescriptorSet> descriptor_sets; // Freed with |descriptor_pool|.
-
-  std::string vert_shader_path;
-  std::string frag_shader_path;
-  Handle<VkPipeline> pipeline = {};
-
-  std::vector<Handle<VkFramebuffer>> frame_buffers;
-
-  std::vector<VkCommandBuffer> command_buffers;   // Freed with |command_pool|.
-  VkDeviceSize ubo_size;
-  std::vector<MemoryBacked<VkBuffer>> uniform_buffers;
-
-  // Actual geometry.
-  MemoryBacked<VkBuffer> vertices;
-  MemoryBacked<VkBuffer> indices;
-
-  MemoryBacked<VkImage> texture;
-  Handle<VkImageView> texture_view;
-  Handle<VkSampler> texture_sampler;
-
-  std::vector<Handle<VkSemaphore>> image_available_semaphores;
-  std::vector<Handle<VkSemaphore>> render_finished_semaphores;
-  std::vector<Handle<VkFence>> in_flight_fences;
 };
+
+bool InitVulkanContext(Context*, WindowManager*);
 
 // |extensions| and |validation_layers| must already be set within context.
 // If successful, |context| will be correctly filled with a VkInstance.
@@ -145,40 +117,6 @@ bool CreateImageViews(Context*);
 bool CreateCommandPool(Context*);
 
 bool CreateDepthResources(Context*);
-
-bool CreateRenderPass(Context*);
-
-bool CreateDescriptorSetLayout(Context*);
-
-bool CreatePipelineLayout(Context*);
-
-// |vert_shader_path| and |frag_shader_path| must be set at this call.
-bool CreateGraphicsPipeline(Context*);
-
-bool CreateFrameBuffers(Context*);
-
-/* // Creates vertices, indices and uniforms. */
-/* // |ubo_size| is the byte size of the uniform buffer object. */
-/* bool CreateDataBuffers(Context*, VkDeviceSize ubo_size); */
-
-bool LoadModel(Context*, const Mesh&);
-
-bool SetupUBO(Context* , VkDeviceSize ubo_size);
-
-bool CreateTextureBuffers(Context*, Image*);
-
-bool CreateTextureSampler(Context*, const Image&);
-
-// This wil also create the descriptor pools.
-bool CreateDescriptorSets(Context*);
-
-bool CreateCommandBuffers(Context*);
-
-bool CreateSyncObjects(Context*);
-
-// -----------------------------------------------------------------------------
-
-bool RecreateSwapChain(Context*, Pair<uint32_t> screen_size);
 
 }  // namespace vulkan
 }  // namespace warhol
