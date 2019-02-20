@@ -3,11 +3,14 @@
 
 #pragma once
 
+#include <stdlib.h>
+
 #include "warhol/utils/macros.h"
 
 namespace warhol {
 
 struct Camera;
+struct RenderCommand;
 struct Renderer;
 
 struct RendererBackend {
@@ -31,7 +34,9 @@ struct RendererBackend {
   struct Interface {
     void (*Init)(RendererBackend*) = nullptr;
     void (*Shutdown)(RendererBackend*) = nullptr;
-    void (*ExecuteCommands)(RendererBackend*) = nullptr;
+    void (*ExecuteCommands)(RendererBackend*,
+                            RenderCommand*,
+                            size_t command_count) = nullptr;
     void (*DrawFrame)(RendererBackend*, Camera*) = nullptr;
   };
   Interface interface = {};

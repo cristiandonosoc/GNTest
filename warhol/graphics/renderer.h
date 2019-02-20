@@ -10,24 +10,12 @@
 
 #include "warhol/utils/macros.h"
 
+#include "warhol/graphics/common/render_command.h"
 #include "warhol/graphics/common/renderer_backend.h"
 
 namespace warhol {
 
-struct Mesh;
 struct WindowManager;
-
-struct RenderCommand {
-  enum class Type {
-    kRenderMesh,
-    kLast,
-  };
-  static const char* TypeToString(Type);
-
-  Type type = Type::kLast;
-  Mesh* mesh;       // Not owning. Must outlive.
-  Camera* camera;   // Not owning. Must outlive.
-};
 
 struct Renderer {
   bool valid() const { return window != nullptr && backend.valid(); }

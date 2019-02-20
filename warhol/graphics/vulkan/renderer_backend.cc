@@ -10,6 +10,7 @@
 #include "warhol/scene/camera.h"
 #include "warhol/graphics/common/image.h"
 #include "warhol/graphics/common/mesh.h"
+#include "warhol/graphics/common/render_command.h"
 #include "warhol/graphics/common/renderer_backend.h"
 #include "warhol/graphics/renderer.h"
 #include "warhol/graphics/vulkan/def.h"
@@ -29,7 +30,7 @@ namespace {
 
 void InitRendererBackend(RendererBackend*);
 void ShutdownRendererBackend(RendererBackend*);
-void ExecuteCommands(RendererBackend*);
+void ExecuteCommands(RendererBackend*, RenderCommand*, size_t);
 void DrawFrame(RendererBackend*, Camera*);
 
 // Declaration of RendererBackend::Interface -----------------------------------
@@ -62,7 +63,32 @@ void InitRendererBackend(RendererBackend* backend) {
 
 // ExecuteCommands -------------------------------------------------------------
 
-void ExecuteCommands(RendererBackend* backend) {
+void ExecuteCommands(RendererBackend* backend, RenderCommand* commands,
+                     size_t command_count) {
+  ASSERT(backend->valid());
+  if (command_count == 0)
+    ASSERT(commands);
+
+  VulkanRendererBackend* vulkan = (VulkanRendererBackend*)backend->data;
+
+  StartFrame(vulkan);
+
+  RenderCommand* current_command = commands;
+  for (size_t i = 0; i < command_count; i++) {
+    switch (current_command->type) {
+      case RenderCommand::Type::kMesh:
+        DrawMesh(vulkan, current_command);
+        break;
+      case RenderCommand::Type::kLast:
+        NOT_REACHED("Invalid RenderCommand Type (Last).");
+        break;
+    }
+
+    current_command++;
+  }
+
+  EndFrame(vulkan);
+
   ASSERT(backend->valid());
   NOT_IMPLEMENTED();
 }
@@ -80,6 +106,7 @@ void ShutdownRendererBackend(RendererBackend* backend) {
     NOT_REACHED("Could not wait on device. Aborting.");
 
   // Reset vulkan renderer. This will free all resources.
+  vulkan->pipeline = {};
   vulkan->context.reset();
   delete vulkan;
 
@@ -94,7 +121,7 @@ void SubmitCommandBuffer(VulkanRendererBackend* vulkan, uint32_t image_index) {
 
   // Which semaphores to wait for.
   VkSemaphore wait_semaphores[] = {
-    *vulkan->image_available_semaphores[vulkan->current_frame],
+    *vulkan->pipeline.image_available_semaphores[vulkan->current_frame],
   };
   submit_info.waitSemaphoreCount = ARRAY_SIZE(wait_semaphores);
   submit_info.pWaitSemaphores = wait_semaphores;
@@ -104,20 +131,22 @@ void SubmitCommandBuffer(VulkanRendererBackend* vulkan, uint32_t image_index) {
   submit_info.pWaitDstStageMask = wait_stages;
 
   VkCommandBuffer command_buffers[] = {
-    vulkan->command_buffers[image_index],
+    vulkan->pipeline.command_buffers[image_index],
   };
   submit_info.commandBufferCount = ARRAY_SIZE(command_buffers);
   submit_info.pCommandBuffers = command_buffers;
 
+  uint32_t current_frame = vulkan->current_frame;
+
   // Which semaphores to signal after we're done.
   VkSemaphore signal_semaphores[] = {
-    *vulkan->render_finished_semaphores[vulkan->current_frame],
+    *vulkan->pipeline.render_finished_semaphores[current_frame],
   };
   submit_info.signalSemaphoreCount = ARRAY_SIZE(signal_semaphores);
   submit_info.pSignalSemaphores = signal_semaphores;
 
   VK_CHECK(vkQueueSubmit, vulkan->context->graphics_queue, 1, &submit_info,
-           *vulkan->in_flight_fences[vulkan->current_frame]);
+           *vulkan->pipeline.in_flight_fences[current_frame]);
 }
 
 void PresentQueue(WindowManager* window, VulkanRendererBackend* vulkan,
@@ -127,9 +156,11 @@ void PresentQueue(WindowManager* window, VulkanRendererBackend* vulkan,
   VkPresentInfoKHR present_info = {};
   present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
+  uint32_t current_frame = vulkan->current_frame;
+
   // Semaphores to wait for.
   VkSemaphore wait_semaphores[] = {
-    *vulkan->render_finished_semaphores[vulkan->current_frame],
+    *vulkan->pipeline.render_finished_semaphores[current_frame],
   };
   present_info.waitSemaphoreCount = ARRAY_SIZE(wait_semaphores);
   present_info.pWaitSemaphores = wait_semaphores;
@@ -164,13 +195,13 @@ void DrawFrame(RendererBackend* backend, Camera* camera) {
 
   int current_frame = vulkan->current_frame;
   VK_CHECK(vkWaitForFences, *context->device, 1,
-           &vulkan->in_flight_fences[current_frame].value(), VK_TRUE,
+           &vulkan->pipeline.in_flight_fences[current_frame].value(), VK_TRUE,
            UINT64_MAX);
 
   uint32_t image_index = 0;
   VK_CHECK(vkAcquireNextImageKHR, *context->device, *context->swap_chain,
            UINT64_MAX,  // No timeout.
-           *vulkan->image_available_semaphores[current_frame],
+           *vulkan->pipeline.image_available_semaphores[current_frame],
            nullptr,
            &image_index);
 
@@ -178,11 +209,11 @@ void DrawFrame(RendererBackend* backend, Camera* camera) {
   Flush(&context->staging_manager);
 
   VK_CHECK(vkResetFences, *context->device, 1,
-           &vulkan->in_flight_fences[current_frame].value());
+           &vulkan->pipeline.in_flight_fences[current_frame].value());
 
   // Copy the UBO
   float time = window->seconds;
-  UBO* vk_ubo = (UBO*)vulkan->uniform_buffers[image_index].data();
+  UBO* vk_ubo = (UBO*)vulkan->pipeline.uniform_buffers[image_index].data();
   *vk_ubo = {};
   vk_ubo->model = glm::rotate(
       glm::mat4{1.0f}, time * glm::radians(90.0f), glm::vec3{0.0f, 0.0f, 1.0f});

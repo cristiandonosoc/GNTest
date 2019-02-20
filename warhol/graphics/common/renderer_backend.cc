@@ -88,7 +88,6 @@ RendererBackend& RendererBackend::operator=(RendererBackend&& other) {
 void Clear(RendererBackend* backend) {
   backend->type = RendererBackend::Type::kLast;
   backend->renderer = nullptr;
-
   backend->interface = {};
   backend->data = nullptr;
 }

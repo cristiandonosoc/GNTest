@@ -9,6 +9,7 @@
 #include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/handle.h"
 #include "warhol/graphics/vulkan/memory_utils.h"
+#include "warhol/utils/log.h"
 #include "warhol/utils/macros.h"
 
 namespace warhol {
@@ -40,35 +41,39 @@ struct VulkanRendererBackend {
 
   // Non-constant elements (should be out of the context).
 
-  Handle<VkRenderPass> render_pass = {};
+  struct Pipeline {
+    Handle<VkRenderPass> render_pass = {};
 
-  Handle<VkDescriptorSetLayout> descriptor_set_layout;
-  Handle<VkPipelineLayout> pipeline_layout = {};
+    Handle<VkDescriptorSetLayout> descriptor_set_layout;
+    Handle<VkPipelineLayout> pipeline_layout = {};
 
-  Handle<VkDescriptorPool> descriptor_pool;
-  std::vector<VkDescriptorSet> descriptor_sets; // Freed with |descriptor_pool|.
+    Handle<VkDescriptorPool> descriptor_pool;
+    std::vector<VkDescriptorSet>
+        descriptor_sets;  // Freed with |descriptor_pool|.
 
-  std::string vert_shader_path;
-  std::string frag_shader_path;
-  Handle<VkPipeline> pipeline = {};
+    std::string vert_shader_path;
+    std::string frag_shader_path;
+    Handle<VkPipeline> pipeline = {};
 
-  Handle<VkFramebuffer> frame_buffers[Definitions::kNumFrames];
+    Handle<VkFramebuffer> frame_buffers[Definitions::kNumFrames];
 
-  VkCommandBuffer command_buffers[Definitions::kNumFrames];
-  VkDeviceSize ubo_size;
-  MemoryBacked<VkBuffer> uniform_buffers[Definitions::kNumFrames];
+    VkCommandBuffer command_buffers[Definitions::kNumFrames];
+    VkDeviceSize ubo_size;
+    MemoryBacked<VkBuffer> uniform_buffers[Definitions::kNumFrames];
 
-  // Actual geometry.
-  MemoryBacked<VkBuffer> vertices;
-  MemoryBacked<VkBuffer> indices;
+    // Actual geometry.
+    MemoryBacked<VkBuffer> vertices;
+    MemoryBacked<VkBuffer> indices;
 
-  MemoryBacked<VkImage> texture;
-  Handle<VkImageView> texture_view;
-  Handle<VkSampler> texture_sampler;
+    MemoryBacked<VkImage> texture;
+    Handle<VkImageView> texture_view;
+    Handle<VkSampler> texture_sampler;
 
-  Handle<VkSemaphore> image_available_semaphores[Definitions::kNumFrames];
-  Handle<VkSemaphore> render_finished_semaphores[Definitions::kNumFrames];
-  Handle<VkFence> in_flight_fences[Definitions::kNumFrames];
+    Handle<VkSemaphore> image_available_semaphores[Definitions::kNumFrames];
+    Handle<VkSemaphore> render_finished_semaphores[Definitions::kNumFrames];
+    Handle<VkFence> in_flight_fences[Definitions::kNumFrames];
+  };
+  Pipeline pipeline;
 };
 
 void CreateRenderPass(VulkanRendererBackend*);

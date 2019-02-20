@@ -46,18 +46,13 @@ struct Handle {
 
   DELETE_COPY_AND_ASSIGN(Handle);
 
-  Handle(Handle&& rhs)
-      : context_(rhs.context_),
-        extra_handle_(rhs.extra_handle_),
-        handle_(rhs.handle_) {
-    rhs.Reset();
+  Handle(Handle&& rhs) {
+    Move(&rhs);
   }
 
   Handle& operator=(Handle&& rhs) {
-    context_ = rhs.context_;
-    extra_handle_ = rhs.extra_handle_;
-    handle_ = rhs.handle_;
-    rhs.Reset();
+    if (this != &rhs)
+      Move(&rhs);
     return *this;
   }
 
@@ -76,6 +71,14 @@ struct Handle {
   void* extra_handle() const { return extra_handle_; }
 
  private:
+  void Move(Handle* rhs) {
+    Clear();
+    context_ = rhs->context_;
+    extra_handle_ = rhs->extra_handle_;
+    handle_ = rhs->handle_;
+    rhs->Reset();
+  }
+
   // This function creates the corresponding freeing of the resource.
   // These are specialized on demand. If you get weird Handle<type> undefined
   // errors, you're probably missing an specialization.

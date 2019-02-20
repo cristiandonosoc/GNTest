@@ -7,6 +7,8 @@ source_set("common") {
     "image.h",
     "mesh.cc",
     "mesh.h",
+    "render_command.cc",
+    "render_command.h",
     "renderer_backend.cc",
     "renderer_backend.h",
   ]

@@ -4,22 +4,11 @@
 #include "warhol/graphics/renderer.h"
 
 #include "warhol/utils/assert.h"
-#include "warhol/utils/log.h"
 #include "warhol/window/window_manager.h"
 
 namespace warhol {
 
 // RenderCommand ---------------------------------------------------------------
-
-const char* RenderCommand::TypeToString(RenderCommand::Type type) {
-  switch (type) {
-    case RenderCommand::Type::kRenderMesh: return "RenderMesh";
-    case RenderCommand::Type::kLast: return "Last";
-  }
-
-  NOT_REACHED("Unknown RenderCommand::Type");
-  return nullptr;
-}
 
 // Renderer --------------------------------------------------------------------
 

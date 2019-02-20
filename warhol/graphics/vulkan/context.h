@@ -88,7 +88,6 @@ struct Context {
   VkFormat depth_format = VK_FORMAT_UNDEFINED;
   MemoryBacked<VkImage> depth_image;
   Handle<VkImageView> depth_image_view;
-
 };
 
 bool InitVulkanContext(Context*, WindowManager*);

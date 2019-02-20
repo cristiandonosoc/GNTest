@@ -87,8 +87,8 @@ void InitVulkanRendererBackend(VulkanRendererBackend* vulkan,
   CreatePipelineLayout(vulkan);
 
   Header("Creating a graphics pipeline...");
-  vulkan->vert_shader_path = Assets::VulkanShaderPath("demo.vert.spv");
-  vulkan->frag_shader_path = Assets::VulkanShaderPath("demo.frag.spv");
+  vulkan->pipeline.vert_shader_path = Assets::VulkanShaderPath("demo.vert.spv");
+  vulkan->pipeline.frag_shader_path = Assets::VulkanShaderPath("demo.frag.spv");
   CreateGraphicsPipeline(vulkan);
 
   Header("Creating frame buffers...");
@@ -181,12 +181,13 @@ void StartFrame(VulkanRendererBackend* vulkan) {
   // We wait for the fences that say this image is still in flight.
   int current_frame = vulkan->current_frame;
   VK_CHECK(vkWaitForFences, *context->device, 1,
-           &vulkan->in_flight_fences[current_frame].value(),
+           &vulkan->pipeline.in_flight_fences[current_frame].value(),
            VK_TRUE, UINT64_MAX);
 
   // We acquire the next image to render to.
   uint32_t current_swap_index;
-  VkSemaphore semaphore = *vulkan->image_available_semaphores[current_frame];
+  VkSemaphore semaphore =
+      *vulkan->pipeline.image_available_semaphores[current_frame];
   VK_CHECK(vkAcquireNextImageKHR, *context->device, *context->swap_chain,
                                   UINT64_MAX,   // No timeout.
                                   semaphore,    // Semaphore to signal
@@ -199,11 +200,11 @@ void StartFrame(VulkanRendererBackend* vulkan) {
   Flush(&context->staging_manager);
 
   // Reset the fences for this frame.
-  VkFence fence = *vulkan->in_flight_fences[current_frame];
+  VkFence fence = *vulkan->pipeline.in_flight_fences[current_frame];
   VK_CHECK(vkResetFences, *context->device, 1, &fence);
 
   // Start the command buffer.
-  VkCommandBuffer command_buffer = vulkan->command_buffers[current_frame];
+  auto command_buffer = vulkan->pipeline.command_buffers[current_frame];
   VkCommandBufferBeginInfo begin_info = {};
   begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   VK_CHECK(vkBeginCommandBuffer, command_buffer, &begin_info);
@@ -218,8 +219,9 @@ void StartFrame(VulkanRendererBackend* vulkan) {
 
   VkRenderPassBeginInfo render_pass_begin = {};
   render_pass_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  render_pass_begin.renderPass = *vulkan->render_pass;
-  render_pass_begin.framebuffer = *vulkan->frame_buffers[current_swap_index];
+  render_pass_begin.renderPass = *vulkan->pipeline.render_pass;
+  render_pass_begin.framebuffer =
+      *vulkan->pipeline.frame_buffers[current_swap_index];
   render_pass_begin.renderArea.extent = context->swap_chain_details.extent;
 
   // TODO(Cristian): Should we handle clearing here?
@@ -228,8 +230,15 @@ void StartFrame(VulkanRendererBackend* vulkan) {
                        VK_SUBPASS_CONTENTS_INLINE);
 }
 
-void EndFrame(VulkanRendererBackend* backend);
+// DrawMesh --------------------------------------------------------------------
 
+void DrawMesh(VulkanRendererBackend*, RenderCommand*) {
+  NOT_IMPLEMENTED();
+}
+
+void EndFrame(VulkanRendererBackend*) {
+  NOT_IMPLEMENTED();
+}
 
 // **** Impl *******************************************************************
 
@@ -307,7 +316,7 @@ void CreateRenderPass(VulkanRendererBackend* vulkan) {
   VkRenderPass render_pass;
   VK_CHECK(vkCreateRenderPass, *context->device, &create_info, nullptr,
                                &render_pass);
-  vulkan->render_pass.Set(context, render_pass);
+  vulkan->pipeline.render_pass.Set(context, render_pass);
 }
 
 // CreateDescriptorSetLayout ---------------------------------------------------
@@ -340,7 +349,7 @@ void CreateDescriptorSetLayout(VulkanRendererBackend* vulkan) {
   VK_CHECK(vkCreateDescriptorSetLayout, *context->device, &create_info,
                                         nullptr, &descriptor_set_layout);
 
-  vulkan->descriptor_set_layout.Set(context, descriptor_set_layout);
+  vulkan->pipeline.descriptor_set_layout.Set(context, descriptor_set_layout);
 }
 
 // CreatePipelineLayout --------------------------------------------------------
@@ -351,14 +360,14 @@ void CreatePipelineLayout(VulkanRendererBackend* vulkan) {
   VkPipelineLayoutCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   create_info.setLayoutCount = 1;
-  create_info.pSetLayouts = &vulkan->descriptor_set_layout.value();
+  create_info.pSetLayouts = &vulkan->pipeline.descriptor_set_layout.value();
   create_info.pushConstantRangeCount = 0; // Optional
   create_info.pPushConstantRanges = nullptr; // Optional
 
   VkPipelineLayout pipeline_layout;
   VK_CHECK(vkCreatePipelineLayout, *context->device, &create_info, nullptr,
                                    &pipeline_layout);
-  vulkan->pipeline_layout.Set(context, pipeline_layout);
+  vulkan->pipeline.pipeline_layout.Set(context, pipeline_layout);
 }
 
 // CreateGraphicsPipeline ------------------------------------------------------
@@ -423,8 +432,8 @@ std::vector<VkVertexInputAttributeDescription> GetAttributeDescriptions() {
 void CreateGraphicsPipeline(VulkanRendererBackend* vulkan) {
   Context* context = vulkan->context.get();
   std::vector<char> vert_data, frag_data;
-  if (!ReadWholeFile(vulkan->vert_shader_path, &vert_data, false) ||
-      !ReadWholeFile(vulkan->frag_shader_path, &frag_data, false)) {
+  if (!ReadWholeFile(vulkan->pipeline.vert_shader_path, &vert_data, false) ||
+      !ReadWholeFile(vulkan->pipeline.frag_shader_path, &frag_data, false)) {
     NOT_REACHED("Unable to read shaders.");
   }
 
@@ -648,10 +657,10 @@ void CreateGraphicsPipeline(VulkanRendererBackend* vulkan) {
   create_info.pDynamicState = nullptr; // Optional
 
   // Pipeline layout.
-  create_info.layout = *vulkan->pipeline_layout;
+  create_info.layout = *vulkan->pipeline.pipeline_layout;
 
   // Render pass.
-  create_info.renderPass = *vulkan->render_pass;
+  create_info.renderPass = *vulkan->pipeline.render_pass;
   create_info.subpass = 0;  // Index of the subpass to use.
 
   // These are used to create pipelines from previous ones.
@@ -661,14 +670,14 @@ void CreateGraphicsPipeline(VulkanRendererBackend* vulkan) {
   VkPipeline pipeline;
   VK_CHECK(vkCreateGraphicsPipelines, *context->device, nullptr,
                                       1, &create_info, nullptr, &pipeline);
-  vulkan->pipeline.Set(context, pipeline);
+  vulkan->pipeline.pipeline.Set(context, pipeline);
 }
 
 // CreateFrameBuffers ----------------------------------------------------------
 
 void CreateFrameBuffers(VulkanRendererBackend* vulkan) {
   Context* context = vulkan->context.get();
-  for (size_t i = 0; i < ARRAY_SIZE(vulkan->frame_buffers); i++) {
+  for (size_t i = 0; i < ARRAY_SIZE(vulkan->pipeline.frame_buffers); i++) {
     // A framebuffer references image views for input data.
     VkImageView attachments[] = {
       *context->image_views[i],
@@ -677,7 +686,7 @@ void CreateFrameBuffers(VulkanRendererBackend* vulkan) {
 
     VkFramebufferCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    create_info.renderPass = *vulkan->render_pass;
+    create_info.renderPass = *vulkan->pipeline.render_pass;
     create_info.attachmentCount = ARRAY_SIZE(attachments);
     create_info.pAttachments = attachments;
     create_info.width = context->swap_chain_details.extent.width;
@@ -688,7 +697,7 @@ void CreateFrameBuffers(VulkanRendererBackend* vulkan) {
     VK_CHECK(vkCreateFramebuffer, *context->device, &create_info, nullptr,
                                   &frame_buffer);
 
-    vulkan->frame_buffers[i].Set(context, frame_buffer);
+    vulkan->pipeline.frame_buffers[i].Set(context, frame_buffer);
   }
 }
 
@@ -713,7 +722,7 @@ void CreateVertexBuffers(VulkanRendererBackend* vulkan, const Mesh& mesh) {
   ASSERT(vertices_memory.has_value());
 
   CopyStageTokenToBuffer(&stage_token, *vertices_memory.handle, 0);
-  vulkan->vertices = std::move(vertices_memory);
+  vulkan->pipeline.vertices = std::move(vertices_memory);
 }
 
 static size_t indices_count = 0;
@@ -740,7 +749,7 @@ void CreateIndicesBuffers(VulkanRendererBackend* vulkan, const Mesh& mesh) {
   indices_count = mesh.indices.size();
 
   // The stating buffers will be freed by Handle<>
-  vulkan->indices = std::move(indices_memory);
+  vulkan->pipeline.indices = std::move(indices_memory);
 }
 
 }  // namespace
@@ -755,7 +764,7 @@ void LoadModel(VulkanRendererBackend* vulkan, const Mesh& mesh) {
 
 void SetupUBO(VulkanRendererBackend* vulkan, VkDeviceSize ubo_size) {
   Context* context = vulkan->context.get();
-  vulkan->ubo_size = ubo_size;
+  vulkan->pipeline.ubo_size = ubo_size;
   for (size_t i = 0; i < ARRAY_SIZE(context->images); i++) {
     LOG(DEBUG) << "Allocating UBO " << i
                << ", size: " << BytesToString(ubo_size);
@@ -767,7 +776,7 @@ void SetupUBO(VulkanRendererBackend* vulkan, VkDeviceSize ubo_size) {
     MemoryBacked<VkBuffer> ubo = AllocBuffer(context, &alloc_config);
     ASSERT(ubo.has_value());
 
-    vulkan->uniform_buffers[i] = std::move(ubo);
+    vulkan->pipeline.uniform_buffers[i] = std::move(ubo);
   }
 }
 
@@ -835,8 +844,8 @@ void CreateTextureBuffers(VulkanRendererBackend* vulkan, Image* image) {
   mipmap_config.mip_levels = image->mip_levels;
   ASSERT(GenerateMipmaps(context, &mipmap_config));
 
-  vulkan->texture = std::move(created_image.image);
-  vulkan->texture_view = std::move(created_image.image_view);
+  vulkan->pipeline.texture = std::move(created_image.image);
+  vulkan->pipeline.texture_view = std::move(created_image.image_view);
 }
 
 // CreateTextureSampler --------------------------------------------------------
@@ -870,7 +879,7 @@ void CreateTextureSampler(VulkanRendererBackend* vulkan, const Image& image) {
   VK_CHECK(vkCreateSampler, *context->device, &sampler_info, nullptr,
                             &sampler_handle);
 
-  vulkan->texture_sampler = {context, sampler_handle};
+  vulkan->pipeline.texture_sampler = {context, sampler_handle};
 }
 
 // CreateDescriptorSets  -------------------------------------------------------
@@ -897,24 +906,23 @@ void CreateDescriptorPool(VulkanRendererBackend* vulkan) {
   VkDescriptorPool pool;
   VK_CHECK(vkCreateDescriptorPool, *context->device, &create_info, nullptr,
                                    &pool);
-  vulkan->descriptor_pool.Set(context, pool);
+  vulkan->pipeline.descriptor_pool.Set(context, pool);
 }
 
 }  // namespace
 
 void CreateDescriptorSets(VulkanRendererBackend* vulkan) {
   CreateDescriptorPool(vulkan);
-
   Context* context = vulkan->context.get();
 
   // The layout could be different for each descriptor set we're allocating.
   // We point to the same layout everytime.
-  std::vector<VkDescriptorSetLayout> layouts(ARRAY_SIZE(context->images),
-                                             *vulkan->descriptor_set_layout);
+  std::vector<VkDescriptorSetLayout> layouts(
+      ARRAY_SIZE(context->images), *vulkan->pipeline.descriptor_set_layout);
 
   VkDescriptorSetAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  alloc_info.descriptorPool = *vulkan->descriptor_pool;
+  alloc_info.descriptorPool = *vulkan->pipeline.descriptor_pool;
   alloc_info.descriptorSetCount = layouts.size();
   alloc_info.pSetLayouts = layouts.data();
 
@@ -925,14 +933,14 @@ void CreateDescriptorSets(VulkanRendererBackend* vulkan) {
   // We now associate our descriptor sets to a uniform buffer.
   for (size_t i = 0; i < layouts.size(); i++) {
     VkDescriptorBufferInfo buffer_info = {};
-    buffer_info.buffer = *vulkan->uniform_buffers[i].handle;
+    buffer_info.buffer = *vulkan->pipeline.uniform_buffers[i].handle;
     buffer_info.offset = 0;
-    buffer_info.range = vulkan->ubo_size;
+    buffer_info.range = vulkan->pipeline.ubo_size;
 
     VkDescriptorImageInfo image_info = {};
     image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    image_info.imageView = *vulkan->texture_view;
-    image_info.sampler = *vulkan->texture_sampler;
+    image_info.imageView = *vulkan->pipeline.texture_view;
+    image_info.sampler = *vulkan->pipeline.texture_sampler;
 
     VkWriteDescriptorSet descriptor_writes[2] = {};
 
@@ -958,7 +966,7 @@ void CreateDescriptorSets(VulkanRendererBackend* vulkan) {
     vkUpdateDescriptorSets(*context->device, 2, descriptor_writes, 0, nullptr);
   }
 
-  vulkan->descriptor_sets = descriptor_sets;
+  vulkan->pipeline.descriptor_sets = descriptor_sets;
 }
 
 // CreateCommandBuffers --------------------------------------------------------
@@ -971,14 +979,14 @@ void CreateCommandBuffers(VulkanRendererBackend* vulkan) {
   alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   alloc_info.commandPool = *context->command_pool;
   alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  alloc_info.commandBufferCount = ARRAY_SIZE(vulkan->command_buffers);
+  alloc_info.commandBufferCount = ARRAY_SIZE(vulkan->pipeline.command_buffers);
 
   VK_CHECK(vkAllocateCommandBuffers, *context->device, &alloc_info,
-                                     vulkan->command_buffers);
+                                     vulkan->pipeline.command_buffers);
 
   // Start a command buffer recording.
-  for (size_t i = 0; i < ARRAY_SIZE(vulkan->command_buffers); i++) {
-    VkCommandBuffer& command_buffer = vulkan->command_buffers[i];
+  for (size_t i = 0; i < ARRAY_SIZE(vulkan->pipeline.command_buffers); i++) {
+    VkCommandBuffer& command_buffer = vulkan->pipeline.command_buffers[i];
 
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -989,8 +997,8 @@ void CreateCommandBuffers(VulkanRendererBackend* vulkan) {
 
     VkRenderPassBeginInfo render_pass_begin = {};
     render_pass_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    render_pass_begin.renderPass = *vulkan->render_pass;
-    render_pass_begin.framebuffer = *vulkan->frame_buffers[i];
+    render_pass_begin.renderPass = *vulkan->pipeline.render_pass;
+    render_pass_begin.framebuffer = *vulkan->pipeline.frame_buffers[i];
     render_pass_begin.renderArea.offset = {0, 0};
     render_pass_begin.renderArea.extent = context->swap_chain_details.extent;
 
@@ -1005,24 +1013,25 @@ void CreateCommandBuffers(VulkanRendererBackend* vulkan) {
                          &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);
     {
       vkCmdBindPipeline(command_buffer,
-                        VK_PIPELINE_BIND_POINT_GRAPHICS, *vulkan->pipeline);
+                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        *vulkan->pipeline.pipeline);
 
       // We are binding the same buffer in two different points.
       VkBuffer vertex_buffers[] = {
-          *vulkan->vertices.handle,
+          *vulkan->pipeline.vertices.handle,
       };
       VkDeviceSize offsets[] = {
         0,
       };
       vkCmdBindVertexBuffers(command_buffer, 0,
                              ARRAY_SIZE(vertex_buffers), vertex_buffers, offsets);
-      vkCmdBindIndexBuffer(command_buffer, *vulkan->indices.handle, 0,
+      vkCmdBindIndexBuffer(command_buffer, *vulkan->pipeline.indices.handle, 0,
                            VK_INDEX_TYPE_UINT32);
 
       // We bind the descriptor sets.
       vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              *vulkan->pipeline_layout, 0, 1,
-                              &vulkan->descriptor_sets[i], 0, nullptr);
+                              *vulkan->pipeline.pipeline_layout, 0, 1,
+                              &vulkan->pipeline.descriptor_sets[i], 0, nullptr);
 
       vkCmdDrawIndexed(command_buffer, (uint32_t)indices_count, 1, 0, 0, 0);
     }
@@ -1055,9 +1064,9 @@ void CreateSyncObjects(VulkanRendererBackend* vulkan) {
     VK_CHECK(vkCreateFence, *context->device, &fence_create_info, nullptr,
                             &fence);
 
-    vulkan->image_available_semaphores[i].Set(context, semaphores[0]);
-    vulkan->render_finished_semaphores[i].Set(context, semaphores[1]);
-    vulkan->in_flight_fences[i].Set(context, fence);
+    vulkan->pipeline.image_available_semaphores[i].Set(context, semaphores[0]);
+    vulkan->pipeline.render_finished_semaphores[i].Set(context, semaphores[1]);
+    vulkan->pipeline.in_flight_fences[i].Set(context, fence);
   }
 }
 
@@ -1073,16 +1082,16 @@ void ClearOldSwapChain(VulkanRendererBackend* vulkan) {
   // buffers.
   vkFreeCommandBuffers(*context->device,
                        *context->command_pool,
-                       (uint32_t)ARRAY_SIZE(vulkan->command_buffers),
-                       vulkan->command_buffers);
+                       (uint32_t)ARRAY_SIZE(vulkan->pipeline.command_buffers),
+                       vulkan->pipeline.command_buffers);
 
   context->swap_chain.Clear();
   for (size_t i = 0; i < ARRAY_SIZE(context->image_views); i++)
     context->image_views[i].Clear();
 
-  vulkan->pipeline.Clear();
-  vulkan->pipeline_layout.Clear();
-  vulkan->render_pass.Clear();
+  vulkan->pipeline.pipeline.Clear();
+  vulkan->pipeline.pipeline_layout.Clear();
+  vulkan->pipeline.render_pass.Clear();
 }
 
 }  // namespace

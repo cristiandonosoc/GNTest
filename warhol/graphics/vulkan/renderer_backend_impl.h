@@ -8,6 +8,7 @@
 
 namespace warhol {
 
+struct RenderCommand;
 struct WindowManager;
 
 namespace vulkan {
@@ -34,6 +35,7 @@ void RecreateSwapChain(VulkanRendererBackend* vulkan,
                        Pair<uint32_t> screen_size);
 
 void StartFrame(VulkanRendererBackend*);
+void DrawMesh(VulkanRendererBackend*, RenderCommand*);
 void EndFrame(VulkanRendererBackend*);
 
 }  // namespace vulkan
