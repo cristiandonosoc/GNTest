@@ -33,6 +33,9 @@ void ShutdownRendererBackend(RendererBackend*);
 void ExecuteCommands(RendererBackend*, RenderCommand*, size_t);
 void DrawFrame(RendererBackend*, Camera*);
 
+void LoadMesh(RendererBackend*, Mesh*);
+void UnloadMesh(RendererBackend*, Mesh*);
+
 // Declaration of RendererBackend::Interface -----------------------------------
 
 struct SetupInterface {
@@ -43,6 +46,10 @@ struct SetupInterface {
     interface.Shutdown = ShutdownRendererBackend;
     interface.ExecuteCommands = ExecuteCommands;
     interface.DrawFrame = DrawFrame;
+
+    interface.LoadMesh = LoadMesh;
+    interface.UnloadMesh = UnloadMesh;
+
     SetRendererBackendInterfaceTemplate(RendererBackend::Type::kVulkan,
                                         std::move(interface));
   }
@@ -59,6 +66,26 @@ void InitRendererBackend(RendererBackend* backend) {
   backend->data = vulkan;
   WindowManager* window = backend->renderer->window;
   InitVulkanRendererBackend(vulkan, window);
+}
+
+// ShutdownRendererBackend -----------------------------------------------------
+
+void ShutdownRendererBackend(RendererBackend* backend) {
+  ASSERT(backend->valid());
+
+  auto* vulkan = (VulkanRendererBackend*)backend->data;
+  vulkan::Context* vk_context = vulkan->context.get();
+  ASSERT(vk_context);
+
+  if (!VK_CALL(vkDeviceWaitIdle, *vk_context->device))
+    NOT_REACHED("Could not wait on device. Aborting.");
+
+  // Reset vulkan renderer. This will free all resources.
+  vulkan->pipeline = {};
+  vulkan->context.reset();
+  delete vulkan;
+
+  Clear(backend);
 }
 
 // ExecuteCommands -------------------------------------------------------------
@@ -91,26 +118,6 @@ void ExecuteCommands(RendererBackend* backend, RenderCommand* commands,
 
   ASSERT(backend->valid());
   NOT_IMPLEMENTED();
-}
-
-// ShutdownRendererBackend -----------------------------------------------------
-
-void ShutdownRendererBackend(RendererBackend* backend) {
-  ASSERT(backend->valid());
-
-  auto* vulkan = (VulkanRendererBackend*)backend->data;
-  vulkan::Context* vk_context = vulkan->context.get();
-  ASSERT(vk_context);
-
-  if (!VK_CALL(vkDeviceWaitIdle, *vk_context->device))
-    NOT_REACHED("Could not wait on device. Aborting.");
-
-  // Reset vulkan renderer. This will free all resources.
-  vulkan->pipeline = {};
-  vulkan->context.reset();
-  delete vulkan;
-
-  Clear(backend);
 }
 
 // DrawFrame -------------------------------------------------------------------
@@ -227,6 +234,69 @@ void DrawFrame(RendererBackend* backend, Camera* camera) {
 
   vulkan->current_frame++;
   vulkan->current_frame %= vulkan::Definitions::kMaxFramesInFlight;
+}
+
+// LoadMesh --------------------------------------------------------------------
+
+
+MemoryBacked<VkBuffer> CreateDeviceBuffer(Context* context, VkDeviceSize size) {
+  // Create the device local memory and copy the memory to it.
+  AllocBufferConfig alloc_config = {};
+  alloc_config.size = size;
+  alloc_config.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+  alloc_config.memory_usage = MemoryUsage::kGPUOnly;
+  return AllocBuffer(context, &alloc_config);
+}
+
+void LoadMesh(RendererBackend* backend, Mesh* mesh) {
+  auto* vulkan = (VulkanRendererBackend*)backend->data;
+  Context* context = vulkan->context.get();
+
+  ASSERT(!mesh->backed_by_backend());
+
+  VulkanRendererBackend::Pipeline::LoadedMesh loaded_mesh = {};
+
+  // **** Vertices ****
+  {
+    VkDeviceSize size = mesh->vertices.size() * sizeof(mesh->vertices[0]);
+    StageToken token = Stage(&context->staging_manager, size);
+    CopyIntoStageToken(&token, (void*)mesh->vertices.data(), size);
+
+    // Create the device local memory and copy the memory to it.
+    MemoryBacked<VkBuffer> vertices_memory = CreateDeviceBuffer(context, size);
+    ASSERT(vertices_memory.has_value());
+    CopyStageTokenToBuffer(&token, *vertices_memory.handle, 0);
+
+    loaded_mesh.vertex_memory = std::move(vertices_memory);
+  }
+
+  // **** Indices ****
+  {
+    VkDeviceSize size = mesh->indices.size() * sizeof(mesh->indices[0]);
+    StageToken token = Stage(&context->staging_manager, size);
+    CopyIntoStageToken(&token, (void*)mesh->indices.data(), size);
+
+    // Create the device local memory and copy the memory to it.
+    MemoryBacked<VkBuffer> indices_memory = CreateDeviceBuffer(context, size);
+    ASSERT(indices_memory.has_value());
+    CopyStageTokenToBuffer(&token, *indices_memory.handle, 0);
+
+    loaded_mesh.index_memory = std::move(indices_memory);
+  }
+
+  auto* storage = new VulkanRendererBackend::Pipeline::LoadedMesh();
+  *storage = std::move(loaded_mesh);
+  mesh->backend_data = storage;
+}
+
+void UnloadMesh(Mesh* mesh) {
+  ASSERT(mesh->backed_by_backend());
+
+  auto* storage =
+      (VulkanRendererBackend::Pipeline::LoadedMesh*)mesh->backend_data;
+  delete storage;
+  mesh->backend_data = nullptr;
 }
 
 }  // namespace

@@ -14,6 +14,9 @@
 
 namespace warhol {
 
+struct Mesh;
+struct RendererBackend;
+
 struct Vertex {
   Vec3 pos;
   Vec3 color;
@@ -25,10 +28,12 @@ size_t Hash(const Vertex&);
 struct Mesh {
   size_t data_size() const { return vertices.size() * sizeof(Vertex); }
 
-  DEFAULT_CONSTRUCTOR(Mesh);
+  Mesh();
+  ~Mesh();
   DELETE_COPY_AND_ASSIGN(Mesh);
-  DEFAULT_MOVE_AND_ASSIGN(Mesh);
+  DECLARE_MOVE_AND_ASSIGN(Mesh);
 
+  uint64_t uuid = 0;     //  Zero is reserved.
   std::vector<Vertex> vertices;
   std::vector<uint32_t> indices;
 };

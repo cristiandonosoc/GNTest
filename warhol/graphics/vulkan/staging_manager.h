@@ -56,7 +56,8 @@ struct StageToken {
   VkDeviceSize offset  = 0;
   uint8_t* data = nullptr;
 };
-StageToken Stage(StagingManager*, VkDeviceSize size, VkDeviceSize alignment);
+StageToken
+Stage(StagingManager*, VkDeviceSize size, VkDeviceSize alignment = 1);
 
 void CopyIntoStageToken(StageToken*, void* src, VkDeviceSize size);
 void CopyStageTokenToBuffer(StageToken*, VkBuffer dst, VkDeviceSize dst_offset);

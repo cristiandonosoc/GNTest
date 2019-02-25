@@ -10,6 +10,7 @@
 namespace warhol {
 
 struct Camera;
+struct Mesh;
 struct RenderCommand;
 struct Renderer;
 
@@ -38,6 +39,10 @@ struct RendererBackend {
                             RenderCommand*,
                             size_t command_count) = nullptr;
     void (*DrawFrame)(RendererBackend*, Camera*) = nullptr;
+
+    // Loads the mesh into the GPU.
+    void (*LoadMesh)(RendererBackend*, Mesh*) = nullptr;
+    void (*UnloadMesh)(RendererBackend*, Mesh*) = nullptr;
   };
   Interface interface = {};
 

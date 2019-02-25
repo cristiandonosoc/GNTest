@@ -58,6 +58,8 @@ struct VulkanRendererBackend {
     Handle<VkFramebuffer> frame_buffers[Definitions::kNumFrames];
 
     VkCommandBuffer command_buffers[Definitions::kNumFrames];
+    VkCommandBuffer new_command_buffers[Definitions::kNumFrames];
+
     VkDeviceSize ubo_size;
     MemoryBacked<VkBuffer> uniform_buffers[Definitions::kNumFrames];
 
@@ -72,6 +74,12 @@ struct VulkanRendererBackend {
     Handle<VkSemaphore> image_available_semaphores[Definitions::kNumFrames];
     Handle<VkSemaphore> render_finished_semaphores[Definitions::kNumFrames];
     Handle<VkFence> in_flight_fences[Definitions::kNumFrames];
+
+    // Loaded models.
+    struct LoadedMesh {
+      MemoryBacked<VkBuffer> vertex_memory;
+      MemoryBacked<VkBuffer> index_memory;
+    };
   };
   Pipeline pipeline;
 };

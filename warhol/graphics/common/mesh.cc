@@ -11,9 +11,42 @@
 
 namespace warhol {
 
+namespace {
+
+uint64_t kNextMeshUUID = 1;
+
+// Not callable from a constructor.
+void Clear(Mesh* mesh) {
+  *mesh = {};
+}
+
+void Move(Mesh* from, Mesh* to) {
+  to->uuid = from->uuid;
+  to->vertices = from->vertices;
+  to->indices = from->indices;
+  to->data = from->data;
+
+  Clear(from);
+}
+
+}  // namespace
+
 size_t Hash(const Vertex& vertex) {
   return ((Hash(vertex.pos) ^ (Hash(vertex.color) << 1)) >> 1) ^
          (Hash(vertex.uv) << 1);
+}
+
+Mesh::Mesh() = default;
+Mesh::~Mesh() = default;
+
+Mesh::Mesh(Mesh&& other) {
+  Move(&other, this);
+}
+
+Mesh& Mesh::operator=(Mesh&& other) {
+  if (this != &other)
+    Move(&other, this);
+  return *this;
 }
 
 std::optional<Mesh> LoadModel(const std::string& model_path) {
@@ -55,7 +88,9 @@ std::optional<Mesh> LoadModel(const std::string& model_path) {
     }
   }
 
-  LOG(INFO) << "Loaded model. Vertices: " << mesh.vertices.size()
+  mesh.uuid = kNextMeshUUID++;
+  LOG(INFO) << "Loaded model " << mesh.uuid
+            << ". Vertices: " << mesh.vertices.size()
             << ", Indices: " << mesh.indices.size();
   return mesh;
 }

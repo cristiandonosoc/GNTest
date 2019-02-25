@@ -14,6 +14,7 @@
 #include "warhol/graphics/vulkan/utils.h"
 #include "warhol/utils/assert.h"
 
+#include "warhol/graphics/common/render_command.h"
 #include "warhol/graphics/common/image.h"
 #include "warhol/graphics/common/mesh.h"
 #include "warhol/graphics/vulkan/memory.h"
@@ -232,7 +233,14 @@ void StartFrame(VulkanRendererBackend* vulkan) {
 
 // DrawMesh --------------------------------------------------------------------
 
-void DrawMesh(VulkanRendererBackend*, RenderCommand*) {
+void DrawMesh(VulkanRendererBackend* vulkan, RenderCommand* cmd) {
+  /* VkCommandBuffer command_buffer = */
+  /*     vulkan->pipeline.new_command_buffers[vulkan->current_frame]; */
+
+  /* vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, */
+  /*                   *vulkan->pipeline.pipeline); */
+  (void)vulkan;
+  (void)cmd;
   NOT_IMPLEMENTED();
 }
 
@@ -983,6 +991,11 @@ void CreateCommandBuffers(VulkanRendererBackend* vulkan) {
 
   VK_CHECK(vkAllocateCommandBuffers, *context->device, &alloc_info,
                                      vulkan->pipeline.command_buffers);
+
+  VK_CHECK(vkAllocateCommandBuffers,
+           *context->device,
+           &alloc_info,
+           vulkan->pipeline.new_command_buffers);
 
   // Start a command buffer recording.
   for (size_t i = 0; i < ARRAY_SIZE(vulkan->pipeline.command_buffers); i++) {
