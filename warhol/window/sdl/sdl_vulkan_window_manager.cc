@@ -20,44 +20,12 @@ namespace warhol {
 namespace sdl {
 
 SDLVulkanWindowManager::SDLVulkanWindowManager() = default;
-SDLVulkanWindowManager::~SDLVulkanWindowManager() = default;
+SDLVulkanWindowManager::~SDLVulkanWindowManager() {
+  if (valid())
+    Shutdown();
+}
 
 namespace {
-
-// Declaration of the WindowBackend interface.
-
-bool InitSDLVulkan(WindowManagerBackend*, uint64_t flags);
-void ShutdownSDLVulkan(WindowManagerBackend*);
-std::pair<WindowEvent*, size_t> NewFrameSDLVulkan(WindowManager*, InputState*);
-
-// *** VULKAN ONLY ***
-
-std::vector<const char*> GetSDLVulkanInstanceExtensions(WindowManager*);
-
-// Will be casted to the right type in the .cc
-// This is so that we don't need to typedef the values and we don't create
-// unnecessary dependencies on the graphics libraries.
-bool CreateSDLVulkanSurface(WindowManager*, void* vk_instance, void* surface_khr);
-
-// Interface installation. This will be run on program startup.
-
-struct SetupInterface {
-  SetupInterface() {
-    WindowManagerBackend::Interface interface;
-
-    interface.Init = InitSDLVulkan;
-    interface.Shutdown = ShutdownSDLVulkan;
-    interface.NewFrame = NewFrameSDLVulkan;
-
-    // Vulkan API.
-    interface.GetVulkanInstanceExtensions = GetSDLVulkanInstanceExtensions;
-    interface.CreateVulkanSurface = CreateSDLVulkanSurface;
-
-    SetWindowManagerBackendInterfaceTemplate(
-        WindowManagerBackend::Type::kSDLVulkan, std::move(interface));
-  }
-};
-SetupInterface setup_interface;
 
 // Passes the info from the backend to the unified WindowManager interface.
 void PassInfo(SDLVulkanWindowManager* from, WindowManager* to) {
@@ -70,14 +38,30 @@ void PassInfo(SDLVulkanWindowManager* from, WindowManager* to) {
   to->seconds = from->seconds;
 }
 
+
+
+// Init ------------------------------------------------------------------------
+
+bool InitSDLVulkan(SDLVulkanWindowManager*, uint64_t flags);
+void ShutdownSDLVulkan(SDLVulkanWindowManager*);
+std::pair<WindowEvent*, size_t>
+NewFrameSDLVulkan(SDLVulkanWindowManager*, InputState*);
+
+// *** VULKAN ONLY ***
+
+std::vector<const char*> GetSDLVulkanInstanceExtensions(WindowManager*);
+
+// Will be casted to the right type in the .cc
+// This is so that we don't need to typedef the values and we don't create
+// unnecessary dependencies on the graphics libraries.
+bool CreateSDLVulkanSurface(WindowManager*, void* vk_instance, void* surface_khr);
+
 // **** Definitions ************************************************************
 
-// InitSDLVulkan ---------------------------------------------------------------
+// Init ------------------------------------------------------------------------
 
-bool InitSDLVulkan(WindowManagerBackend* backend, uint64_t flags) {
-  ASSERT(backend->window_manager);
-  SDLVulkanWindowManager* sdl = new SDLVulkanWindowManager();
-  backend->data = sdl;
+bool InitSDLVulkan(SDLVulkanWindowManager* sdl, uint64_t flags) {
+  ASSERT(sdl->valid());
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
     LOG(ERROR) << "Error loading SDL: " << SDL_GetError();
@@ -87,17 +71,25 @@ bool InitSDLVulkan(WindowManagerBackend* backend, uint64_t flags) {
   sdl->window = SDL_CreateWindow("Warhol",
                                  SDL_WINDOWPOS_CENTERED,
                                  SDL_WINDOWPOS_CENTERED,
-                                 1280,
-                                 720,
+                                 1280, 720,
                                  SDL_WINDOW_VULKAN | (uint32_t)flags);
   if (!sdl->window) {
     LOG(ERROR) << "Error creating window: " << SDL_GetError();
     return false;
   }
-  SDL_GetWindowSize(sdl->window, &sdl->width, &sdl->height);
-  PassInfo(sdl, backend->window_manager);
 
+  SDL_GetWindowSize(sdl->window, &sdl->width, &sdl->height);
+  PassInfo(sdl, sdl->window_manager);
   return true;
+}
+
+// Shutdown --------------------------------------------------------------------
+
+void ShutdownSDLVulkan(SDLVulkanWindowManager* sdl) {
+  ASSERT(sdl->valid());
+  if (sdl->window)
+    SDL_DestroyWindow(sdl->window);
+  return;
 }
 
 // NewFrame --------------------------------------------------------------------
@@ -110,10 +102,8 @@ void HandleMouseWheelEvent(const SDL_MouseWheelEvent*, InputState*);
 void HandleWindowEvent(SDLVulkanWindowManager*, const SDL_WindowEvent*);
 
 std::pair<WindowEvent*, size_t>
-NewFrameSDLVulkan(WindowManager* window, InputState* input) {
-  WindowManagerBackend& backend = window->backend;
-  ASSERT(backend.data);
-  SDLVulkanWindowManager* sdl = (SDLVulkanWindowManager*)backend.data;
+NewFrameSDLVulkan(SDLVulkanWindowManager* sdl, InputState* input) {
+  ASSERT(sdl->valid());
 
   sdl->events.clear();
   sdl->utf8_chars_inputted.clear();
@@ -144,7 +134,7 @@ NewFrameSDLVulkan(WindowManager* window, InputState* input) {
   HandleKeysDown(input);
   HandleMouse(input);
 
-  PassInfo(sdl, window);
+  PassInfo(sdl, sdl->window_manager);
   return {sdl->events.empty() ? nullptr : sdl->events.data(),
           sdl->events.size()};
 }
@@ -293,39 +283,22 @@ void HandleWindowEvent(SDLVulkanWindowManager* sdl,
 }
 
 
-// Shutdown --------------------------------------------------------------------
-
-void ShutdownSDLVulkan(WindowManagerBackend* backend) {
-  if (!backend->valid())
-    return;
-
-  ASSERT(backend->data);
-  SDLVulkanWindowManager* sdl = (SDLVulkanWindowManager*)backend->data;
-
-  if (sdl->window)
-    SDL_DestroyWindow(sdl->window);
-
-  return;
-}
-
 // Vulkan API ------------------------------------------------------------------
 
 std::vector<const char*>
-GetSDLVulkanInstanceExtensions(WindowManager* window) {
-  ASSERT(window->backend.valid());
-  ASSERT(window->backend.type == WindowManagerBackend::Type::kSDLVulkan);
-  auto* vulkan_sdl = (SDLVulkanWindowManager*)window->backend.data;
+GetSDLVulkanInstanceExtensions(SDLVulkanWindowManager* sdl) {
+  ASSERT(sdl->valid());
 
   bool res;
   uint32_t count = 0;
-  res = SDL_Vulkan_GetInstanceExtensions(vulkan_sdl->window, &count, nullptr);
+  res = SDL_Vulkan_GetInstanceExtensions(sdl->window, &count, nullptr);
   if (!res)  {
     LOG(ERROR) << "Could not get vulkan SDL extensions.";
     return {};
   }
 
   std::vector<const char*> extensions(count);
-  res = SDL_Vulkan_GetInstanceExtensions(vulkan_sdl->window, &count,
+  res = SDL_Vulkan_GetInstanceExtensions(sdl->window, &count,
                                          extensions.data());
   if (!res)  {
     LOG(ERROR) << "Could not get vulkan SDL extensions.";
@@ -335,15 +308,10 @@ GetSDLVulkanInstanceExtensions(WindowManager* window) {
   return extensions;
 }
 
-bool CreateSDLVulkanSurface(WindowManager* window, void* vk_instance,
-                            void* surface_khr) {
-  ASSERT(window->backend.valid());
-  ASSERT(window->backend.type == WindowManagerBackend::Type::kSDLVulkan);
-  auto* vulkan_sdl = (SDLVulkanWindowManager*)window->backend.data;
-
-  VkInstance* instance = (VkInstance*)vk_instance;
-  VkSurfaceKHR* surface = (VkSurfaceKHR*)surface_khr;
-  if (!SDL_Vulkan_CreateSurface(vulkan_sdl->window, *instance, surface)) {
+bool CreateSDLVulkanSurface(SDLVulkanWindowManager* sdl, VkInstance* instance,
+                            VkSurfaceKHR* surface) {
+  ASSERT(sdl->valid());
+  if (!SDL_Vulkan_CreateSurface(sdl->window, *instance, surface)) {
     LOG(ERROR) << "Could not create Vulkan SDL surface: " << SDL_GetError();
     return false;
   }
@@ -352,6 +320,33 @@ bool CreateSDLVulkanSurface(WindowManager* window, void* vk_instance,
 }
 
 }  // namespace
+
+// Calling the implementations -------------------------------------------------
+
+bool SDLVulkanWindowManager::Init(WindowManager* window_manager, uint64_t flags) {
+  this->window_manager = window_manager;
+  return InitSDLVulkan(this, flags);
+}
+
+void SDLVulkanWindowManager::Shutdown() {
+  ShutdownSDLVulkan(this);
+}
+
+std::pair<WindowEvent*, size_t>
+SDLVulkanWindowManager::NewFrame(InputState* input) {
+  return NewFrameSDLVulkan(this, input);
+}
+
+std::vector<const char*> SDLVulkanWindowManager::GetVulkanInstanceExtensions() {
+  return GetSDLVulkanInstanceExtensions(this);
+}
+
+bool SDLVulkanWindowManager::CreateVulkanSurface(void* vk_instance,
+                                                 void* surface_khr) {
+  auto* instance = (VkInstance*)vk_instance;
+  auto* surface = (VkSurfaceKHR*)surface_khr;
+  return CreateSDLVulkanSurface(this, instance, surface);
+}
 
 }  // namespace sdl
 }  // namespace warhol

@@ -25,60 +25,35 @@ struct WindowEvent {
 };
 
 struct WindowManagerBackend {
-  bool valid() const { return window_manager != nullptr && data != nullptr; }
-
-  // DO NOT add numbers to this enum.
   enum class Type {
     kSDLVulkan,
     kLast,    // DO NOT specialize with numbers.
   };
   static const char* TypeToString(Type);
 
-  WindowManagerBackend();
-  ~WindowManagerBackend();
-  DELETE_COPY_AND_ASSIGN(WindowManagerBackend);
-  DECLARE_MOVE_AND_ASSIGN(WindowManagerBackend);
+  bool valid() const { return window_manager != nullptr; }
+  virtual Type type() const = 0;
 
-  // IMPORTANT: If you add a function here, remember to handle it (specially
-  //            constructors) in the .cc file.
-  struct Interface {
-    // Lifetime.
-    bool (*Init)(WindowManagerBackend*, uint64_t flags) = nullptr;
-    void (*Shutdown)(WindowManagerBackend*) = nullptr;
+  WindowManager* window_manager = nullptr;  // Not owning.
 
-    // API
-    std::pair<WindowEvent*, size_t> (*NewFrame)(WindowManager*,
-                                                InputState*) = nullptr;
+  // Interface -----------------------------------------------------------------
 
-    // *** VULKAN SPECIFIC ***
-    std::vector<const char*>
-    (*GetVulkanInstanceExtensions)(WindowManager*) = nullptr;
+  // Must leave the backend in a |valid()| state.
+  virtual bool Init(WindowManager*, uint64_t flags) = 0;
+  // Must leave the backend in an |!valid()| state.
+  virtual void Shutdown() = 0;
+  // Can only be called in a |valid()| state.
+  virtual std::pair<WindowEvent*, size_t> NewFrame(InputState*) = 0;
 
-    // |vk_instance| & |surface_khr| must be casted to the right type in the
-    // implementation.
-    // This is so that we don't need to typedef the values and we don't create
-    // unnecessary dependencies on the graphics libraries.
-    bool (*CreateVulkanSurface)(WindowManager*, void* vk_instance,
-                                void* surface_khr);
-  };
+  // *** VULKAN SPECIFIC ***
+  // These functions must be subclassed. Calling them in a backend that doesn't
+  // support them will assert a failure (see window_manager_backend.cc).
 
-  Type type = Type::kLast;
-  Interface interface = {};
-
-  WindowManager* window_manager = nullptr;
-  void* data = nullptr;  // Underlying memory of backend.
+  virtual std::vector<const char*> GetVulkanInstanceExtensions();
+  // |vk_instance| & |surface_khr| must be casted to the right type in the
+  // implementation. This is so that we don't need to forward declare vulkan
+  // typedefs.
+  virtual bool CreateVulkanSurface(void* vk_instance, void* surface_khr);
 };
-
-void SetWindowManagerBackendInterfaceTemplate(
-    WindowManagerBackend::Type, WindowManagerBackend::Interface interface);
-
-// Creates an un-initialized backend for |type|.
-// That type MUST have been set for that type.
-// Initialize must be called before using this.
-WindowManagerBackend GetWindowManagerBackend(WindowManagerBackend::Type type);
-
-// Cleans up all the fields of a window manager.
-// Safe to call from a destructor.
-void Clear(WindowManagerBackend*);
 
 }  // namespace warhol

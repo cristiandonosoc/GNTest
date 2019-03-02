@@ -9,9 +9,10 @@
 #include <vector>
 
 #include "warhol/utils/macros.h"
-#include "warhol/window/common/window_manager_backend.h"
 
 namespace warhol {
+
+struct WindowManagerBackend;
 
 struct WindowManager {
   static constexpr size_t kRollingAverageFrames = 60;
@@ -32,7 +33,7 @@ struct WindowManager {
   float frame_rate = 0;           // 1 / frame_delta_average.
   float seconds = 0;              // Seconds since Init was called.
 
-  WindowManagerBackend backend;
+  std::unique_ptr<WindowManagerBackend> backend;
 };
 
 // WindowManager must be already set with |type|.

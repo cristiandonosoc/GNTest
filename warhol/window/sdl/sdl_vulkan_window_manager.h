@@ -7,17 +7,18 @@
 
 #include "warhol/window/sdl/def.h"
 #include "warhol/utils/macros.h"
+#include "warhol/window/common/window_manager_backend.h"
 
 namespace warhol {
 
 struct InputState;
 struct WindowEvent;
 struct WindowManager;
-struct WindowManagerBackend;
 
 namespace sdl {
 
-struct SDLVulkanWindowManager {
+
+struct SDLVulkanWindowManager : public WindowManagerBackend {
   // Amount of frames to keep track of in order to get an average frame time.
   static constexpr int kFrameTimesCounts = 128;
 
@@ -26,7 +27,8 @@ struct SDLVulkanWindowManager {
   DELETE_COPY_AND_ASSIGN(SDLVulkanWindowManager);
   DELETE_MOVE_AND_ASSIGN(SDLVulkanWindowManager);
 
-  WindowManager* window_manager = nullptr;
+  Type type() const override { return Type::kSDLVulkan; }
+
   SDL_Window* window = nullptr;
 
   int width = 0;
@@ -47,6 +49,14 @@ struct SDLVulkanWindowManager {
 
   std::vector<WindowEvent> events;
   std::vector<char> utf8_chars_inputted;
+
+  // Interface -----------------------------------------------------------------
+
+  bool Init(WindowManager*, uint64_t flags) override;
+  void Shutdown() override;
+  std::pair<WindowEvent*, size_t> NewFrame(InputState*) override;
+  std::vector<const char*> GetVulkanInstanceExtensions() override;
+  bool CreateVulkanSurface(void* vk_instance, void* surface_khr) override;
 };
 
 }  // namespace sdl
