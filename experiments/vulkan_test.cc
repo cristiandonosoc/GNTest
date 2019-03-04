@@ -45,10 +45,8 @@ int main() {
 
   {
     Timer timer = Timer::ManualTimer();
-
-    if (!InitWindowManager(&window, WindowManagerBackend::Type::kSDLVulkan,
-                           SDL_WINDOW_RESIZABLE))
-      return 1;
+    WindowManagerInit(&window, WindowManagerBackend::Type::kSDLVulkan,
+                      SDL_WINDOW_RESIZABLE);
 
     float timing = timer.End();
     LOG(INFO) << "Created SDL context: " << timing << " ms.";
@@ -76,7 +74,7 @@ int main() {
   InputState input = InputState::Create();
   app_context.running = true;
   while (app_context.running) {
-    if (auto [events, event_count] = NewFrame(&window, &input);
+    if (auto [events, event_count] = WindowManagerNewFrame(&window, &input);
         events != nullptr) {
       HandleWindowEvents(&app_context, events, event_count);
     }

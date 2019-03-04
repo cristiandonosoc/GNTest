@@ -24,7 +24,7 @@ void Move(Mesh* from, Mesh* to) {
   to->uuid = from->uuid;
   to->vertices = from->vertices;
   to->indices = from->indices;
-  to->data = from->data;
+  to->loaded_token = from->loaded_token;
 
   Clear(from);
 }

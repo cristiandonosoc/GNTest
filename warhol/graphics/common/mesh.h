@@ -36,6 +36,11 @@ struct Mesh {
   uint64_t uuid = 0;     //  Zero is reserved.
   std::vector<Vertex> vertices;
   std::vector<uint32_t> indices;
+
+  // Represents a token RendererBackends will use to track down whether this
+  // token has been loaded. UINT64_MAX means non-loaded.
+  bool loaded() const { return loaded_token != UINT64_MAX; }
+  uint64_t loaded_token = UINT64_MAX;
 };
 
 std::optional<Mesh> LoadModel(const std::string& model_path);

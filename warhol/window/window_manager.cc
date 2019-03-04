@@ -13,37 +13,41 @@ namespace warhol {
 WindowManager::WindowManager() = default;
 WindowManager::~WindowManager() {
   if (valid())
-    ShutdownWindowManager(this);
+    WindowManagerShutdown(this);
 }
 
-
-bool InitWindowManager(WindowManager* window,
-                       WindowManagerBackend::Type type,
+void WindowManagerInit(WindowManager* window, WindowManagerBackend::Type type,
                        uint64_t flags) {
-  if (type == WindowManagerBackend::Type::kLast) {
-    LOG(ERROR) << "Unset WindowManager type.";
-    return false;
-  }
+  ASSERT(type != WindowManagerBackend::Type::kLast);
 
-  window->backend = GetWindowManagerBackend(type);
-  window->backend.window_manager = window;  // Set the backpointer.
+  window->backend = CreateWindowManagerBackend(type);
+  window->backend->Init(window, flags);
+}
 
-  // Initialize the backend.
-  auto& interface = window->backend.interface;
-  return interface.Init(&window->backend, flags);
+void WindowManagerShutdown(WindowManager* window) {
+  ASSERT(window->valid());
+  window->backend->Shutdown();
 }
 
 std::pair<WindowEvent*, size_t>
-NewFrame(WindowManager* window, InputState* input) {
+WindowManagerNewFrame(WindowManager* window, InputState* input) {
   ASSERT(window->valid());
-  auto& interface = window->interface();
-  return interface.NewFrame(window, input);
+  return window->backend->NewFrame(input);
 }
 
-void ShutdownWindowManager(WindowManager* window) {
+std::vector<const char*>
+WindowManagerGetVulkanInstanceExtensions(WindowManager* window) {
   ASSERT(window->valid());
-  auto& interface = window->interface();
-  interface.Shutdown(&window->backend);
+  return window->backend->GetVulkanInstanceExtensions();
+}
+
+// |vk_instance| & |surface_khr| must be casted to the right type in the
+// implementation. This is so that we don't need to forward declare vulkan
+// typedefs.
+bool WindowManagerCreateVulkanSurface(WindowManager* window, void* vk_instance,
+                                      void* surface_khr) {
+  ASSERT(window->valid());
+  return window->backend->CreateVulkanSurface(vk_instance, surface_khr);
 }
 
 }  // namespace warhol

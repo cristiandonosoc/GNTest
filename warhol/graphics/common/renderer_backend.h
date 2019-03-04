@@ -5,6 +5,8 @@
 
 #include <stdlib.h>
 
+#include <memory>
+
 #include "warhol/utils/macros.h"
 
 namespace warhol {
@@ -15,52 +17,43 @@ struct RenderCommand;
 struct Renderer;
 
 struct RendererBackend {
-  bool valid() const;
-
   // DO NOT add numbers to this enum.
-  enum class Type {
+  enum class Type : uint32_t {
     kVulkan,
-    kLast,    // DO NOT specialize with numbers.
+    kLast,  // DO NOT specialize with numbers.
   };
   static const char* TypeToString(Type);
 
   RendererBackend();
-  ~RendererBackend();
-  DELETE_COPY_AND_ASSIGN(RendererBackend);
-  DECLARE_MOVE_AND_ASSIGN(RendererBackend);
+  RendererBackend(Type);
+  virtual ~RendererBackend();
+
+  bool valid() const { return renderer != nullptr; }
 
   Type type = Type::kLast;
-  Renderer* renderer;   // Not-owning.
+  Renderer* renderer;  // Not-owning.
 
-  struct Interface {
-    void (*Init)(RendererBackend*) = nullptr;
-    void (*Shutdown)(RendererBackend*) = nullptr;
-    void (*ExecuteCommands)(RendererBackend*,
-                            RenderCommand*,
-                            size_t command_count) = nullptr;
-    void (*DrawFrame)(RendererBackend*, Camera*) = nullptr;
+  // Interface -----------------------------------------------------------------
 
-    // Loads the mesh into the GPU.
-    void (*LoadMesh)(RendererBackend*, Mesh*) = nullptr;
-    void (*UnloadMesh)(RendererBackend*, Mesh*) = nullptr;
-  };
-  Interface interface = {};
+  virtual void Init(Renderer*) = 0;
+  virtual void Shutdown() = 0;
+  virtual void ExecuteCommands(RenderCommand*, size_t command_count) = 0;
+  virtual void DrawFrame(Camera*) = 0;
 
-  // |data| lifecycle is managed by Init and Shutdown. Shutdown is called on the
-  // destructor.
-  void* data = nullptr;
+  // Loads the mesh into the GPU.
+  virtual void LoadMesh(Mesh*) = 0;
+  virtual void UnloadMesh(Mesh*) = 0;
 };
 
-// Each RendererBackend::Type will get a reference set.
-void SetRendererBackendInterfaceTemplate(RendererBackend::Type,
-                                         RendererBackend::Interface);
+// Backend Suscription ---------------------------------------------------------
 
-// Creates a un-initialiazed backend for |type|.
-// That type MUST have a set renderer interface.
-RendererBackend GetRendererBackend(RendererBackend::Type type);
+// Each backend, upon application startup, must suscribe a function that will
+// be called to create a that particular RendererBackend.
+using RendererBackendFactory = std::unique_ptr<RendererBackend> (*)();
+void SuscribeRendererBackendFactory(RendererBackend::Type,
+                                         RendererBackendFactory);
 
-// Cleans up all the fields of a RendererBackend.
-// Safe to call from a destructor.
-void Clear(RendererBackend*);
+std::unique_ptr<RendererBackend>
+CreateRendererBackend(RendererBackend::Type);
 
 }  // namespace warhol

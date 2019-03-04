@@ -3,100 +3,51 @@
 
 #include "warhol/graphics/common/renderer_backend.h"
 
+#include <unordered_map>
+
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
 
-namespace {
-
-// RendererBackend Setup Interface ---------------------------------------------
-
-// This will have one entry per backend type.
-struct BackendTemplate {
-  bool set = false;
-  RendererBackend::Interface interface = {};
-};
-
-BackendTemplate gBackends[(size_t)RendererBackend::Type::kLast] = {};
-
-}  // namespace
-
-void
-SetRendererBackendInterfaceTemplate(RendererBackend::Type type,
-                                    RendererBackend::Interface interface) {
-  size_t index = (size_t)type;
-  ASSERT(index < (size_t)RendererBackend::Type::kLast);
-  BackendTemplate& backend_template = gBackends[index];
-  ASSERT(!backend_template.set);
-
-  LOG(INFO) << "Setting up rendering interface for "
-            << RendererBackend::TypeToString(type);
-
-  backend_template.interface = std::move(interface);
-  backend_template.set = true;
-}
-
-RendererBackend GetRendererBackend(RendererBackend::Type type) {
-  size_t index = (size_t)type;
-  ASSERT(index < (size_t)RendererBackend::Type::kLast);
-  BackendTemplate& backend_template = gBackends[index];
-  ASSERT(backend_template.set);
-
-  RendererBackend backend;
-  backend.type = type;
-  backend.interface = backend_template.interface;
-  return backend;
-}
-
-
-// RendererBackend -------------------------------------------------------------
+// RendererBackend Suscription / Getting ----------------------------------
 
 namespace {
 
-void Move(RendererBackend* from, RendererBackend* to) {
-  to->type = from->type;
-  to->renderer = from->renderer;
+using FactoryMap =
+    std::unordered_map<RendererBackend::Type, RendererBackendFactory>;
 
-  to->interface = std::move(from->interface);
-  to->data = from->data;
-
-  Clear(from);
+FactoryMap* GetFactoryMap() {
+  static FactoryMap factory_map;
+  return &factory_map;
 }
 
 }  // namespace
+
+void SuscribeRendererBackendFactory(RendererBackend::Type type,
+                                    RendererBackendFactory factory) {
+  LOG(DEBUG) << "Suscribing Renderer Backend: "
+             << RendererBackend::TypeToString(type);
+  FactoryMap* factory_map = GetFactoryMap();
+  ASSERT(factory_map->find(type) == factory_map->end());
+  factory_map->insert({type, factory});
+}
+
+std::unique_ptr<RendererBackend>
+CreateRendererBackend(RendererBackend::Type type) {
+  FactoryMap* factory_map = GetFactoryMap();
+  auto it = factory_map->find(type);
+  ASSERT(it != factory_map->end());
+
+  RendererBackendFactory factory = it->second;
+  return factory();
+}
+
+// RendererBackend Interface ----------------------------------------------
 
 RendererBackend::RendererBackend() = default;
-RendererBackend::~RendererBackend() {
-  if (valid()) {
-    ASSERT(data);
-    interface.Shutdown(this);   // Frees data.
-  }
-  Clear(this);
-}
-
-RendererBackend::RendererBackend(RendererBackend&& other) {
-  Move(&other, this);
-}
-
-RendererBackend& RendererBackend::operator=(RendererBackend&& other) {
-  if (this != &other)
-    Move(&other, this);
-  return *this;
-}
-
-void Clear(RendererBackend* backend) {
-  backend->type = RendererBackend::Type::kLast;
-  backend->renderer = nullptr;
-  backend->interface = {};
-  backend->data = nullptr;
-}
-
-bool RendererBackend::valid() const {
-  if (type == Type::kLast || renderer == nullptr || data == nullptr)
-    return false;
-  return true;
-}
+RendererBackend::RendererBackend(Type type) : type(type) {}
+RendererBackend::~RendererBackend() = default;
 
 const char* RendererBackend::TypeToString(RendererBackend::Type type) {
   switch (type) {

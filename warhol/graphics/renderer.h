@@ -15,20 +15,19 @@
 
 namespace warhol {
 
+struct RendererBackend;
 struct WindowManager;
 
 struct Renderer {
-  bool valid() const { return window != nullptr && backend.valid(); }
-  RendererBackend::Type backend_type() const { return backend.type; }
-  RendererBackend::Interface& interface() { return backend.interface; }
-
   Renderer();
   ~Renderer();
   DELETE_COPY_AND_ASSIGN(Renderer);
   DELETE_MOVE_AND_ASSIGN(Renderer);
 
+  bool valid() const { return backend && backend->valid(); }
+
   WindowManager* window = nullptr;
-  RendererBackend backend = {};
+  std::unique_ptr<RendererBackend> backend = {};
 
   std::vector<RenderCommand> render_commands;
 };

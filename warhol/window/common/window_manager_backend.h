@@ -31,17 +31,23 @@ struct WindowManagerBackend {
   };
   static const char* TypeToString(Type);
 
-  bool valid() const { return window_manager != nullptr; }
-  virtual Type type() const = 0;
+  WindowManagerBackend();
+  WindowManagerBackend(Type);
+  virtual ~WindowManagerBackend();
 
+  bool valid() const { return window_manager != nullptr; }
+
+  Type type = Type::kLast;
   WindowManager* window_manager = nullptr;  // Not owning.
 
   // Interface -----------------------------------------------------------------
 
   // Must leave the backend in a |valid()| state.
-  virtual bool Init(WindowManager*, uint64_t flags) = 0;
+  virtual void Init(WindowManager*, uint64_t flags) = 0;
+
   // Must leave the backend in an |!valid()| state.
   virtual void Shutdown() = 0;
+
   // Can only be called in a |valid()| state.
   virtual std::pair<WindowEvent*, size_t> NewFrame(InputState*) = 0;
 
@@ -50,10 +56,22 @@ struct WindowManagerBackend {
   // support them will assert a failure (see window_manager_backend.cc).
 
   virtual std::vector<const char*> GetVulkanInstanceExtensions();
+
   // |vk_instance| & |surface_khr| must be casted to the right type in the
   // implementation. This is so that we don't need to forward declare vulkan
   // typedefs.
   virtual bool CreateVulkanSurface(void* vk_instance, void* surface_khr);
 };
+
+// Backend Suscription ---------------------------------------------------------
+
+// Each backend, upon application startup, must suscribe a function that will
+// be called to create a that particular WindowManagerBackend.
+using WindowManagerBackendFactory = std::unique_ptr<WindowManagerBackend> (*)();
+void SuscribeWindowManagerBackendFactory(WindowManagerBackend::Type,
+                                         WindowManagerBackendFactory);
+
+std::unique_ptr<WindowManagerBackend>
+CreateWindowManagerBackend(WindowManagerBackend::Type);
 
 }  // namespace warhol

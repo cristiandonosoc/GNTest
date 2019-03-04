@@ -27,8 +27,6 @@ struct SDLVulkanWindowManager : public WindowManagerBackend {
   DELETE_COPY_AND_ASSIGN(SDLVulkanWindowManager);
   DELETE_MOVE_AND_ASSIGN(SDLVulkanWindowManager);
 
-  Type type() const override { return Type::kSDLVulkan; }
-
   SDL_Window* window = nullptr;
 
   int width = 0;
@@ -52,7 +50,7 @@ struct SDLVulkanWindowManager : public WindowManagerBackend {
 
   // Interface -----------------------------------------------------------------
 
-  bool Init(WindowManager*, uint64_t flags) override;
+  void Init(WindowManager*, uint64_t flags) override;
   void Shutdown() override;
   std::pair<WindowEvent*, size_t> NewFrame(InputState*) override;
   std::vector<const char*> GetVulkanInstanceExtensions() override;

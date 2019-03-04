@@ -23,80 +23,68 @@
 namespace warhol {
 namespace vulkan {
 
-VulkanRendererBackend::VulkanRendererBackend() = default;
-VulkanRendererBackend::~VulkanRendererBackend() = default;
+// Backend Suscription ---------------------------------------------------------
 
 namespace {
 
-void InitRendererBackend(RendererBackend*);
-void ShutdownRendererBackend(RendererBackend*);
-void ExecuteCommands(RendererBackend*, RenderCommand*, size_t);
-void DrawFrame(RendererBackend*, Camera*);
+std::unique_ptr<RendererBackend> CreateSDLVulkanRenderer() {
+  return std::make_unique<VulkanRendererBackend>();
+}
 
-void LoadMesh(RendererBackend*, Mesh*);
-void UnloadMesh(RendererBackend*, Mesh*);
-
-// Declaration of RendererBackend::Interface -----------------------------------
-
-struct SetupInterface {
-  SetupInterface() {
-    RendererBackend::Interface interface;
-
-    interface.Init = InitRendererBackend;
-    interface.Shutdown = ShutdownRendererBackend;
-    interface.ExecuteCommands = ExecuteCommands;
-    interface.DrawFrame = DrawFrame;
-
-    interface.LoadMesh = LoadMesh;
-    interface.UnloadMesh = UnloadMesh;
-
-    SetRendererBackendInterfaceTemplate(RendererBackend::Type::kVulkan,
-                                        std::move(interface));
+struct BackendSuscriptor {
+  BackendSuscriptor() {
+    SuscribeRendererBackendFactory(RendererBackend::Type::kVulkan,
+                                   CreateSDLVulkanRenderer);
   }
 };
 
-// Setup the renderer backend once.
-SetupInterface setup_interface;
+// Trigger the suscription.
+BackendSuscriptor backend_suscriptor;
 
-// InitRendererBackend ---------------------------------------------------------
+} // namespace
 
-void InitRendererBackend(RendererBackend* backend) {
-  ASSERT(!backend->valid());
-  VulkanRendererBackend* vulkan = new VulkanRendererBackend();
-  backend->data = vulkan;
-  WindowManager* window = backend->renderer->window;
+// VulkanRendererBackend -------------------------------------------------------
+
+VulkanRendererBackend::VulkanRendererBackend()
+    : RendererBackend(Type::kVulkan) {}
+VulkanRendererBackend::~VulkanRendererBackend() {
+  if (valid())
+    Shutdown();
+}
+
+namespace {
+
+// VulkanBackendInit -----------------------------------------------------------
+
+void VulkanBackendInit(VulkanRendererBackend* vulkan) {
+  WindowManager* window = vulkan->renderer->window;
   InitVulkanRendererBackend(vulkan, window);
 }
 
-// ShutdownRendererBackend -----------------------------------------------------
+// VulkanBackendShutdown -------------------------------------------------------
 
-void ShutdownRendererBackend(RendererBackend* backend) {
-  ASSERT(backend->valid());
+void VulkanBackendShutdown(VulkanRendererBackend* vulkan) {
+  ASSERT(vulkan->valid());
 
-  auto* vulkan = (VulkanRendererBackend*)backend->data;
-  vulkan::Context* vk_context = vulkan->context.get();
-  ASSERT(vk_context);
+  vulkan::Context* context = vulkan->context.get();
+  ASSERT(context);
 
-  if (!VK_CALL(vkDeviceWaitIdle, *vk_context->device))
-    NOT_REACHED("Could not wait on device. Aborting.");
+  VK_CHECK(vkDeviceWaitIdle, *context->device);
 
   // Reset vulkan renderer. This will free all resources.
   vulkan->pipeline = {};
   vulkan->context.reset();
-  delete vulkan;
-
-  Clear(backend);
+  vulkan->renderer = nullptr;
 }
 
-// ExecuteCommands -------------------------------------------------------------
+// VulkanBackendExecuteCommands ------------------------------------------------
 
-void ExecuteCommands(RendererBackend* backend, RenderCommand* commands,
-                     size_t command_count) {
-  ASSERT(backend->valid());
-  if (command_count == 0)
-    ASSERT(commands);
-
-  VulkanRendererBackend* vulkan = (VulkanRendererBackend*)backend->data;
+void VulkanBackendExecuteCommands(VulkanRendererBackend* vulkan,
+                                  RenderCommand* commands,
+                                  size_t command_count) {
+  ASSERT(vulkan->valid());
+  ASSERT(command_count > 0);
+  ASSERT(commands);
 
   StartFrame(vulkan);
 
@@ -116,11 +104,10 @@ void ExecuteCommands(RendererBackend* backend, RenderCommand* commands,
 
   EndFrame(vulkan);
 
-  ASSERT(backend->valid());
   NOT_IMPLEMENTED();
 }
 
-// DrawFrame -------------------------------------------------------------------
+// VulkanBackendDrawFrame ------------------------------------------------------
 
 void SubmitCommandBuffer(VulkanRendererBackend* vulkan, uint32_t image_index) {
   VkSubmitInfo submit_info = {};
@@ -194,11 +181,11 @@ void PresentQueue(WindowManager* window, VulkanRendererBackend* vulkan,
   }
 }
 
-void DrawFrame(RendererBackend* backend, Camera* camera) {
-  ASSERT(backend->valid());
-  WindowManager* window= backend->renderer->window;
-  auto* vulkan = (VulkanRendererBackend*)backend->data;
+void VulkanBackendDrawFrame(VulkanRendererBackend* vulkan, Camera* camera) {
+  ASSERT(vulkan->valid());
+  WindowManager* window = vulkan->renderer->window;
   Context* context = vulkan->context.get();
+  ASSERT(context);
 
   int current_frame = vulkan->current_frame;
   VK_CHECK(vkWaitForFences, *context->device, 1,
@@ -238,7 +225,6 @@ void DrawFrame(RendererBackend* backend, Camera* camera) {
 
 // LoadMesh --------------------------------------------------------------------
 
-
 MemoryBacked<VkBuffer> CreateDeviceBuffer(Context* context, VkDeviceSize size) {
   // Create the device local memory and copy the memory to it.
   AllocBufferConfig alloc_config = {};
@@ -249,13 +235,13 @@ MemoryBacked<VkBuffer> CreateDeviceBuffer(Context* context, VkDeviceSize size) {
   return AllocBuffer(context, &alloc_config);
 }
 
-void LoadMesh(RendererBackend* backend, Mesh* mesh) {
-  auto* vulkan = (VulkanRendererBackend*)backend->data;
+void VulkanBackendLoadMesh(VulkanRendererBackend* vulkan, Mesh* mesh) {
   Context* context = vulkan->context.get();
+  ASSERT(context);
 
-  ASSERT(!mesh->backed_by_backend());
+  ASSERT(!mesh->loaded());
 
-  VulkanRendererBackend::Pipeline::LoadedMesh loaded_mesh = {};
+  VulkanRendererBackend::LoadedMesh loaded_mesh = {};
 
   // **** Vertices ****
   {
@@ -285,21 +271,53 @@ void LoadMesh(RendererBackend* backend, Mesh* mesh) {
     loaded_mesh.index_memory = std::move(indices_memory);
   }
 
-  auto* storage = new VulkanRendererBackend::Pipeline::LoadedMesh();
-  *storage = std::move(loaded_mesh);
-  mesh->backend_data = storage;
+  uint64_t mesh_id = vulkan->next_loaded_mesh_id++;
+  mesh->loaded_token = mesh_id;
+  loaded_mesh.mesh = mesh;
+  vulkan->loaded_meshes[mesh_id] = std::move(loaded_mesh);
 }
 
-void UnloadMesh(Mesh* mesh) {
-  ASSERT(mesh->backed_by_backend());
+void VulkanBackendUnloadMesh(VulkanRendererBackend* vulkan, Mesh* mesh) {
+  ASSERT(mesh->loaded());
 
-  auto* storage =
-      (VulkanRendererBackend::Pipeline::LoadedMesh*)mesh->backend_data;
-  delete storage;
-  mesh->backend_data = nullptr;
+  auto it = vulkan->loaded_meshes.find(mesh->loaded_token);
+  ASSERT(it != vulkan->loaded_meshes.end());
+
+  auto& loaded_mesh = it->second;
+  ASSERT(loaded_mesh.mesh == mesh);
+
+  vulkan->loaded_meshes.erase(it);
 }
 
 }  // namespace
+
+// Calling the implementations -------------------------------------------------
+
+void VulkanRendererBackend::Init(Renderer* renderer) {
+  this->renderer = renderer;
+  VulkanBackendInit(this);
+}
+
+void VulkanRendererBackend::Shutdown() {
+  if (valid())
+    VulkanBackendShutdown(this);
+}
+
+void VulkanRendererBackend::ExecuteCommands(RenderCommand* commands,
+                                            size_t count) {
+  VulkanBackendExecuteCommands(this, commands, count);
+}
+
+void VulkanRendererBackend::DrawFrame(Camera* camera) {
+  VulkanBackendDrawFrame(this, camera);
+}
+
+void VulkanRendererBackend::LoadMesh(Mesh* mesh) {
+  VulkanBackendLoadMesh(this, mesh);
+}
+void VulkanRendererBackend::UnloadMesh(Mesh* mesh) {
+  VulkanBackendUnloadMesh(this, mesh);
+}
 
 }  // namespace vulkan
 }  // namespace warhol

@@ -19,7 +19,30 @@ namespace warhol {
 
 namespace sdl {
 
-SDLVulkanWindowManager::SDLVulkanWindowManager() = default;
+// Backend Suscription ---------------------------------------------------------
+
+namespace {
+
+std::unique_ptr<WindowManagerBackend> CreateSDLVulkanWindowManager() {
+  return std::make_unique<SDLVulkanWindowManager>();
+}
+
+struct BackendSuscriptor {
+  BackendSuscriptor() {
+    SuscribeWindowManagerBackendFactory(WindowManagerBackend::Type::kSDLVulkan,
+                                        CreateSDLVulkanWindowManager);
+  }
+};
+
+// Trigger the suscription.
+BackendSuscriptor backend_suscriptor;
+
+} // namespace
+
+// SDLVulkanWindowManager ------------------------------------------------------
+
+SDLVulkanWindowManager::SDLVulkanWindowManager()
+    : WindowManagerBackend(Type::kSDLVulkan) {}
 SDLVulkanWindowManager::~SDLVulkanWindowManager() {
   if (valid())
     Shutdown();
@@ -38,34 +61,14 @@ void PassInfo(SDLVulkanWindowManager* from, WindowManager* to) {
   to->seconds = from->seconds;
 }
 
-
-
 // Init ------------------------------------------------------------------------
 
-bool InitSDLVulkan(SDLVulkanWindowManager*, uint64_t flags);
-void ShutdownSDLVulkan(SDLVulkanWindowManager*);
-std::pair<WindowEvent*, size_t>
-NewFrameSDLVulkan(SDLVulkanWindowManager*, InputState*);
-
-// *** VULKAN ONLY ***
-
-std::vector<const char*> GetSDLVulkanInstanceExtensions(WindowManager*);
-
-// Will be casted to the right type in the .cc
-// This is so that we don't need to typedef the values and we don't create
-// unnecessary dependencies on the graphics libraries.
-bool CreateSDLVulkanSurface(WindowManager*, void* vk_instance, void* surface_khr);
-
-// **** Definitions ************************************************************
-
-// Init ------------------------------------------------------------------------
-
-bool InitSDLVulkan(SDLVulkanWindowManager* sdl, uint64_t flags) {
+void InitSDLVulkan(SDLVulkanWindowManager* sdl, uint64_t flags) {
   ASSERT(sdl->valid());
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
     LOG(ERROR) << "Error loading SDL: " << SDL_GetError();
-    return false;
+    NOT_REACHED("Error loading SDL. See logs.");
   }
 
   sdl->window = SDL_CreateWindow("Warhol",
@@ -75,12 +78,11 @@ bool InitSDLVulkan(SDLVulkanWindowManager* sdl, uint64_t flags) {
                                  SDL_WINDOW_VULKAN | (uint32_t)flags);
   if (!sdl->window) {
     LOG(ERROR) << "Error creating window: " << SDL_GetError();
-    return false;
+    NOT_REACHED("Error loading SDL. See logs.");
   }
 
   SDL_GetWindowSize(sdl->window, &sdl->width, &sdl->height);
   PassInfo(sdl, sdl->window_manager);
-  return true;
 }
 
 // Shutdown --------------------------------------------------------------------
@@ -323,9 +325,10 @@ bool CreateSDLVulkanSurface(SDLVulkanWindowManager* sdl, VkInstance* instance,
 
 // Calling the implementations -------------------------------------------------
 
-bool SDLVulkanWindowManager::Init(WindowManager* window_manager, uint64_t flags) {
+void SDLVulkanWindowManager::Init(WindowManager* window_manager,
+                                  uint64_t flags) {
   this->window_manager = window_manager;
-  return InitSDLVulkan(this, flags);
+  InitSDLVulkan(this, flags);
 }
 
 void SDLVulkanWindowManager::Shutdown() {

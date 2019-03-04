@@ -53,20 +53,19 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
 }  // namespace
 
 bool InitVulkanContext(Context* context, WindowManager* window) {
-  auto& window_interface = window->interface();
-  context->extensions = window_interface.GetVulkanInstanceExtensions(window);
+  ASSERT(window->valid());
+  context->extensions = WindowManagerGetVulkanInstanceExtensions(window);
   if (context->extensions.empty())
     return false;
 
 #ifndef NDEBUG
   vulkan::AddDebugExtensions(&context->extensions);
+  context->validation_layers.push_back("VK_LAYER_LUNARG_standard_validation");
 #endif
+
   if (!vulkan::CheckExtensions(context->extensions))
     return false;
 
-#ifndef NDEBUG
-  context->validation_layers.push_back("VK_LAYER_LUNARG_standard_validation");
-#endif
   if (!vulkan::CheckValidationLayers(context->validation_layers))
     return false;
 
@@ -81,8 +80,8 @@ bool InitVulkanContext(Context* context, WindowManager* window) {
   Header("Creating surface...");
   VkSurfaceKHR surface;
 
-  if (!window_interface.CreateVulkanSurface(window, &context->instance.value(),
-                                            &surface)) {
+  if (!WindowManagerCreateVulkanSurface(
+          window, &context->instance.value(), &surface)) {
     return false;
   }
   context->surface.Set(context, surface);

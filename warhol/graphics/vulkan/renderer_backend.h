@@ -4,8 +4,10 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
+#include "warhol/graphics/common/renderer_backend.h"
 #include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/handle.h"
 #include "warhol/graphics/vulkan/memory_utils.h"
@@ -17,7 +19,7 @@ namespace warhol {
 struct Camera;
 struct Image;
 struct Mesh;
-struct RendererBackend;
+struct RenderCommand;
 
 namespace vulkan {
 
@@ -27,7 +29,7 @@ struct Context;
 // here because all the interaction is made through RendererBackend::Interface.
 //
 // On this .cc is the setup of that interface.
-struct VulkanRendererBackend {
+struct VulkanRendererBackend : public RendererBackend {
   VulkanRendererBackend();
   ~VulkanRendererBackend();
   DELETE_COPY_AND_ASSIGN(VulkanRendererBackend);
@@ -75,13 +77,28 @@ struct VulkanRendererBackend {
     Handle<VkSemaphore> render_finished_semaphores[Definitions::kNumFrames];
     Handle<VkFence> in_flight_fences[Definitions::kNumFrames];
 
-    // Loaded models.
-    struct LoadedMesh {
-      MemoryBacked<VkBuffer> vertex_memory;
-      MemoryBacked<VkBuffer> index_memory;
-    };
   };
   Pipeline pipeline;
+
+  // Loaded models.
+  struct LoadedMesh {
+    MemoryBacked<VkBuffer> vertex_memory;
+    MemoryBacked<VkBuffer> index_memory;
+    Mesh* mesh;   // Not owning, must outlive.
+  };
+  std::unordered_map<uint64_t, LoadedMesh> loaded_meshes;
+  uint64_t next_loaded_mesh_id = 0;
+
+  // Interface -----------------------------------------------------------------
+
+  void Init(Renderer*) override;
+  void Shutdown() override;
+  void ExecuteCommands(RenderCommand*, size_t command_count) override;
+  void DrawFrame(Camera*) override;
+
+  // Loads the mesh into the GPU.
+  void LoadMesh(Mesh*) override;
+  void UnloadMesh(Mesh*) override;
 };
 
 void CreateRenderPass(VulkanRendererBackend*);
