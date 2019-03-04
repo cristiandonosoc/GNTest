@@ -82,8 +82,8 @@ struct VulkanRendererBackend : public RendererBackend {
 
   // Loaded models.
   struct LoadedMesh {
-    MemoryBacked<VkBuffer> vertex_memory;
-    MemoryBacked<VkBuffer> index_memory;
+    MemoryBacked<VkBuffer> vertices;
+    MemoryBacked<VkBuffer> indices;
     Mesh* mesh;   // Not owning, must outlive.
   };
   std::unordered_map<uint64_t, LoadedMesh> loaded_meshes;

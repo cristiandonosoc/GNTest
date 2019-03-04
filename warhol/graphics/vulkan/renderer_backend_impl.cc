@@ -73,8 +73,8 @@ const std::vector<uint32_t> indices = {
 
 }  // namespace
 
-void InitVulkanRendererBackend(VulkanRendererBackend* vulkan,
-                               WindowManager* window) {
+void VulkanBackendInitImpl(VulkanRendererBackend* vulkan,
+                           WindowManager* window) {
   vulkan->context = std::make_unique<vulkan::Context>();
   InitVulkanContext(vulkan->context.get(), window);
 
@@ -173,9 +173,9 @@ void InitVulkanRendererBackend(VulkanRendererBackend* vulkan,
   LOG(INFO) << "Vulkan context creation successful!";
 }
 
-// StartFrame ------------------------------------------------------------------
+// VulkanBackendStartFrame -----------------------------------------------------
 
-void StartFrame(VulkanRendererBackend* vulkan) {
+void VulkanBackendStartFrame(VulkanRendererBackend* vulkan) {
   Context* context = vulkan->context.get();
   ASSERT(context);
 
@@ -231,20 +231,39 @@ void StartFrame(VulkanRendererBackend* vulkan) {
                        VK_SUBPASS_CONTENTS_INLINE);
 }
 
-// DrawMesh --------------------------------------------------------------------
+// VulkanBackendDrawMesh -------------------------------------------------------
 
-void DrawMesh(VulkanRendererBackend* vulkan, RenderCommand* cmd) {
-  /* VkCommandBuffer command_buffer = */
-  /*     vulkan->pipeline.new_command_buffers[vulkan->current_frame]; */
+void VulkanBackendDrawMesh(VulkanRendererBackend* vulkan, RenderCommand* cmd) {
+  VkCommandBuffer command_buffer =
+      vulkan->pipeline.new_command_buffers[vulkan->current_frame];
 
-  /* vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, */
-  /*                   *vulkan->pipeline.pipeline); */
-  (void)vulkan;
-  (void)cmd;
-  NOT_IMPLEMENTED();
+  vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    *vulkan->pipeline.pipeline);
+
+  Mesh* mesh = cmd->mesh;
+  ASSERT(mesh->loaded());
+
+  auto it = vulkan->loaded_meshes.find(mesh->loaded_token);
+  ASSERT(it != vulkan->loaded_meshes.end());
+  VulkanRendererBackend::LoadedMesh& loaded_mesh = it->second;
+
+  VkBuffer vertex_buffers[] = {
+    *loaded_mesh.vertices.handle,
+  };
+  VkDeviceSize offsets[] = {
+      0,
+  };
+
+  vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, offsets);
+  vkCmdBindIndexBuffer(command_buffer, *loaded_mesh.indices.handle, 0,
+                       VK_INDEX_TYPE_UINT32);
+
+  vkCmdDrawIndexed(command_buffer, (uint32_t)mesh->indices.size(), 1, 0, 0, 0);
 }
 
-void EndFrame(VulkanRendererBackend*) {
+// VulkanBackendEndFrame -------------------------------------------------------
+
+void VulkanBackendEndFrame(VulkanRendererBackend*) {
   NOT_IMPLEMENTED();
 }
 
@@ -1083,7 +1102,7 @@ void CreateSyncObjects(VulkanRendererBackend* vulkan) {
   }
 }
 
-// RecreateSwapChain -----------------------------------------------------------
+// VulkanBackendRecreateSwapChain ----------------------------------------------
 
 namespace {
 
@@ -1109,22 +1128,14 @@ void ClearOldSwapChain(VulkanRendererBackend* vulkan) {
 
 }  // namespace
 
-void RecreateSwapChain(VulkanRendererBackend* vulkan,
-                       Pair<uint32_t> screen_size) {
+void VulkanBackendRecreateSwapChain(VulkanRendererBackend* vulkan,
+                                    Pair<uint32_t> screen_size) {
   Context* context = vulkan->context.get();
   VK_CHECK(vkDeviceWaitIdle, *context->device);
 
   ClearOldSwapChain(vulkan);
 
-  // We re-query the swapchain capabilities, as the surface could have changed.
-  auto& cap =
-      context->physical_device_info.swap_chain_capabilities.capabilities;
-  VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR, context->physical_device,
-           *context->surface, &cap);
-
-  // Finally we recreate the whole infrastructure again.
-  CreateSwapChain(context, screen_size);
-  CreateImageViews(context);
+  RecreateSwapChain(context, screen_size);
 
   CreateRenderPass(vulkan);
   CreatePipelineLayout(vulkan);

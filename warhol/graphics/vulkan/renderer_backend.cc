@@ -58,7 +58,7 @@ namespace {
 
 void VulkanBackendInit(VulkanRendererBackend* vulkan) {
   WindowManager* window = vulkan->renderer->window;
-  InitVulkanRendererBackend(vulkan, window);
+  VulkanBackendInitImpl(vulkan, window);
 }
 
 // VulkanBackendShutdown -------------------------------------------------------
@@ -86,13 +86,13 @@ void VulkanBackendExecuteCommands(VulkanRendererBackend* vulkan,
   ASSERT(command_count > 0);
   ASSERT(commands);
 
-  StartFrame(vulkan);
+  VulkanBackendStartFrame(vulkan);
 
   RenderCommand* current_command = commands;
   for (size_t i = 0; i < command_count; i++) {
     switch (current_command->type) {
       case RenderCommand::Type::kMesh:
-        DrawMesh(vulkan, current_command);
+        VulkanBackendDrawMesh(vulkan, current_command);
         break;
       case RenderCommand::Type::kLast:
         NOT_REACHED("Invalid RenderCommand Type (Last).");
@@ -102,7 +102,7 @@ void VulkanBackendExecuteCommands(VulkanRendererBackend* vulkan,
     current_command++;
   }
 
-  EndFrame(vulkan);
+  VulkanBackendEndFrame(vulkan);
 
   NOT_IMPLEMENTED();
 }
@@ -173,7 +173,7 @@ void PresentQueue(WindowManager* window, VulkanRendererBackend* vulkan,
     Pair<uint32_t> screen_size = {(uint32_t)window->width,
                                   (uint32_t)window->height};
     LOG(INFO) << "Recreating swap chain to " << screen_size.ToString();
-    RecreateSwapChain(vulkan, screen_size);
+    VulkanBackendRecreateSwapChain(vulkan, screen_size);
   } else if (res != VK_SUCCESS) {
     // Suboptimal is considered a success state, as rendering can continue.
     LOG(ERROR) << "Error presenting the queue: " << vulkan::EnumToString(res);
@@ -254,7 +254,7 @@ void VulkanBackendLoadMesh(VulkanRendererBackend* vulkan, Mesh* mesh) {
     ASSERT(vertices_memory.has_value());
     CopyStageTokenToBuffer(&token, *vertices_memory.handle, 0);
 
-    loaded_mesh.vertex_memory = std::move(vertices_memory);
+    loaded_mesh.vertices = std::move(vertices_memory);
   }
 
   // **** Indices ****
@@ -268,7 +268,7 @@ void VulkanBackendLoadMesh(VulkanRendererBackend* vulkan, Mesh* mesh) {
     ASSERT(indices_memory.has_value());
     CopyStageTokenToBuffer(&token, *indices_memory.handle, 0);
 
-    loaded_mesh.index_memory = std::move(indices_memory);
+    loaded_mesh.indices = std::move(indices_memory);
   }
 
   uint64_t mesh_id = vulkan->next_loaded_mesh_id++;

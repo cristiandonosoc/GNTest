@@ -26,17 +26,19 @@ struct VulkanRendererBackend;
 // This is mainly an ordering separation, as this all could be implemented in
 // renderer_backend.cc as non-exported functions.
 
-void InitVulkanRendererBackend(VulkanRendererBackend*, WindowManager*);
+void VulkanBackendInitImpl(VulkanRendererBackend*, WindowManager*);
 
 // TODO(Cristian): Review if this should be here.
 //                 The RendererBackendInterface should have a display changed
 //                 call.
-void RecreateSwapChain(VulkanRendererBackend* vulkan,
-                       Pair<uint32_t> screen_size);
+void VulkanBackendRecreateSwapChain(VulkanRendererBackend* vulkan,
+                                    Pair<uint32_t> screen_size);
 
-void StartFrame(VulkanRendererBackend*);
-void DrawMesh(VulkanRendererBackend*, RenderCommand*);
-void EndFrame(VulkanRendererBackend*);
+// Execute Commands Functions --------------------------------------------------
+
+void VulkanBackendStartFrame(VulkanRendererBackend*);
+void VulkanBackendDrawMesh(VulkanRendererBackend*, RenderCommand*);
+void VulkanBackendEndFrame(VulkanRendererBackend*);
 
 }  // namespace vulkan
 }  // namespace warhol

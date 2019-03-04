@@ -92,30 +92,7 @@ struct Context {
 
 bool InitVulkanContext(Context*, WindowManager*);
 
-// |extensions| and |validation_layers| must already be set within context.
-// If successful, |context| will be correctly filled with a VkInstance.
-bool CreateContext(Context* context);
-
-// The Context must be valid from here on...
-
-bool SetupDebugCall(Context*, PFN_vkDebugUtilsMessengerCallbackEXT callback);
-
-// |device_extensions| must already be set for both these calls.
-
-// |swap_chain_details| will be filled for the picked physical device.
-bool PickPhysicalDevice(Context*);
-bool CreateLogicalDevice(Context*);
-
-bool InitResourceManagement(Context*);
-
-// A |device| must be created already.
-bool CreateSwapChain(Context*, Pair<uint32_t> screen_size);
-
-bool CreateImageViews(Context*);
-
-bool CreateCommandPool(Context*);
-
-bool CreateDepthResources(Context*);
+void RecreateSwapChain(Context*, Pair<uint32_t> screen_size);
 
 }  // namespace vulkan
 }  // namespace warhol

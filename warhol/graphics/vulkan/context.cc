@@ -20,8 +20,6 @@
 namespace warhol {
 namespace vulkan {
 
-// InitVulkanContext -----------------------------------------------------------
-
 namespace {
 
 inline void Header(const char* header) {
@@ -49,6 +47,26 @@ VulkanDebugCall(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
 
   return VK_FALSE;
 }
+
+}  // namespace
+
+// InitVulkanContext -----------------------------------------------------------
+
+namespace {
+
+// |extensions| and |validation_layers| must already be set within context.
+// If successful, |context| will be correctly filled with a VkInstance.
+bool CreateContext(Context* context);
+bool SetupDebugCall(Context*, PFN_vkDebugUtilsMessengerCallbackEXT callback);
+// |device_extensions| must already be set for both these calls.
+bool PickPhysicalDevice(Context*);
+bool CreateLogicalDevice(Context*);
+bool InitResourceManagement(Context*);
+// A |device| must be created already.
+bool CreateSwapChain(Context*, Pair<uint32_t> screen_size);
+bool CreateImageViews(Context*);
+bool CreateCommandPool(Context*);
+bool CreateDepthResources(Context*);
 
 }  // namespace
 
@@ -124,6 +142,8 @@ bool InitVulkanContext(Context* context, WindowManager* window) {
   return true;
 }
 
+namespace {
+
 // CreateContext ---------------------------------------------------------------
 
 bool CreateContext(Context* context) {
@@ -181,8 +201,6 @@ bool SetupDebugCall(Context* context,
 }
 
 // PickPhysicalDevice ----------------------------------------------------------
-
-namespace {
 
 QueueFamilyIndices FindQueueFamilyIndices(const VkPhysicalDevice& device,
                                           const VkSurfaceKHR& surface) {
@@ -270,8 +288,6 @@ bool IsSuitableDevice(const VkPhysicalDevice& device,
     return false;
   return true;
 }
-
-}  // namespace
 
 bool PickPhysicalDevice(Context* context) {
   std::vector<VkPhysicalDevice> devices;
@@ -363,8 +379,6 @@ bool InitResourceManagement(Context* context) {
 
 // CreateSwapChain -------------------------------------------------------------
 
-namespace {
-
 VkSurfaceFormatKHR
 ChooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats) {
   // If vulkan only returns an undefined format, it means that it has no
@@ -412,8 +426,6 @@ VkExtent2D ChooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& cap,
                         cap.minImageExtent.height, cap.maxImageExtent.height);
   return extent;
 }
-
-}  // namespace
 
 bool CreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
   auto& capabilities = context->physical_device_info.swap_chain_capabilities;
@@ -525,8 +537,6 @@ bool CreateCommandPool(Context* context) {
 
 // CreateDepthResources --------------------------------------------------------
 
-namespace {
-
 // Returns format undefined on error.
 VkFormat FindDepthFormat(VkPhysicalDevice device,
                          VkImageTiling tiling, VkFormatFeatureFlags features,
@@ -548,8 +558,6 @@ VkFormat FindDepthFormat(VkPhysicalDevice device,
 
   return VK_FORMAT_UNDEFINED;
 }
-
-}  // namespace
 
 bool CreateDepthResources(Context* context) {
   SCOPE_LOCATION();
@@ -610,6 +618,25 @@ bool CreateDepthResources(Context* context) {
 
   return true;
 }
+
+}  // namespace
+
+// RecreateSwapChain -----------------------------------------------------------
+
+
+
+void RecreateSwapChain(Context* context, Pair<uint32_t> screen_size) {
+  // We re-query the swapchain capabilities, as the surface could have changed.
+  auto& cap =
+      context->physical_device_info.swap_chain_capabilities.capabilities;
+  VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR, context->physical_device,
+           *context->surface, &cap);
+
+  // Finally we recreate the whole infrastructure again.
+  CreateSwapChain(context, screen_size);
+  CreateImageViews(context);
+}
+
 
 }  // namespace vulkan
 }  // namespace warhol
