@@ -6,23 +6,22 @@
 #include <iostream>
 
 #include "warhol/assets/assets.h"
-
+#include "warhol/graphics/renderer.h"
+#include "warhol/graphics/common/render_command.h"
+#include "warhol/graphics/common/render_command.h"
+#include "warhol/graphics/common/image.h"
+#include "warhol/graphics/common/mesh.h"
+#include "warhol/graphics/vulkan/memory.h"
+#include "warhol/graphics/vulkan/utils.h"
 #include "warhol/graphics/vulkan/context.h"
 #include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/image_utils.h"
 #include "warhol/graphics/vulkan/renderer_backend.h"
 #include "warhol/graphics/vulkan/utils.h"
 #include "warhol/utils/assert.h"
-
-#include "warhol/graphics/common/render_command.h"
-#include "warhol/graphics/common/image.h"
-#include "warhol/graphics/common/mesh.h"
-#include "warhol/graphics/vulkan/memory.h"
-#include "warhol/graphics/vulkan/utils.h"
-
-
 #include "warhol/utils/file.h"
 #include "warhol/utils/scope_trigger.h"
+#include "warhol/window/window_manager.h"
 
 namespace warhol {
 namespace vulkan {
@@ -225,7 +224,11 @@ void VulkanBackendStartFrame(VulkanRendererBackend* vulkan) {
       *vulkan->pipeline.frame_buffers[current_swap_index];
   render_pass_begin.renderArea.extent = context->swap_chain_details.extent;
 
-  // TODO(Cristian): Should we handle clearing here?
+  VkClearValue clear_values[2] = {};
+  clear_values[0].color = {{0.7f, 0.3f, 0.5f, 1.0f}};
+  clear_values[1].depthStencil = {1.0f, 0};
+  render_pass_begin.clearValueCount = ARRAY_SIZE(clear_values);
+  render_pass_begin.pClearValues = clear_values;
 
   vkCmdBeginRenderPass(command_buffer, &render_pass_begin,
                        VK_SUBPASS_CONTENTS_INLINE);
@@ -263,8 +266,122 @@ void VulkanBackendDrawMesh(VulkanRendererBackend* vulkan, RenderCommand* cmd) {
 
 // VulkanBackendEndFrame -------------------------------------------------------
 
-void VulkanBackendEndFrame(VulkanRendererBackend*) {
-  NOT_IMPLEMENTED();
+namespace {
+
+void SubmitCommandBuffer(VulkanRendererBackend* vulkan, uint32_t image_index) {
+  VkSubmitInfo submit_info = {};
+  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+  // Which semaphores to wait for.
+  VkSemaphore wait_semaphores[] = {
+    *vulkan->pipeline.image_available_semaphores[vulkan->current_frame],
+  };
+  submit_info.waitSemaphoreCount = ARRAY_SIZE(wait_semaphores);
+  submit_info.pWaitSemaphores = wait_semaphores;
+  VkPipelineStageFlags wait_stages[] = {
+      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+  };
+  submit_info.pWaitDstStageMask = wait_stages;
+
+  VkCommandBuffer command_buffers[] = {
+    vulkan->pipeline.command_buffers[image_index],
+  };
+  submit_info.commandBufferCount = ARRAY_SIZE(command_buffers);
+  submit_info.pCommandBuffers = command_buffers;
+
+  uint32_t current_frame = vulkan->current_frame;
+
+  // Which semaphores to signal after we're done.
+  VkSemaphore signal_semaphores[] = {
+    *vulkan->pipeline.render_finished_semaphores[current_frame],
+  };
+  submit_info.signalSemaphoreCount = ARRAY_SIZE(signal_semaphores);
+  submit_info.pSignalSemaphores = signal_semaphores;
+
+  VK_CHECK(vkQueueSubmit, vulkan->context->graphics_queue, 1, &submit_info,
+           *vulkan->pipeline.in_flight_fences[current_frame]);
+}
+
+void PresentQueue(VulkanRendererBackend* vulkan, uint32_t image_index) {
+  Context* context = vulkan->context.get();
+
+  VkPresentInfoKHR present_info = {};
+  present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+  uint32_t current_frame = vulkan->current_frame;
+
+  // Semaphores to wait for.
+  VkSemaphore wait_semaphores[] = {
+    *vulkan->pipeline.render_finished_semaphores[current_frame],
+  };
+  present_info.waitSemaphoreCount = ARRAY_SIZE(wait_semaphores);
+  present_info.pWaitSemaphores = wait_semaphores;
+
+  present_info.swapchainCount = 1;
+  present_info.pSwapchains = &context->swap_chain.value();
+  present_info.pImageIndices = &image_index;
+
+  present_info.pResults = nullptr;  // Optional, as we only submit one image.
+
+  // When presenting a queue, we can be notified that the queue is out of date
+  // (eg. the surface changed size) and we need to recreate the swapchain for
+  // this.
+  VkResult res = vkQueuePresentKHR(context->present_queue, &present_info);
+  if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR) {
+    WindowManager* window = vulkan->renderer->window;
+    Pair<uint32_t> screen_size = {(uint32_t)window->width,
+                                  (uint32_t)window->height};
+    LOG(INFO) << "Recreating swap chain to " << screen_size.ToString();
+    VulkanBackendRecreateSwapChain(vulkan, screen_size);
+  } else if (res != VK_SUCCESS) {
+    // Suboptimal is considered a success state, as rendering can continue.
+    LOG(ERROR) << "Error presenting the queue: " << vulkan::EnumToString(res);
+    NOT_REACHED("See logs.");
+  }
+}
+
+}  // namespace
+
+void VulkanBackendEndFrame(VulkanRendererBackend* vulkan) {
+  VkCommandBuffer command_buffer =
+      vulkan->pipeline.new_command_buffers[vulkan->current_frame];
+
+  vkCmdEndRenderPass(command_buffer);
+
+	// Transition our swap image to present.
+	// Do this instead of having the renderpass do the transition
+	// so we can take advantage of the general layout to avoid
+	// additional image barriers.
+	VkImageMemoryBarrier barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = vulkan->context->images[vulkan->current_frame];
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+	barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	barrier.dstAccessMask = 0;
+
+	vkCmdPipelineBarrier(
+		command_buffer,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+		0, 0, NULL, 0, NULL, 1, &barrier );
+
+
+  VK_CHECK(vkEndCommandBuffer, command_buffer);
+
+
+
+
+
+
+
 }
 
 // **** Impl *******************************************************************
@@ -1037,7 +1154,6 @@ void CreateCommandBuffers(VulkanRendererBackend* vulkan) {
     VkClearValue clear_values[2] = {};
     clear_values[0].color = {{0.7f, 0.3f, 0.5f, 1.0f}};
     clear_values[1].depthStencil = {1.0f, 0};
-
     render_pass_begin.clearValueCount = ARRAY_SIZE(clear_values);
     render_pass_begin.pClearValues = clear_values;
 
