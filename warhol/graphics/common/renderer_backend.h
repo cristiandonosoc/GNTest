@@ -13,6 +13,7 @@ namespace warhol {
 
 struct Camera;
 struct Mesh;
+struct ShaderManager;
 struct RenderCommand;
 struct Renderer;
 
@@ -43,6 +44,8 @@ struct RendererBackend {
   // Loads the mesh into the GPU.
   virtual void LoadMesh(Mesh*) = 0;
   virtual void UnloadMesh(Mesh*) = 0;
+
+  virtual ShaderManager* GetShaderManager() = 0;
 };
 
 // Backend Suscription ---------------------------------------------------------

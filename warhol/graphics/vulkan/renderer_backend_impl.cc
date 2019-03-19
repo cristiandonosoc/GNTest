@@ -489,7 +489,7 @@ void CreateDescriptorSetLayout(VulkanRendererBackend* vulkan) {
   create_info.bindingCount = ARRAY_SIZE(bindings);
   create_info.pBindings = bindings;
 
-  VkDescriptorSetLayout descriptor_set_layout;
+  VkDescriptorSetLayout descriptor_set_layout = {};
   VK_CHECK(vkCreateDescriptorSetLayout, *context->device, &create_info,
                                         nullptr, &descriptor_set_layout);
 

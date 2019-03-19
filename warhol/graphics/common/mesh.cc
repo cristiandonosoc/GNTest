@@ -7,6 +7,7 @@
 
 #include <third_party/tiny_obj_loader/tiny_obj_loader.h>
 
+#include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
@@ -37,7 +38,9 @@ size_t Hash(const Vertex& vertex) {
 }
 
 Mesh::Mesh() = default;
-Mesh::~Mesh() = default;
+Mesh::~Mesh() {
+  ASSERT(!loaded());
+}
 
 Mesh::Mesh(Mesh&& other) {
   Move(&other, this);

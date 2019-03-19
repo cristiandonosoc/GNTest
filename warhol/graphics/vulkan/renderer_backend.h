@@ -11,6 +11,7 @@
 #include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/handle.h"
 #include "warhol/graphics/vulkan/memory_utils.h"
+#include "warhol/graphics/vulkan/shader_manager.h"
 #include "warhol/utils/log.h"
 #include "warhol/utils/macros.h"
 
@@ -22,6 +23,8 @@ struct Mesh;
 struct RenderCommand;
 
 namespace vulkan {
+
+struct VulkanShaderManager;
 
 struct Context;
 
@@ -40,6 +43,7 @@ struct VulkanRendererBackend : public RendererBackend {
   int current_frame = 0;
 
   std::unique_ptr<Context> context;
+  std::unique_ptr<VulkanShaderManager> shader_manager;
 
   // Non-constant elements (should be out of the context).
 
@@ -99,6 +103,8 @@ struct VulkanRendererBackend : public RendererBackend {
   // Loads the mesh into the GPU.
   void LoadMesh(Mesh*) override;
   void UnloadMesh(Mesh*) override;
+
+  ShaderManager* GetShaderManager() override { return shader_manager.get(); }
 };
 
 void CreateRenderPass(VulkanRendererBackend*);
