@@ -16,6 +16,18 @@ const char* ShaderIDToString(ShaderID id) {
   return nullptr;
 }
 
+namespace {
+
+
+}  // namespace
+
+ShaderDescription* GetShaderDescription(ShaderID) {
+  NOT_IMPLEMENTED();
+  return nullptr;
+}
+
+// ShaderManager ---------------------------------------------------------------
+
 ShaderManager::~ShaderManager() {
   if (valid)
     Shutdown();

@@ -12,23 +12,18 @@
 
 namespace warhol {
 
-enum class ShaderType : uint32_t ;
-enum class ShaderUniform : uint32_t;
-
-struct Shader {
-  ShaderType type;
-  const char* name;
-
-  // Which uniforms this shader has.
-  std::vector<ShaderUniform> uniforms;
-};
-
 // Explicit enum used for binding draw routines.
-enum class ShaderID {
+enum class ShaderID : uint32_t {
   kCommon,
   kLast,
 };
 const char* ShaderIDToString(ShaderID);
+
+// Type determines which attributes a shader has.
+enum class ShaderAttributeLayout : uint32_t {
+  kMesh,
+  kLast,
+};
 
 // A Shader can have any combination of this uniforms.
 // The set is determined by the shader uniform layout.
@@ -62,7 +57,33 @@ enum class ShaderUniform : uint32_t {
 
   kLast,
 };
+const char* ShaderUniformToString(ShaderUniform);
 
+// Types of bindings a shader has in a particular stage.
+enum class ShaderBinding {
+  kNone = 0,
+  kUniformBuffer,
+  kSampler,     // Texture sampler.
+  kLast,
+};
+const char* ShaderBindingToString(ShaderBinding);
+
+struct ShaderDescription {
+  ShaderID id;
+  ShaderAttributeLayout attribute_layout;
+
+  ShaderBinding vertex_bindings[4] = {};
+  ShaderBinding fragment_bindings[4] = {};
+
+  const char* name;
+
+  int vertex_shader_id = -1;      // ID of where the vertex shader is loaded.
+  int fragment_shader_id = -1;    // ID of where the fragment shader is loaded.
+
+  // Which uniforms this shader has.
+  std::vector<ShaderUniform> uniforms;
+};
+ShaderDescription* GetShaderDescription(ShaderID);
 
 struct UniformBuffer {
   using UniformValue = float[4];
@@ -72,7 +93,8 @@ struct UniformBuffer {
 struct ShaderManager {
   virtual ~ShaderManager();
 
-  std::vector<Shader> shaders;
+  std::vector<ShaderDescription> shaders;
+
   UniformBuffer values[kMaxFrameBuffering];
   int current_frame = 0;
   bool valid = false;   // Valid from Init() to Shutdown().
@@ -88,13 +110,6 @@ void InitShaderManager(ShaderManager*);
 void SetUniforms(ShaderUniform, float* values, size_t size);
 
 void ShutdownShaderManager(ShaderManager*);
-
-// Type determines which attributes a shader has.
-enum class ShaderType : uint32_t {
-  kMesh,
-  kLast,
-};
-
 
 
 }  // namespace warhol
