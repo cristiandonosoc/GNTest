@@ -9,24 +9,22 @@
 
 namespace warhol {
 
-struct MemoryDefs {
-  static constexpr size_t kKilobyte = 1024;
-  static constexpr size_t kMegabyte = 1024 * 1024;
-  static constexpr size_t kGigabyte = 1024 * 1024 * 1024;
-};
+constexpr size_t kKilobyte = 1024;
+constexpr size_t kMegabyte = 1024 * 1024;
+constexpr size_t kGigabyte = 1024 * 1024 * 1024;
 
-#define KILOBYTES(count) (count * ::warhol::MemoryDefs::kKilobyte)
-#define MEGABYTES(count) (count * ::warhol::MemoryDefs::kMegabyte)
-#define GIGABYTES(count) (count * ::warhol::MemoryDefs::kGigabyte)
+#define KILOBYTES(count) (count * kKilobyte)
+#define MEGABYTES(count) (count * kMegabyte)
+#define GIGABYTES(count) (count * kGigabyte)
 
 inline float ToKilobytes(size_t bytes) {
-  return (float)bytes / ::warhol::MemoryDefs::kKilobyte;
+  return (float)bytes / kKilobyte;
 }
 inline float ToMegabytes(size_t bytes) {
-  return (float)bytes / ::warhol::MemoryDefs::kMegabyte;
+  return (float)bytes / kMegabyte;
 }
 inline float ToGigabytes(size_t bytes) {
-  return (float)bytes / ::warhol::MemoryDefs::kGigabyte;
+  return (float)bytes / kGigabyte;
 }
 
 std::string BytesToString(size_t bytes);

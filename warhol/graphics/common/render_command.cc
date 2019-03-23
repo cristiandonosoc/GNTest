@@ -7,14 +7,19 @@
 
 namespace warhol {
 
-const char* RenderCommand::TypeToString(RenderCommand::Type type) {
-  switch (type) {
-    case RenderCommand::Type::kMesh: return "Mesh";
-    case RenderCommand::Type::kLast: return "Last";
-  }
+RenderCommandsManager::~RenderCommandsManager() {
+  if (Valid(this))
+    ShutdownRenderCommandsManager(this);
+}
 
-  NOT_REACHED("Unknown RenderCommand::Type");
-  return nullptr;
+bool InitRenderCommandsManager(RenderCommandsManager* manager) {
+  manager->pool = std::make_unique<uint8_t[]>(1024 * 1024);
+  return true;
+}
+
+void SHutdownRenderCommandsManager(RenderCommandsManager* manager) {
+  ASSERT(Valid(manager));
+  manager->pool.reset();
 }
 
 }  // namespace warhol

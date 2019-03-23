@@ -11,7 +11,6 @@
 #include "warhol/graphics/common/image.h"
 #include "warhol/graphics/common/mesh.h"
 #include "warhol/graphics/common/render_command.h"
-#include "warhol/graphics/common/renderer_backend.h"
 #include "warhol/graphics/renderer.h"
 #include "warhol/graphics/vulkan/def.h"
 #include "warhol/graphics/vulkan/context.h"

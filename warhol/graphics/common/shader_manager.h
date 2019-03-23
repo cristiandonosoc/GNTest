@@ -25,40 +25,6 @@ enum class ShaderAttributeLayout : uint32_t {
   kLast,
 };
 
-// A Shader can have any combination of this uniforms.
-// The set is determined by the shader uniform layout.
-enum class ShaderUniform : uint32_t {
-  kModelMatrixX,
-  kModelMatrixY,
-  kModelMatrixZ,
-  kModelMatrixW,
-
-  kViewMatrixX,
-  kViewMatrixY,
-  kViewMatrixZ,
-  kViewMatrixW,
-
-  kProjectionMatrixX,
-  kProjectionMatrixY,
-  kProjectionMatrixZ,
-  kProjectionMatrixW,
-
-  kTex0U, kTex0V,
-  kTex1U, kTex1V,
-
-  kUser0,
-  kUser1,
-  kUser2,
-  kUser3,
-  kUser4,
-  kUser5,
-  kUser6,
-  kUser7,
-
-  kLast,
-};
-const char* ShaderUniformToString(ShaderUniform);
-
 // Types of bindings a shader has in a particular stage.
 enum class ShaderBinding {
   kNone = 0,
@@ -110,6 +76,5 @@ void InitShaderManager(ShaderManager*);
 void SetUniforms(ShaderUniform, float* values, size_t size);
 
 void ShutdownShaderManager(ShaderManager*);
-
 
 }  // namespace warhol

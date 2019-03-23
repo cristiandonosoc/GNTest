@@ -28,7 +28,7 @@ void HandleWindowEvents(ApplicationContext* app_context, WindowEvent* events,
                         size_t event_count) {
   for (size_t i = 0; i < event_count; i++) {
     WindowEvent& event = events[i];
-    if (event.type == WindowEvent::Type::kQuit) {
+    if (event == WindowEvent::kQuit) {
       app_context->running = false;
       break;
     }
@@ -45,8 +45,7 @@ int main() {
 
   {
     Timer timer = Timer::ManualTimer();
-    WindowManagerInit(&window, WindowManagerBackend::Type::kSDLVulkan,
-                      SDL_WINDOW_RESIZABLE);
+    InitWindowManager(&window, WindowBackendType::kSDLVulkan);
 
     float timing = timer.End();
     LOG(INFO) << "Created SDL context: " << timing << " ms.";
@@ -56,7 +55,7 @@ int main() {
     Timer timer = Timer::ManualTimer();
 
     renderer.window = &window;
-    InitRenderer(&renderer, RendererBackend::Type::kVulkan);
+    InitRenderer(&renderer, RendererType::kVulkan, &window);
 
     float timing = timer.End();
     LOG(INFO) << "Initialized vulkan: " << timing << " ms.";
@@ -74,7 +73,7 @@ int main() {
   InputState input = InputState::Create();
   app_context.running = true;
   while (app_context.running) {
-    if (auto [events, event_count] = WindowManagerNewFrame(&window, &input);
+    if (auto [events, event_count] = UpdateWindowManager(&window, &input);
         events != nullptr) {
       HandleWindowEvents(&app_context, events, event_count);
     }

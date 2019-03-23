@@ -26,23 +26,18 @@ struct Vertex {
 size_t Hash(const Vertex&);
 
 struct Mesh {
-  size_t data_size() const { return vertices.size() * sizeof(Vertex); }
-
-  Mesh();
-  ~Mesh();
-  DELETE_COPY_AND_ASSIGN(Mesh);
-  DECLARE_MOVE_AND_ASSIGN(Mesh);
-
   uint64_t uuid = 0;     //  Zero is reserved.
   std::vector<Vertex> vertices;
   std::vector<uint32_t> indices;
-
-  // Represents a token RendererBackends will use to track down whether this
-  // token has been loaded. 0 means non-loaded.
-  bool loaded() const { return loaded_token != 0; }
-  uint64_t loaded_token = 0;
 };
 
+inline size_t DataSize(Mesh* m) { return m->vertices.size() * sizeof(Vertex); }
+
 std::optional<Mesh> LoadModel(const std::string& model_path);
+
+bool LoadMesh(const std::string&, Mesh*);
+
+// Will advance the UUID.
+uint64_t GetNextMeshUUID();
 
 }  // namespace warhol

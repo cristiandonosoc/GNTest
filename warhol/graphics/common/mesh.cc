@@ -16,40 +16,13 @@ namespace {
 
 uint64_t kNextMeshUUID = 1;
 
-// Not callable from a constructor.
-void Clear(Mesh* mesh) {
-  *mesh = {};
-}
-
-void Move(Mesh* from, Mesh* to) {
-  to->uuid = from->uuid;
-  to->vertices = from->vertices;
-  to->indices = from->indices;
-  to->loaded_token = from->loaded_token;
-
-  Clear(from);
-}
-
 }  // namespace
+
+uint64_t GetNextMeshUUID() { return kNextMeshUUID++; }
 
 size_t Hash(const Vertex& vertex) {
   return ((Hash(vertex.pos) ^ (Hash(vertex.color) << 1)) >> 1) ^
          (Hash(vertex.uv) << 1);
-}
-
-Mesh::Mesh() = default;
-Mesh::~Mesh() {
-  ASSERT(!loaded());
-}
-
-Mesh::Mesh(Mesh&& other) {
-  Move(&other, this);
-}
-
-Mesh& Mesh::operator=(Mesh&& other) {
-  if (this != &other)
-    Move(&other, this);
-  return *this;
 }
 
 std::optional<Mesh> LoadModel(const std::string& model_path) {
@@ -91,7 +64,7 @@ std::optional<Mesh> LoadModel(const std::string& model_path) {
     }
   }
 
-  mesh.uuid = kNextMeshUUID++;
+  mesh.uuid = GetNextMeshUUID();
   LOG(INFO) << "Loaded model " << mesh.uuid
             << ". Vertices: " << mesh.vertices.size()
             << ", Indices: " << mesh.indices.size();
