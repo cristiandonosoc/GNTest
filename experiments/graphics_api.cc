@@ -5,6 +5,7 @@
 
 #include <warhol/assets/asset_paths.h>
 #include <warhol/graphics/common/mesh.h>
+#include <warhol/graphics/common/shader.h>
 #include <warhol/graphics/renderer.h>
 #include <warhol/input/input.h>
 #include <warhol/window/window_manager.h>
@@ -71,7 +72,15 @@ int main() {
     return 1;
   }
 
-  if (!RendererLoadShader(&renderer, ShaderID::kCommon)) {
+  Shader shader;
+  const char* shader_name = "common";
+  if (!LoadShader(GetShaderPath(shader_name, ShaderPathType::kOpenGL),
+                  &shader)) {
+    LOG(ERROR) << "Could not load shader " << shader_name;
+    return 1;
+  }
+
+  if (!RendererStageShader(&renderer, &shader)) {
     LOG(ERROR) << "Could not load shader " << ToString(ShaderID::kCommon);
     return 1;
   }
@@ -79,11 +88,11 @@ int main() {
   // **** MESH ****
 
   Mesh mesh;
-  mesh.uuid = GetNextMeshUUID();
+  mesh.uuid = GetNextMeshUUID();    // Created by hand.
   mesh.vertices = vertices;
   mesh.indices = indices;
 
-  if (!RendererLoadMesh(&renderer, &mesh)) {
+  if (!RendererStageMesh(&renderer, &mesh)) {
     LOG(ERROR) << "Could not load mesh into renderer.";
     return 1;
   }
@@ -91,13 +100,14 @@ int main() {
   // **** TEXTURE ****
 
   Texture texture;
+  TextureType texture_type = TextureType::kOpenGL;
   const char* texture_name = "awesomeface.png";
-  if (!LoadTexture(GetTexturePath(texture_name), &texture)) {
+  if (!LoadTexture(GetTexturePath(texture_name), texture_type, &texture)) {
     LOG(ERROR) << "Could not load texture " <<  texture_name;
     return 1;
   }
 
-  if (!RendererLoadTexture(&renderer, &texture)) {
+  if (!RendererStageTexture(&renderer, &texture)) {
     LOG(ERROR) << "Could not load texture " << texture_name
                << " into renderer.";
     return 1;

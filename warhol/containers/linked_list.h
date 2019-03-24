@@ -22,6 +22,40 @@ struct LinkedList {
 
   LinkNode<T>* head = nullptr;
   LinkNode<T>* tail = nullptr;
+
+  struct Iterator {
+    Iterator() = default;
+    Iterator(LinkNode<T>* t) : elem(t) {}
+
+    DEFAULT_COPY_AND_ASSIGN(Iterator);
+    DEFAULT_MOVE_AND_ASSIGN(Iterator);
+
+    bool operator==(const Iterator& rhs) const {
+      return elem == rhs.elem;
+    }
+
+    bool operator!=(const Iterator& rhs) const {
+      return elem != rhs.elem;
+    }
+
+    Iterator& operator++() {
+      elem = elem->next;
+      return *this;
+    }
+
+    Iterator operator++(int) {
+      elem = elem->next;
+      return Iterator(elem->next);
+    }
+
+    T* operator->() { return &elem->value; }
+    T& operator*() { return elem->value; }
+
+    LinkNode<T>* elem = nullptr;
+  };
+
+  Iterator begin() { return Iterator(head); }
+  Iterator end() { return nullptr; }
 };
 
 template <typename T>

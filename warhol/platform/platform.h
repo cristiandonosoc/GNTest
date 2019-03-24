@@ -23,4 +23,6 @@ class Platform {
    static uint64_t GetHighPerformanceFrequency();
 };
 
+std::string GetBasePath();
+
 }  // namespace warhol

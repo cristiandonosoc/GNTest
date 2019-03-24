@@ -27,13 +27,20 @@ size_t Hash(const Vertex&);
 
 struct Mesh {
   uint64_t uuid = 0;     //  Zero is reserved.
+
+  std::string name;
+
   std::vector<Vertex> vertices;
   std::vector<uint32_t> indices;
 };
 
-inline size_t DataSize(Mesh* m) { return m->vertices.size() * sizeof(Vertex); }
+inline size_t VerticesSize(Mesh* mesh) {
+  return mesh->vertices.size() * sizeof(Vertex);
+}
 
-std::optional<Mesh> LoadModel(const std::string& model_path);
+inline size_t IndicesSize(Mesh* mesh) {
+  return mesh->indices.size() * sizeof(uint32_t);
+}
 
 bool LoadMesh(const std::string&, Mesh*);
 

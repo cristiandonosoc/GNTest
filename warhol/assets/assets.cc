@@ -28,4 +28,5 @@ std::string Assets::ModelPath(std::string model_name) {
                    std::move(model_name)});
 }
 
+
 }  // namespace warhol

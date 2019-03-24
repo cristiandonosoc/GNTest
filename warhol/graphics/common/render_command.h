@@ -14,6 +14,7 @@ namespace warhol {
 
 struct Camera;
 struct Mesh;
+struct Shader;
 
 enum class ShaderID {
   kCommon,
@@ -88,9 +89,9 @@ enum class RenderCommandType {
 
 struct RenderCommand {
   RenderCommandType type = RenderCommandType::kLast;
-  ShaderID shader_id = ShaderID::kLast;
 
   Camera* camera;
+  Shader* shader;
   union {
     LinkedList<MeshRenderAction>* mesh_actions;
   };

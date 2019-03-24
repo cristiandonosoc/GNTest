@@ -5,9 +5,10 @@
 
 #include <unordered_map>
 
-#include "warhol/graphics/common/renderer_backend.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
+#include "warhol/graphics/common/renderer_backend.h"
+#include "warhol/graphics/common/shader.h"
 #include "warhol/window/window_manager.h"
 
 namespace warhol {
@@ -73,9 +74,44 @@ void ShutdownRenderer(Renderer* renderer) {
 
 // void WindowSizeChanged(Renderer* renderer, uint32_t width, uint32_t height) {}
 
-void DrawFrame(Renderer* renderer, Camera* camera) {
+bool RendererStageShader(Renderer* renderer, Shader* shader) {
   ASSERT(Valid(renderer));
-  renderer->backend->DrawFrame(camera);
+
+  if (shader->uuid == 0) {
+    LOG(ERROR) << "Staging shader with UUID 0.";
+    return false;
+  }
+
+  if (!HasSource(shader)) {
+    LOG(ERROR) << "Attempting to load shader without sources (name: "
+               << shader->name << ").";
+    return false;
+  }
+
+  return renderer->backend->StageShader(shader);
+};
+
+bool RendererUnstageShader(Renderer* renderer, Shader* shader) {
+  ASSERT(Valid(renderer));
+  renderer->backend->UnstageShader(shader);
+};
+
+void RendererStartFrame(Renderer* renderer) {
+  ASSERT(Valid(renderer));
+  renderer->backend->StartFrame(renderer);
+
+}
+
+void RendererExecuteCommands(Renderer* renderer,
+                             LinkedList<RenderCommand>* commands) {
+  ASSERT(Valid(renderer));
+  renderer->backend->ExecuteCommands(renderer, commands);
+}
+
+void RendererEndFrame(Renderer* renderer) {
+  ASSERT(Valid(renderer));
+  renderer->backend->EndFrame(renderer);
+
 }
 
 }  // namespace warhol

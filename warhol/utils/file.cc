@@ -10,7 +10,7 @@
 namespace warhol {
 
 bool ReadWholeFile(const std::string& path,
-                   std::vector<char>* out,
+                   std::string* out,
                    bool add_extra_zero) {
   FILE* file;
   size_t file_size;

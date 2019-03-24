@@ -13,10 +13,18 @@
 #include "warhol/graphics/common/shader_manager.h"
 #include "warhol/graphics/common/render_command.h"
 
+#include "warhol/math/vec.h"
+
 namespace warhol {
 
 struct RendererBackend;   // Defined at end of file.
+struct Shader;
 struct WindowManager;
+
+// Renderers are implemented in terms of backends (OpenGL, Vulkan, etc.).
+// This means that the renderer is a simple proxy object the users are warhol
+// will use, while the functionality is actually implemented by the |backend|
+// object within it.
 
 // Backend Suscription ---------------------------------------------------------
 
@@ -37,8 +45,10 @@ void SuscribeRendererBackendFactory(RendererType,
 struct Renderer {
   ~Renderer();  // "RAII" semantics.
 
+  Vec3 clear_color;
+
   WindowManager* window = nullptr;
-  std::unique_ptr<RendererBackend> backend = {};
+  std::unique_ptr<RendererBackend> backend;
 
   // Holds all the general view of loaded shaders/uniforms.
   ShaderManager shader_manager;
@@ -59,25 +69,19 @@ void WindowSizeChanged(Renderer*, uint32_t width, uint32_t height);
 // See warhol/graphics/common/render_command.h for more details.
 void AddRenderCommand(RenderCommand*, UniformValue* values, size_t count);
 
-void DrawFrame(Renderer*);
+// Resource Uploading.
 
-// RendererBackend -------------------------------------------------------------
+bool RendererStageMesh(Renderer*, Mesh*);
+bool RendererUnstageMesh(Renderer*, Mesh*);
 
-struct RendererBackend {
-  virtual ~RendererBackend();
+bool RendererStageShader(Renderer*, Shader*);
+bool RendererUnstageShader(Renderer*, Shader*);
 
-  // Virtual interface.
+bool RendererStageTexture(Renderer*, Texture*);
+bool RendererUnstageShader(Renderer*, Texture*);
 
-  virtual bool Init(Renderer*) = 0;
-  virtual void Shutdown() = 0;
-  virtual void ExecuteCommands(RenderCommand*, size_t command_count) = 0;
-  virtual void DrawFrame(Camera*) = 0;
-
-  // Loads the mesh into the GPU.
-  virtual void LoadMesh(Mesh*) = 0;
-  virtual void UnloadMesh(Mesh*) = 0;
-
-  virtual ShaderManager* GetShaderManager() = 0;
-};
+void RendererStartFrame(Renderer*);
+void RendererExecuteCommands(Renderer*, LinkedList<RenderCommand>* commands);
+void RendererEndFrame(Renderer*);
 
 }  // namespace
