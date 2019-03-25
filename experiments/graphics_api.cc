@@ -24,12 +24,15 @@ const std::vector<Vertex> vertices = {
   {{-0.5f, -0.5f,  0.0f},
     {1.0f,  0.0f,  0.0f},
    {0.0f,  0.0f}},
+
   {{0.5f, -0.5f,  0.0f},
     {0.0f,  1.0f,  0.0f},
     {1.0f,  0.0f}},
+
   {{0.5f,  0.5f,  0.0f},
     {0.0f,  0.0f,  1.0f},
     {1.0f,  1.0f}},
+
   {{-0.5f,  0.5f,  0.0f},
     {1.0f,  1.0f,  1.0f},
     {0.0f,  1.0f}},
@@ -37,12 +40,15 @@ const std::vector<Vertex> vertices = {
   {{-0.5f, -0.5f,  -0.5f},
     {1.0f,  0.0f,  0.0f},
     {0.0f,  0.0f}},
+
   {{0.5f, -0.5f,  -0.5f},
     {0.0f,  1.0f,  0.0f},
     {1.0f,  0.0f}},
+
   {{0.5f,  0.5f,  -0.5f},
     {0.0f,  0.0f,  1.0f},
     {1.0f,  1.0f}},
+
   {{-0.5f,  0.5f,  -0.5f},
     {1.0f,  1.0f,  1.0f},
     {0.0f,  1.0f}},
@@ -139,7 +145,7 @@ int main() {
 
   command->type = RenderCommandType::kMesh;
   command->camera = &camera;
-  command->shader_id = ShaderID::kCommon;
+  command->shader = &shader;
   command->mesh_actions = &mesh_action_list;
 
   // **** GAME LOOP ****

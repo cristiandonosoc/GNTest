@@ -3,6 +3,7 @@
 
 #include "warhol/graphics/opengl/renderer_backend.h"
 
+#include "warhol/scene/camera.h"
 #include "warhol/graphics/common/mesh.h"
 #include "warhol/graphics/common/shader.h"
 #include "warhol/graphics/common/texture.h"
@@ -32,12 +33,21 @@ Gl3wInitResultToString(int res) {
 
 // Init ------------------------------------------------------------------------
 
-bool OpenGLInit() {
+bool OpenGLInit(OpenGLRendererBackend* opengl) {
   int res = gl3wInit();
   if (res != GL3W_OK) {
     LOG(WARNING) << "Got non-OK GL3W result: " << Gl3wInitResultToString(res);
     return false;
   }
+
+  GL_CALL(glGenBuffers, 1, &opengl->camera_ubo);
+  GL_CALL(glBindBuffer, GL_UNIFORM_BUFFER, opengl->camera_ubo);
+  GL_CALL(glBufferData, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+  GL_CALL(glBindBuffer, GL_UNIFORM_BUFFER, NULL);
+
+  GL_CALL(glBindBufferBase, GL_UNIFORM_BUFFER, 0, opengl->camera_ubo);
+
+  opengl->loaded = true;
   return true;
 }
 
@@ -92,6 +102,7 @@ bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
     return false;
   }
 
+  // Compile the shaders and and program.
   uint32_t vert_handle = 0;
   uint32_t frag_handle = 0;
   if (!CompileVertShader(shader, &vert_handle) ||
@@ -105,9 +116,12 @@ bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
     return false;
   }
 
+  // Link 'em.
   GL_CALL(glAttachShader, prog_handle, vert_handle);
   GL_CALL(glAttachShader, prog_handle, frag_handle);
   GL_CALL(glLinkProgram, prog_handle);
+  glDeleteShader(vert_handle);
+  glDeleteShader(frag_handle);
 
   GLint success = 0;
   GL_CALL(glGetProgramiv, prog_handle, GL_LINK_STATUS, &success);
@@ -118,6 +132,16 @@ bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
     return false;
   }
 
+  // Get the uniform buffer blocks.
+  const char* block_name = "Camera";
+  uint32_t block_index = glGetUniformBlockIndex(prog_handle, block_name);
+  if (block_index == GL_INVALID_INDEX) {
+    LOG(ERROR) << "Could not find uniform buffer block " << block_name;
+    glDeleteProgram(prog_handle);
+    return false;
+  }
+
+  GL_CALL(glUniformBlockBinding, prog_handle, block_index, 0);
   opengl->loaded_shaders[shader->uuid] = prog_handle;
   return true;
 }
@@ -280,33 +304,61 @@ void OpenGLStartFrame(Renderer* renderer) {
 
 namespace {
 
+void SetCameraMatrices(OpenGLRendererBackend* opengl, Camera* camera) {
+  if (opengl->last_set_camera == camera)
+    return;
 
+  void* data = &camera->projection;
+  GL_CALL(glBindBuffer, GL_UNIFORM_BUFFER, opengl->camera_ubo);
+  GL_CALL(glBufferSubData, GL_UNIFORM_BUFFER, 0, 2 * sizeof(glm::mat4), data);
+  GL_CALL(glBindBuffer, GL_UNIFORM_BUFFER, NULL);
+
+  opengl->last_set_camera = camera;
+}
+
+void ExecuteMeshActions(OpenGLRendererBackend* opengl,
+                        LinkedList<MeshRenderAction>* mesh_actions) {
+  for (MeshRenderAction& action : *mesh_actions) {
+    auto it = opengl->loaded_meshes.find(action.mesh->uuid);
+    ASSERT(it != opengl->loaded_meshes.end());
+
+    MeshHandles& handles = it->second;
+    GL_CALL(glBindVertexArray, handles.vao);
+    GL_CALL(glDrawElements, GL_TRIANGLES, action.mesh->indices.size() / 3,
+                            GL_UNSIGNED_INT, NULL);
+  }
+  GL_CALL(glBindVertexArray, NULL);
+}
 
 }  // namespace
 
-void ExecuteCommands(OpenGLRendererBackend* opengl, Renderer* renderer,
-                     LinkedList<RenderCommand>* commands) {
+void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
+                           LinkedList<RenderCommand>* commands) {
   for (auto& command : *commands) {
     auto shader_it = opengl->loaded_shaders.find(command.shader->uuid);
     ASSERT(shader_it != opengl->loaded_shaders.end());
 
     GL_CALL(glUseProgram, shader_it->second);
 
-    SetCameraMatrices(command->camera);
+    SetCameraMatrices(opengl, command.camera);
 
     switch (command.type) {
       case RenderCommandType::kMesh:
-        ExecuteMeshActions(opengl, renderer, command.mesh_actions);
+        ExecuteMeshActions(opengl, command.mesh_actions);
         break;
       case RenderCommandType::kLast:
         NOT_REACHED("Invalid render command type.");
     }
+
+    GL_CALL(glUseProgram, NULL);
   }
 }
 
 // Shutdown --------------------------------------------------------------------
 
 void OpenGLShutdown(OpenGLRendererBackend* opengl) {
+  ASSERT(Valid(opengl));
+
   for (auto& [shader_uuid, handle] : opengl->loaded_shaders) {
     GL_CALL(glDeleteProgram, handle);
   }
@@ -314,12 +366,19 @@ void OpenGLShutdown(OpenGLRendererBackend* opengl) {
   for (auto& [mesh_uuid, handles] : opengl->loaded_meshes) {
     DeleteMeshHandles(&handles);
   }
+
+  if (opengl->camera_ubo != 0) {
+    GL_CALL(glDeleteBuffers, 1, &opengl->camera_ubo);
+    opengl->camera_ubo = 0;
+  }
+
+  opengl->loaded = false;
 }
 
 // Virtual Interface "Dispatch" ------------------------------------------------
 
 bool OpenGLRendererBackend::Init(Renderer*) {
-  return OpenGLInit();
+  return OpenGLInit(this);
 }
 
 void OpenGLRendererBackend::Shutdown() {
@@ -355,12 +414,12 @@ void OpenGLRendererBackend::StartFrame(Renderer* renderer) {
 }
 
 void OpenGLRendererBackend::ExecuteCommands(
-    Renderer* renderer, LinkedList<RenderCommand>* commands) {
-  OpenGLExecuteCommands(this, renderer, commands);
+    Renderer*, LinkedList<RenderCommand>* commands) {
+  OpenGLExecuteCommands(this, commands);
 }
 
-void OpenGLRendererBackend::EndFrame(Renderer* renderer) {
-  OpenGLEndFrame(this, renderer);
+void OpenGLRendererBackend::EndFrame(Renderer*) {
+  // No op.
 }
 
 }  // namespace opengl
