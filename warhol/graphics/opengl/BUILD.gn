@@ -1,0 +1,29 @@
+# Copyright 2019, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+config("opengl_config") {
+  # For having OpenGL contexts in MacOS.
+  # Support for OpenGL in mac is spotty at best, so this is kind of a best
+  # effort thing really.
+  if (target_os == "mac" && compiler == "clang") {
+    ldflags = [ "-framework", "OpenGL" ]
+  }
+}
+
+source_set("opengl") {
+  sources = [
+    "renderer_backend.cc",
+    "renderer_backend.h",
+    "utils.cc",
+    "utils.h",
+  ]
+
+  public_configs = [
+    ":opengl_config",
+    "//third_party/gl3w:gl3w_config",
+  ]
+
+  public_deps = [
+    "//third_party/gl3w",
+  ]
+}

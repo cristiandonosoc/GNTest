@@ -53,3 +53,19 @@ source_set("sdl_vulkan") {
     "//warhol/utils",
   ]
 }
+
+source_set("sdl_opengl") {
+  sources = [
+    "sdl_opengl.cc",
+    "sdl_opengl.h",
+  ]
+
+  public_configs = [
+    "sdl2_config",
+  ]
+
+  deps = [
+    "//warhol/input",
+    "//warhol/utils",
+  ]
+}

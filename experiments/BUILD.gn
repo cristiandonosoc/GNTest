@@ -65,6 +65,17 @@ executable("vulkan_test") {
   if (target_os == "linux") {
     libs = [ "-lpthread" ]
   }
+}
 
+executable("graphics_api") {
+  sources = [
+    "graphics_api.cc",
+  ]
 
+  deps = [
+    "//warhol/graphics:opengl_renderer",
+    "//warhol/math",
+    "//warhol/utils",
+    "//warhol/window:sdl_opengl",
+  ]
 }

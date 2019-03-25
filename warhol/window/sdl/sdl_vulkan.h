@@ -7,25 +7,19 @@
 
 #include "warhol/window/sdl/def.h"
 #include "warhol/utils/macros.h"
-#include "warhol/window/common/window_manager_backend.h"
+#include "warhol/window/common/window_backend.h"
 
 namespace warhol {
+namespace sdl_vulkan {
 
-struct InputState;
-struct WindowEvent;
-struct WindowManager;
-
-namespace sdl {
-
-
-struct SDLVulkanWindowManager : public WindowManagerBackend {
+struct SDLVulkanWindow : public WindowBackend {
   // Amount of frames to keep track of in order to get an average frame time.
   static constexpr int kFrameTimesCounts = 128;
 
-  SDLVulkanWindowManager();
-  ~SDLVulkanWindowManager();
-  DELETE_COPY_AND_ASSIGN(SDLVulkanWindowManager);
-  DELETE_MOVE_AND_ASSIGN(SDLVulkanWindowManager);
+  SDLVulkanWindow() = default;
+  ~SDLVulkanWindow();
+  DELETE_COPY_AND_ASSIGN(SDLVulkanWindow);
+  DELETE_MOVE_AND_ASSIGN(SDLVulkanWindow);
 
   SDL_Window* window = nullptr;
 
@@ -50,12 +44,14 @@ struct SDLVulkanWindowManager : public WindowManagerBackend {
 
   // Interface -----------------------------------------------------------------
 
-  void Init(WindowManager*, uint64_t flags) override;
+  bool Init(Window*) override;
   void Shutdown() override;
-  std::pair<WindowEvent*, size_t> NewFrame(InputState*) override;
+  std::pair<WindowEvent*, size_t> NewFrame(Window*, InputState*) override;
   std::vector<const char*> GetVulkanInstanceExtensions() override;
   bool CreateVulkanSurface(void* vk_instance, void* surface_khr) override;
 };
 
-}  // namespace sdl
+inline bool Valid(SDLVulkanWindow* w) { return w->window != nullptr; }
+
+}  // namespace sdl_vulkan
 }  // namespace warhol

@@ -1,7 +1,8 @@
 // Copyright 2019, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include "warhol/window/window_manager.h"
+#include "warhol/window/common/window.h"
+#include "warhol/window/common/window_backend.h"
 
 #include <unordered_map>
 
@@ -10,9 +11,9 @@
 
 namespace warhol {
 
-WindowManager::~WindowManager() {
+Window::~Window() {
   if (Valid(this))
-    ShutdownWindowManager(this);
+    ShutdownWindow(this);
 }
 
 // Backend Suscription ---------------------------------------------------------
@@ -27,8 +28,8 @@ FactoryMap* GetFactoryMap() {
   return &factory_map;
 }
 
-std::unique_ptr<WindowManagerBackend>
-CreateWindowManagerBackend(WindowBackendType type) {
+std::unique_ptr<WindowBackend>
+CreateWindowBackend(WindowBackendType type) {
   FactoryMap* factory_map = GetFactoryMap();
   auto it = factory_map->find(type);
   ASSERT(it != factory_map->end());
@@ -39,8 +40,8 @@ CreateWindowManagerBackend(WindowBackendType type) {
 
 }  // namespace
 
-void SuscribeWindowManagerBackendFactory(WindowBackendType type,
-                                         WindowBackendFactoryFunction factory) {
+void SuscribeWindowBackendFactory(WindowBackendType type,
+                                  WindowBackendFactoryFunction factory) {
   LOG(DEBUG) << "Suscribing Window Manager Backend: " << ToString(type);
 
   FactoryMap* factory_map = GetFactoryMap();
@@ -48,41 +49,41 @@ void SuscribeWindowManagerBackendFactory(WindowBackendType type,
   factory_map->insert({type, factory});
 }
 
-// InitWindowManager -----------------------------------------------------------
+// InitWindow -----------------------------------------------------------
 
 namespace {
 
-void Reset(WindowManager* window) {
+void Reset(Window* window) {
   window->backend_type = WindowBackendType::kLast;
   window->backend.reset();
 }
 
 }  // namespace
 
-bool InitWindowManager(WindowManager* window, WindowBackendType type) {
+bool InitWindow(Window* window, WindowBackendType type) {
   ASSERT(type != WindowBackendType::kLast);
 
-  window->backend = CreateWindowManagerBackend(type);
+  window->backend = CreateWindowBackend(type);
   bool success = window->backend->Init(window);
   if (!success)
     Reset(window);
   return success;
 }
 
-void ShutdownWindowManager(WindowManager* window) {
+void ShutdownWindow(Window* window) {
   ASSERT(Valid(window));
   window->backend->Shutdown();
   Reset(window);
 }
 
 std::pair<WindowEvent*, size_t>
-UpdateWindowManager(WindowManager* window, InputState* input) {
+UpdateWindow(Window* window, InputState* input) {
   ASSERT(Valid(window));
   return window->backend->NewFrame(input);
 }
 
 std::vector<const char*>
-WindowManagerGetVulkanInstanceExtensions(WindowManager* window) {
+WindowGetVulkanInstanceExtensions(Window* window) {
   ASSERT(Valid(window));
   return window->backend->GetVulkanInstanceExtensions();
 }
@@ -90,24 +91,10 @@ WindowManagerGetVulkanInstanceExtensions(WindowManager* window) {
 // |vk_instance| & |surface_khr| must be casted to the right type in the
 // implementation. This is so that we don't need to forward declare vulkan
 // typedefs.
-bool WindowManagerCreateVulkanSurface(WindowManager* window, void* vk_instance,
+bool WindowCreateVulkanSurface(Window* window, void* vk_instance,
                                       void* surface_khr) {
   ASSERT(Valid(window));
   return window->backend->CreateVulkanSurface(vk_instance, surface_khr);
-}
-
-
-// WindowManagerBackend --------------------------------------------------------
-
-std::vector<const char*>
-WindowManagerBackend::GetVulkanInstanceExtensions() {
-  NOT_REACHED("This function must be subclassed.");
-  return {};
-}
-
-bool WindowManagerBackend::CreateVulkanSurface(void*, void*) {
-  NOT_REACHED("This function must be subclassed.");
-  return false;
 }
 
 // Misc ------------------------------------------------------------------------

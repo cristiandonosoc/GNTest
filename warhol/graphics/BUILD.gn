@@ -2,6 +2,7 @@
 # This code has a BSD license. See LICENSE.
 
 declare_args() {
+  opengl_renderer_enabled = false
   vulkan_renderer_enabled = false
 }
 
@@ -9,6 +10,10 @@ config("renderer_common_config") {
   defines = []
   if (vulkan_renderer_enabled) {
     defines += [ "WARHOL_VULKAN_ENABLED" ]
+  }
+
+  if (opengl_renderer_enabled) {
+    defines += [ "WARHOL_OPENGL_ENABLED" ]
   }
 }
 
@@ -32,8 +37,17 @@ source_set("renderer_common") {
 }
 
 source_set("vulkan_renderer") {
+  assert(vulkan_renderer_enabled)
   deps = [
     ":renderer_common",
     "//warhol/graphics/vulkan",
+  ]
+}
+
+source_set("opengl_renderer") {
+  assert(opengl_renderer_enabled)
+  deps = ]
+    ":renderer_common",
+    "//warhol/graphics/opengl",
   ]
 }
