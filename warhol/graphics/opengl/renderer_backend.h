@@ -14,37 +14,37 @@
 #include "warhol/graphics/opengl/utils.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/location.h"
+#include "warhol/utils/macros.h"
 
 namespace warhol {
 namespace opengl {
 
-#define GL_CALL(func, ...) \
-  ::warhol::opengl::InternalOpenGLCall(func, #func, FROM_HERE, __VA_ARGS__)
+// Used to define a new variable name for each GL_CHECK call.
+#define GL_VAR COMBINE(gl_err, __LINE__)
 
-template <typename FunctionType, typename... Args>
-static inline void InternalOpenGLCall(FunctionType func,
-                                  const char* func_str,
-                                  const Location& location,
-                                  Args&&... args) {
-  func(std::forward<Args>(args)...);
-  GLenum error = glGetError();
-  if (error != GL_NO_ERROR) {
-    fprintf(stderr,
-            "[ERROR][%s:%d] When calling %s: %s\n",
-            location.file,
-            location.line,
-            func_str,
-            GLEnumToString(error));
-    ASSERT(false);
+// Wraps an opengl call with an error checking query.
+// Will assert on error.
+#define GL_CHECK(opengl_call)                            \
+  {                                                      \
+    opengl_call;                                         \
+    GLenum GL_VAR = glGetError();                        \
+    if (GL_VAR != GL_NO_ERROR) {                         \
+      auto location = FROM_HERE;                         \
+      fprintf(stderr,                                    \
+              "[ERROR][%s:%d] When calling %s: %s\n",    \
+              location.file,                             \
+              location.line,                             \
+              #opengl_call,                              \
+              ::warhol::opengl::GLEnumToString(GL_VAR)); \
+      NOT_REACHED("Invalid OpenGL call. See logs.");     \
+    }                                                    \
   }
-}
 
 struct MeshHandles {
   uint32_t vbo = 0;
   uint32_t ebo = 0;
   uint32_t vao = 0;
 };
-
 
 struct OpenGLRendererBackend : public RendererBackend {
   OpenGLRendererBackend() = default;

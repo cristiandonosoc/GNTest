@@ -22,7 +22,7 @@ struct ClearOnMove{
     return *this;
   }
 
-  bool has_value() const { value != 0; }
+  bool has_value() const { return value != 0; }
 
   T& operator*() { return value; }
   T* operator->() { return &value; }

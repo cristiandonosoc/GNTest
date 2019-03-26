@@ -71,6 +71,7 @@ T* PushIntoListFromPool(LinkedList<T>* list, MemoryPool* pool) {
   (void)list;
   (void)pool;
   NOT_IMPLEMENTED();
+  return nullptr;
 }
 
 }  // namespace warhol

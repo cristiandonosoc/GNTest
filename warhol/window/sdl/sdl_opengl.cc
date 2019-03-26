@@ -2,6 +2,7 @@
 // This code has a BSD license. See LICENSE.
 
 #include "warhol/window/sdl/sdl_opengl.h"
+#include "warhol/window/common/window.h"
 
 #include <memory>
 
@@ -12,14 +13,14 @@ namespace sdl_opengl {
 
 namespace {
 
-std::unique_ptr<WindowManagerBackend> CreateWindowManager() {
-  return std::make_unique<SDLOpenGLWindowManager>();
+std::unique_ptr<WindowBackend> CreateWindow() {
+  return std::make_unique<SDLOpenGLWindow>();
 }
 
 struct BackendSuscriptor {
   BackendSuscriptor() {
-    SuscribeWindowManagerBackendFactory(WindowBackendType::kSDLVulkan,
-                                        CreateSDLVulkanWindowManager);
+    SuscribeWindowBackendFactoryFunction(WindowBackendType::kSDLVulkan,
+                                         CreateWindow);
   }
 };
 
@@ -27,8 +28,6 @@ struct BackendSuscriptor {
 BackendSuscriptor backend_suscriptor;
 
 } // namespace
-
-
 
 }  // namespace sdl_opengl
 }  // namespace warhol

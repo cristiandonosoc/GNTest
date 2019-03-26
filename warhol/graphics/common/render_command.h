@@ -66,11 +66,7 @@ const char* ToString(TextureBind);
 
 struct UniformValue {
   Uniform uniform;
-  union {
-    struct { float r, g, b, a; };
-    struct { float x, y, z, w; };
-    float values[4];
-  };
+  float x, y, z, w;
 };
 
 struct MeshRenderAction {

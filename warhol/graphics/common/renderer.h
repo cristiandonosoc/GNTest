@@ -10,16 +10,15 @@
 
 #include "warhol/utils/macros.h"
 
-#include "warhol/graphics/common/shader_manager.h"
 #include "warhol/graphics/common/render_command.h"
+#include "warhol/graphics/common/renderer_backend.h"
 
 #include "warhol/math/vec.h"
 
 namespace warhol {
 
-struct RendererBackend;   // Defined at end of file.
 struct Shader;
-struct WindowManager;
+struct Window;
 
 // Renderers are implemented in terms of backends (OpenGL, Vulkan, etc.).
 // This means that the renderer is a simple proxy object the users are warhol
@@ -47,17 +46,15 @@ struct Renderer {
 
   Vec3 clear_color;
 
-  WindowManager* window = nullptr;
+  Window* window = nullptr;
   std::unique_ptr<RendererBackend> backend;
 
-  // Holds all the general view of loaded shaders/uniforms.
-  ShaderManager shader_manager;
   std::vector<RenderCommand> render_commands;
 };
 
 inline bool Valid(Renderer* r) { return !!r->backend; }
 
-bool InitRenderer(Renderer*, RendererType, WindowManager*);
+bool InitRenderer(Renderer*, RendererType, Window*);
 // Will be called on destructor if the renderer is valid.
 void ShutdownRenderer(Renderer*);
 
@@ -72,13 +69,13 @@ void AddRenderCommand(RenderCommand*, UniformValue* values, size_t count);
 // Resource Uploading.
 
 bool RendererStageMesh(Renderer*, Mesh*);
-bool RendererUnstageMesh(Renderer*, Mesh*);
+void RendererUnstageMesh(Renderer*, Mesh*);
 
 bool RendererStageShader(Renderer*, Shader*);
-bool RendererUnstageShader(Renderer*, Shader*);
+void RendererUnstageShader(Renderer*, Shader*);
 
 bool RendererStageTexture(Renderer*, Texture*);
-bool RendererUnstageShader(Renderer*, Texture*);
+void RendererUnstageShader(Renderer*, Texture*);
 
 void RendererStartFrame(Renderer*);
 void RendererExecuteCommands(Renderer*, LinkedList<RenderCommand>* commands);

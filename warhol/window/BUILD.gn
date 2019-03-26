@@ -1,9 +1,7 @@
 # Copyright 2019, Cristián Donoso.
 # This code has a BSD license. See LICENSE.
 
-declare_args() {
-  sdl_enabled = false
-}
+# See the buildconfig file (set in .gn) for then *_enabled variables.
 
 config("common_config") {
   defines = []
@@ -12,33 +10,30 @@ config("common_config") {
   }
 }
 
+if (sdl_enabled) {
+  if (opengl_enabled) {
+    source_set("sdl_opengl") {
 
-# For functionality requiring window manager, they should depend on this.
-source_set("common") {
-  public = [
-    "window_manager.h",
-  ]
+      public_configs = [
+        ":common_config",
+      ]
 
-  sources = [
-    "window_manager.cc",
-  ]
+      public_deps = [
+        "//warhol/window/sdl:sdl_opengl",
+      ]
+    }
+  }
 
-  deps = [
-    "//warhol/utils",
-    "//warhol/window/common",
-  ]
+  if (vulkan_enabled) {
+    source_set("sdl_vulkan") {
 
-  public_configs = [
-    ":common_config",
-  ]
-}
+      public_configs = [
+        ":common_config",
+      ]
 
-source_set("sdl_vulkan") {
-  deps = [
-    ":common",
-  ]
-
-  public_deps = [
-    "//warhol/window/sdl:sdl_vulkan",
-  ]
+      public_deps = [
+        "//warhol/window/sdl:sdl_vulkan",
+      ]
+    }
+  }
 }

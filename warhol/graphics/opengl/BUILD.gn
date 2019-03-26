@@ -26,4 +26,8 @@ source_set("opengl") {
   public_deps = [
     "//third_party/gl3w",
   ]
+
+  deps = [
+    "//warhol/graphics/common",
+  ]
 }

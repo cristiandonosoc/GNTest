@@ -7,7 +7,7 @@
 #include "warhol/graphics/common/mesh.h"
 #include "warhol/graphics/common/shader.h"
 #include "warhol/graphics/common/texture.h"
-#include "warhol/graphics/renderer.h"
+#include "warhol/graphics/common/renderer.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
@@ -40,12 +40,13 @@ bool OpenGLInit(OpenGLRendererBackend* opengl) {
     return false;
   }
 
-  GL_CALL(glGenBuffers, 1, &opengl->camera_ubo);
-  GL_CALL(glBindBuffer, GL_UNIFORM_BUFFER, opengl->camera_ubo);
-  GL_CALL(glBufferData, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
-  GL_CALL(glBindBuffer, GL_UNIFORM_BUFFER, NULL);
+  GL_CHECK(glGenBuffers(1, &opengl->camera_ubo));
+  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, opengl->camera_ubo));
+  GL_CHECK(glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL,
+                        GL_STATIC_DRAW));
+  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, NULL));
 
-  GL_CALL(glBindBufferBase, GL_UNIFORM_BUFFER, 0, opengl->camera_ubo);
+  GL_CHECK(glBindBufferBase(GL_UNIFORM_BUFFER, 0, opengl->camera_ubo));
 
   opengl->loaded = true;
   return true;
@@ -65,15 +66,15 @@ bool CompileShader(Shader* shader, const char* source, GLenum shader_kind,
 
   // Compile the shader source.
   const GLchar* gl_src = source;
-  GL_CALL(glShaderSource, handle, 1, &gl_src, 0);
-  GL_CALL(glCompileShader, handle);
+  GL_CHECK(glShaderSource(handle, 1, &gl_src, 0));
+  GL_CHECK(glCompileShader(handle));
 
   GLint success = 0;
-  GL_CALL(glGetShaderiv, handle, GL_COMPILE_STATUS, &success);
+  GL_CHECK(glGetShaderiv(handle, GL_COMPILE_STATUS, &success));
   if (success == GL_FALSE) {
     GLchar log[2048];
-    GL_CALL(glGetShaderInfoLog, handle, sizeof(log), 0, log);
-    GL_CALL(glDeleteShader, handle);
+    GL_CHECK(glGetShaderInfoLog(handle, sizeof(log), 0, log));
+    GL_CHECK(glDeleteShader(handle));
     LOG(ERROR) << "Shader " << shader->name << ": Error compiling "
                << GLEnumToString(shader_kind) << " shader: " << log;
     return false;
@@ -117,17 +118,17 @@ bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
   }
 
   // Link 'em.
-  GL_CALL(glAttachShader, prog_handle, vert_handle);
-  GL_CALL(glAttachShader, prog_handle, frag_handle);
-  GL_CALL(glLinkProgram, prog_handle);
+  GL_CHECK(glAttachShader(prog_handle, vert_handle));
+  GL_CHECK(glAttachShader(prog_handle, frag_handle));
+  GL_CHECK(glLinkProgram(prog_handle));
   glDeleteShader(vert_handle);
   glDeleteShader(frag_handle);
 
   GLint success = 0;
-  GL_CALL(glGetProgramiv, prog_handle, GL_LINK_STATUS, &success);
+  GL_CHECK(glGetProgramiv(prog_handle, GL_LINK_STATUS, &success));
   if (success == GL_FALSE) {
     GLchar log[2048];
-    GL_CALL(glGetProgramInfoLog, prog_handle, sizeof(log), 0, log);
+    GL_CHECK(glGetProgramInfoLog(prog_handle, sizeof(log), 0, log));
     LOG(ERROR) << "Could not link shader: " << log;
     return false;
   }
@@ -141,7 +142,7 @@ bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
     return false;
   }
 
-  GL_CALL(glUniformBlockBinding, prog_handle, block_index, 0);
+  GL_CHECK(glUniformBlockBinding(prog_handle, block_index, 0));
   opengl->loaded_shaders[shader->uuid] = prog_handle;
   return true;
 }
@@ -152,7 +153,7 @@ void OpenGLUnstageShader(OpenGLRendererBackend* opengl, Shader* shader) {
   auto it = opengl->loaded_shaders.find(shader->uuid);
   ASSERT(it != opengl->loaded_shaders.end());
 
-  GL_CALL(glDeleteProgram, it->second);
+  GL_CHECK(glDeleteProgram(it->second));
   opengl->loaded_shaders.erase(it);
 }
 
@@ -162,10 +163,10 @@ namespace {
 
 MeshHandles GenerateMeshHandles() {
   uint32_t buffers[2];
-  GL_CALL(glGenBuffers, ARRAY_SIZE(buffers), buffers);
+  GL_CHECK(glGenBuffers(ARRAY_SIZE(buffers), buffers));
 
   uint32_t vao;
-  GL_CALL(glGenVertexArrays, 1, &vao);
+  GL_CHECK(glGenVertexArrays(1, &vao));
 
   MeshHandles handles;
   handles.vbo = buffers[0];
@@ -175,42 +176,42 @@ MeshHandles GenerateMeshHandles() {
 }
 
 void DeleteMeshHandles(MeshHandles* handles) {
-  GL_CALL(glDeleteBuffers, 2, (GLuint*)handles);
-  GL_CALL(glDeleteVertexArrays, 1, handles->vao);
+  GL_CHECK(glDeleteBuffers(2, (GLuint*)handles));
+  GL_CHECK(glDeleteVertexArrays(1, &handles->vao));
 }
 
 void BindMeshHandles(MeshHandles* handles) {
-  GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, handles->vbo);
-  GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, handles->ebo);
-  GL_CALL(glBindVertexArray, handles->vao);
+  GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, handles->vbo));
+  GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handles->ebo));
+  GL_CHECK(glBindVertexArray(handles->vao));
 }
 
 void UnbindMeshHandles() {
-  GL_CALL(glBindBuffer, GL_ARRAY_BUFFER, NULL);
-  GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, NULL);
-  GL_CALL(glBindVertexArray, NULL);
+  GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, NULL));
+  GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, NULL));
+  GL_CHECK(glBindVertexArray(NULL));
 }
 
 void BufferVertices(Mesh* mesh) {
-  GL_CALL(glBufferData, GL_ARRAY_BUFFER, VerticesSize(mesh),
-          mesh->vertices.data(), GL_STATIC_DRAW);
+  GL_CHECK(glBufferData(GL_ARRAY_BUFFER, VerticesSize(mesh),
+          mesh->vertices.data(), GL_STATIC_DRAW));
 
   // Pos.
-  GL_CALL(glVertexAttribPointer, 0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
-  GL_CALL(glEnableVertexAttribArray, 0);
+  GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0));
+  GL_CHECK(glEnableVertexAttribArray(0));
   // Color.
-  GL_CALL(glVertexAttribPointer, 1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-          offsetof(Vertex, color));
-  GL_CALL(glEnableVertexAttribArray, 1);
+  GL_CHECK(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+          (void*)offsetof(Vertex, color)));
+  GL_CHECK(glEnableVertexAttribArray(1));
   // UV.
-  GL_CALL(glVertexAttribPointer, 2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-          offsetof(Vertex, uv));
-  GL_CALL(glEnableVertexAttribArray, 2);
+  GL_CHECK(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+          (void*)offsetof(Vertex, uv)));
+  GL_CHECK(glEnableVertexAttribArray(2));
 }
 
 void BufferIndices(Mesh* mesh) {
-  GL_CALL(glBufferData, GL_ELEMENT_ARRAY_BUFFER, IndicesSize(mesh),
-          mesh->indices.data(), GL_STATIC_DRAW);
+  GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, IndicesSize(mesh),
+          mesh->indices.data(), GL_STATIC_DRAW));
 }
 
 }  // namespace
@@ -253,20 +254,20 @@ bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
   }
 
   uint32_t handle;
-  GL_CALL(glGenTextures, 1, handle);
-  GL_CALL(glBindTexture, GL_TEXTURE_2D, handle);
+  GL_CHECK(glGenTextures(1, &handle));
+  GL_CHECK(glBindTexture(GL_TEXTURE_2D, handle));
 
   // Setup wrapping/filtering options.
-  GL_CALL(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  GL_CALL(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  GL_CALL(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  GL_CALL(glTexParameteri, GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
+  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT));
+  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
 
   // Send the bits over.
   // TODO(Cristian): Check for errors.
   // TODO(Cristian): When multi-threading is done, use this async.
   //                 Think what to do about in memory buffer.
-  GL_CALL(glTexImage2D, GL_TEXTURE_2D,          // target
+  GL_CHECK(glTexImage2D(GL_TEXTURE_2D,          // target
                         0,                      // level
                         GL_RGBA,                // internalformat
                         texture->x,             // width,
@@ -274,8 +275,8 @@ bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
                         0,                      // border
                         GL_RGBA,                // format
                         GL_UNSIGNED_BYTE,       // type,
-                        texture->data.value);
-  GL_CALL(glGenerateMipmap, GL_TEXTURE_2D);
+                        texture->data.value));
+  GL_CHECK(glGenerateMipmap(GL_TEXTURE_2D));
 
   opengl->loaded_textures[texture->uuid] = handle;
   return true;
@@ -287,17 +288,18 @@ void OpenGLUnstageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
   auto it = opengl->loaded_textures.find(texture->uuid);
   ASSERT(it != opengl->loaded_textures.end());
 
-  GL_CALL(glDeleteTextures, 1, it->second);
+  GL_CHECK(glDeleteTextures(1, &it->second));
   opengl->loaded_textures.erase(it);
 }
 
 // Start Frame -----------------------------------------------------------------
 
 void OpenGLStartFrame(Renderer* renderer) {
-  GL_CALL(glClearColor, renderer->clear_color.x,
+  GL_CHECK(glClearColor(renderer->clear_color.x,
                         renderer->clear_color.y,
-                        renderer->clear_color.z);
-  GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                        renderer->clear_color.z,
+                        1.0f));
+  GL_CHECK(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 }
 
 // Execute Commands ------------------------------------------------------------
@@ -309,9 +311,9 @@ void SetCameraMatrices(OpenGLRendererBackend* opengl, Camera* camera) {
     return;
 
   void* data = &camera->projection;
-  GL_CALL(glBindBuffer, GL_UNIFORM_BUFFER, opengl->camera_ubo);
-  GL_CALL(glBufferSubData, GL_UNIFORM_BUFFER, 0, 2 * sizeof(glm::mat4), data);
-  GL_CALL(glBindBuffer, GL_UNIFORM_BUFFER, NULL);
+  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, opengl->camera_ubo));
+  GL_CHECK(glBufferSubData(GL_UNIFORM_BUFFER, 0, 2 * sizeof(glm::mat4), data));
+  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, NULL));
 
   opengl->last_set_camera = camera;
 }
@@ -323,11 +325,11 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
     ASSERT(it != opengl->loaded_meshes.end());
 
     MeshHandles& handles = it->second;
-    GL_CALL(glBindVertexArray, handles.vao);
-    GL_CALL(glDrawElements, GL_TRIANGLES, action.mesh->indices.size() / 3,
-                            GL_UNSIGNED_INT, NULL);
+    GL_CHECK(glBindVertexArray(handles.vao));
+    GL_CHECK(glDrawElements(GL_TRIANGLES, action.mesh->indices.size() / 3,
+                            GL_UNSIGNED_INT, NULL));
   }
-  GL_CALL(glBindVertexArray, NULL);
+  GL_CHECK(glBindVertexArray(NULL));
 }
 
 }  // namespace
@@ -338,7 +340,7 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
     auto shader_it = opengl->loaded_shaders.find(command.shader->uuid);
     ASSERT(shader_it != opengl->loaded_shaders.end());
 
-    GL_CALL(glUseProgram, shader_it->second);
+    GL_CHECK(glUseProgram(shader_it->second));
 
     SetCameraMatrices(opengl, command.camera);
 
@@ -350,7 +352,7 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
         NOT_REACHED("Invalid render command type.");
     }
 
-    GL_CALL(glUseProgram, NULL);
+    GL_CHECK(glUseProgram(NULL));
   }
 }
 
@@ -360,7 +362,7 @@ void OpenGLShutdown(OpenGLRendererBackend* opengl) {
   ASSERT(Valid(opengl));
 
   for (auto& [shader_uuid, handle] : opengl->loaded_shaders) {
-    GL_CALL(glDeleteProgram, handle);
+    GL_CHECK(glDeleteProgram(handle));
   }
 
   for (auto& [mesh_uuid, handles] : opengl->loaded_meshes) {
@@ -368,7 +370,7 @@ void OpenGLShutdown(OpenGLRendererBackend* opengl) {
   }
 
   if (opengl->camera_ubo != 0) {
-    GL_CALL(glDeleteBuffers, 1, &opengl->camera_ubo);
+    GL_CHECK(glDeleteBuffers(1, &opengl->camera_ubo));
     opengl->camera_ubo = 0;
   }
 

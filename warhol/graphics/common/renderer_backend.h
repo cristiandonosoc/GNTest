@@ -42,6 +42,4 @@ struct RendererBackend {
   virtual void EndFrame(Renderer*) = 0;
 };
 
-
-
 }  // namespace warhol

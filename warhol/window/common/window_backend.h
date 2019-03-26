@@ -22,7 +22,8 @@ struct WindowBackend {
 
   virtual bool Init(Window*) = 0;
   virtual void Shutdown() = 0;
-  virtual std::pair<WindowEvent*, size_t> NewFrame(Window*, InputState*) = 0;
+  virtual std::pair<WindowEvent*, size_t> UpdateWindow(Window*,
+                                                       InputState*) = 0;
 
   // *** VULKAN SPECIFIC ***
 

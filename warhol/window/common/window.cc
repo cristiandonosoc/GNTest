@@ -79,7 +79,7 @@ void ShutdownWindow(Window* window) {
 std::pair<WindowEvent*, size_t>
 UpdateWindow(Window* window, InputState* input) {
   ASSERT(Valid(window));
-  return window->backend->NewFrame(input);
+  return window->backend->UpdateWindow(window, input);
 }
 
 std::vector<const char*>

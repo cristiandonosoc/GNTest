@@ -1,7 +1,7 @@
 // Copyright 2019, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include "warhol/graphics/renderer.h"
+#include "warhol/graphics/common/renderer.h"
 
 #include <unordered_map>
 
@@ -9,7 +9,7 @@
 #include "warhol/utils/log.h"
 #include "warhol/graphics/common/renderer_backend.h"
 #include "warhol/graphics/common/shader.h"
-#include "warhol/window/window_manager.h"
+#include "warhol/window/common/window.h"
 
 namespace warhol {
 
@@ -91,7 +91,7 @@ bool RendererStageShader(Renderer* renderer, Shader* shader) {
   return renderer->backend->StageShader(shader);
 };
 
-bool RendererUnstageShader(Renderer* renderer, Shader* shader) {
+void RendererUnstageShader(Renderer* renderer, Shader* shader) {
   ASSERT(Valid(renderer));
   renderer->backend->UnstageShader(shader);
 };
@@ -99,7 +99,6 @@ bool RendererUnstageShader(Renderer* renderer, Shader* shader) {
 void RendererStartFrame(Renderer* renderer) {
   ASSERT(Valid(renderer));
   renderer->backend->StartFrame(renderer);
-
 }
 
 void RendererExecuteCommands(Renderer* renderer,

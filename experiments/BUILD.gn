@@ -46,26 +46,26 @@
 
 # Vulkan Test ------------------------------------------------------------------
 
-executable("vulkan_test") {
-  sources = [
-    "vulkan_test.cc",
-  ]
-
-  deps = [
-    "//warhol/debug:timing",
-    "//warhol/graphics:vulkan_renderer",
-    "//warhol/math",
-    "//warhol/window:sdl_vulkan",
-  ]
-
-  data_deps = [
-    "//assets/shaders/vulkan:shaders",
-  ]
-
-  if (target_os == "linux") {
-    libs = [ "-lpthread" ]
-  }
-}
+#executable("vulkan_test") {
+#  sources = [
+#    "vulkan_test.cc",
+#  ]
+#
+#  deps = [
+#    "//warhol/debug:timing",
+#    "//warhol/graphics:vulkan_renderer",
+#    "//warhol/math",
+#    "//warhol/window:sdl_vulkan",
+#  ]
+#
+#  data_deps = [
+#    "//assets/shaders/vulkan:shaders",
+#  ]
+#
+#  if (target_os == "linux") {
+#    libs = [ "-lpthread" ]
+#  }
+#}
 
 executable("graphics_api") {
   sources = [

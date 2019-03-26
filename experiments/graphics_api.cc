@@ -1,14 +1,14 @@
 // Copyright 2019, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include <unistd.h>
+#include <thread>
 
 #include <warhol/assets/asset_paths.h>
 #include <warhol/graphics/common/mesh.h>
 #include <warhol/graphics/common/shader.h>
-#include <warhol/graphics/renderer.h>
+#include <warhol/graphics/common/renderer.h>
 #include <warhol/input/input.h>
-#include <warhol/window/window_manager.h>
+#include <warhol/window/common/window.h>
 #include <warhol/scene/camera.h>
 #include <warhol/utils/log.h>
 
@@ -64,8 +64,8 @@ const std::vector<uint32_t> indices = {
 int main() {
 
   // **** WINDOW ****
-  WindowManager window;
-  if (!InitWindowManager(&window, WindowBackendType::kSDLOpenGL)) {
+  Window window;
+  if (!InitWindow(&window, WindowBackendType::kSDLOpenGL)) {
     LOG(ERROR) << "Could not start SDL.";
     return 1;
   }
@@ -153,7 +153,7 @@ int main() {
   InputState input = InputState::Create();
 
   while (true) {
-    auto [events, event_count] = UpdateWindowManager(&window, &input);
+    auto [events, event_count] = UpdateWindow(&window, &input);
     for (uint32_t i = 0; i < event_count; i++) {
       if (events[i] == WindowEvent::kQuit)
         break;
@@ -166,7 +166,7 @@ int main() {
     RendererExecuteCommands(&renderer, &command_list);
     RendererEndFrame(&renderer);
 
-    sleep(16);  // ~60 fps.
+    std::this_thread::sleep_for(std::chrono::milliseconds(16));
   }
 
 }

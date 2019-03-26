@@ -7,6 +7,13 @@ declare_args() {
   is_linux = false
   is_osx = false
   is_windows = false
+
+  opengl_enabled = false
+  vulkan_enabled = false
+
+  sdl_enabled = false
+
+
 }
 
 # OS/Compiler Targets

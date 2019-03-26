@@ -2,19 +2,27 @@
 # This code has a BSD license. See LICENSE.
 
 source_set("common") {
+  public = [
+    "renderer.h",
+    "image.h",
+    "mesh.h",
+    "shader.h",
+    "texture.h",
+  ]
+
   sources = [
     "image.cc",
-    "image.h",
     "mesh.cc",
-    "mesh.h",
-    "render_command.cc",
     "render_command.h",
-    "renderer_backend.cc",
+    "renderer.cc",
     "renderer_backend.h",
+    "shader.cc",
+    "texture.cc",
   ]
 
   deps = [
     "//third_party/stb",
     "//third_party/tiny_obj_loader",
+    "//warhol/utils",
   ]
 }

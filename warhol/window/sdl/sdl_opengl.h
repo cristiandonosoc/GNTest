@@ -21,7 +21,7 @@ struct SDLOpenGLWindow : public WindowBackend {
 
   bool Init(Window*) override;
   void Shutdown() override;
-  std::pair<WindowEvent*, size_t> NewFrame(InputState*) override;
+  std::pair<WindowEvent*, size_t> UpdateWindow(Window*, InputState*) override;
 };
 
 }  // namespace sdl_opengl

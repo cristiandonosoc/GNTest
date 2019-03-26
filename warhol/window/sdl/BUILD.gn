@@ -51,6 +51,7 @@ source_set("sdl_vulkan") {
   deps = [
     "//warhol/input",
     "//warhol/utils",
+    "//warhol/window/common",
   ]
 }
 
@@ -61,11 +62,12 @@ source_set("sdl_opengl") {
   ]
 
   public_configs = [
-    "sdl2_config",
+    ":sdl2_config",
   ]
 
   deps = [
     "//warhol/input",
     "//warhol/utils",
+    "//warhol/window/common",
   ]
 }
