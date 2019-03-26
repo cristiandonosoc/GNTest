@@ -379,7 +379,7 @@ void OpenGLShutdown(OpenGLRendererBackend* opengl) {
 
 // Virtual Interface "Dispatch" ------------------------------------------------
 
-bool OpenGLRendererBackend::Init(Renderer*) {
+bool OpenGLRendererBackend::Init(Renderer*, Window*) {
   return OpenGLInit(this);
 }
 

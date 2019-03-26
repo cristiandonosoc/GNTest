@@ -73,8 +73,10 @@ executable("graphics_api") {
   ]
 
   deps = [
+    "//warhol/assets",
     "//warhol/graphics:opengl_renderer",
     "//warhol/math",
+    "//warhol/memory",
     "//warhol/utils",
     "//warhol/window:sdl_opengl",
   ]

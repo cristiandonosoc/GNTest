@@ -3,8 +3,9 @@
 
 #pragma once
 
+#include "warhol/utils/macros.h"
 #include "warhol/window/sdl/def.h"
-#include "warhol/window/common/window_backend.cc"
+#include "warhol/window/common/window_backend.h"
 
 namespace warhol {
 namespace sdl_opengl {

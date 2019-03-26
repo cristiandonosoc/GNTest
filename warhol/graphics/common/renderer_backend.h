@@ -14,8 +14,7 @@ struct RenderCommand;
 struct Renderer;
 struct Shader;
 struct Texture;
-
-struct ShaderManager;
+struct Window;
 
 // Abstract interface all graphics backends must implement.
 
@@ -24,7 +23,7 @@ struct RendererBackend {
 
   // Virtual interface.
 
-  virtual bool Init(Renderer*) = 0;
+  virtual bool Init(Renderer*, Window*) = 0;
   virtual void Shutdown() = 0;
   virtual void ExecuteCommands(RenderCommand*, size_t command_count) = 0;
 

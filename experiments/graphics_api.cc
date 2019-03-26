@@ -87,7 +87,7 @@ int main() {
   }
 
   if (!RendererStageShader(&renderer, &shader)) {
-    LOG(ERROR) << "Could not load shader " << ToString(ShaderID::kCommon);
+    LOG(ERROR) << "Could not load shader " << shader_name;
     return 1;
   }
 

@@ -4,10 +4,12 @@
 source_set("assets") {
   public = [
     "assets.h",
+    "asset_paths.h",
   ]
 
   sources = [
     "assets.cc",
+    "asset_paths.cc",
   ]
 
   deps = [

@@ -66,7 +66,7 @@ struct OpenGLRendererBackend : public RendererBackend {
 
   // Virtual interface ---------------------------------------------------------
 
-  bool Init(Renderer*) override;
+  bool Init(Renderer*, Window*) override;
   void Shutdown() override;
   void ExecuteCommands(RenderCommand*, size_t command_count) override;
   bool StageShader(Shader*) override;

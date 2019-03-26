@@ -16,12 +16,6 @@ struct Camera;
 struct Mesh;
 struct Shader;
 
-enum class ShaderID {
-  kCommon,
-  kLast,
-};
-const char* ToString(ShaderID);
-
 // A Shader can have any combination of this uniforms.
 //
 // The set is determined by the shader uniform layout.

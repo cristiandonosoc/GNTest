@@ -2,10 +2,11 @@
 # This code has a BSD license. See LICENSE.
 
 source_set("platform") {
-  sources = [
-    "platform.cc",
+  public = [
     "platform.h",
   ]
+
+  sources = []
   if (is_windows) {
     sources += [ "windows_platform.cc" ]
   } else if (is_linux) {
@@ -17,7 +18,7 @@ source_set("platform") {
   }
 
   deps = [
-    "//warhol/window:common",
+    "//warhol/utils",
   ]
 }
 

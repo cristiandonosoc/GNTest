@@ -5,6 +5,12 @@ source_set("memory") {
   public = [
     "array_heap.h",
     "types.h",
+
+    "memory_pool.h"
+  ]
+
+  sources = [
+    "memory_pool.cc",
   ]
 
   if (target_os == "linux") {

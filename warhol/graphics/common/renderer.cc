@@ -57,11 +57,11 @@ Renderer::~Renderer() {
     ShutdownRenderer(this);
 }
 
-void InitRenderer(Renderer* renderer, RendererType type) {
+bool InitRenderer(Renderer* renderer, RendererType type, Window* window) {
   ASSERT(type != RendererType::kLast);
 
   renderer->backend = CreateRendererBackend(type);
-  renderer->backend->Init(renderer);
+  return renderer->backend->Init(renderer, window);
 }
 
 // An null backend renderer can happen if Shutdown was called before the

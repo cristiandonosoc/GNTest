@@ -7,7 +7,7 @@
 
 namespace warhol {
 
-std::string GetTexturePath(const char* texture_name);
+std::string GetTexturePath(const std::string& texture_name);
 
 enum class ShaderPathType {
   kOpenGL,

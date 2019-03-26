@@ -12,7 +12,7 @@
 
 namespace warhol {
 
-std::string Platform::GetCurrentExecutablePath() {
+std::string GetCurrentExecutablePath() {
   char buf[256];
   uint32_t bufsize = sizeof(buf);
   int res = _NSGetExecutablePath(buf, &bufsize);
@@ -25,7 +25,7 @@ std::string Platform::GetCurrentExecutablePath() {
   return buf;
 }
 
-std::string Platform::GetCurrentExecutableDirectory() {
+std::string GetCurrentExecutableDirectory() {
   std::string exe_path = GetCurrentExecutablePath();
   size_t separator = exe_path.rfind('/');
   if (separator == std::string::npos)
@@ -33,7 +33,7 @@ std::string Platform::GetCurrentExecutableDirectory() {
   return exe_path.substr(0, separator);
 }
 
-std::string Platform::GetBasePath() {
+std::string GetBasePath() {
   std::string exe_path = GetCurrentExecutablePath();
   size_t separator = exe_path.rfind('/');
   if (separator == std::string::npos)
@@ -41,5 +41,8 @@ std::string Platform::GetBasePath() {
   auto base_path = exe_path.substr(0, separator);
   return PathJoin({std::move(base_path), ".."});
 }
+
+#error GetPerformanceCounter not imlemented.
+#error GetPerformanceFrequency not implemented.
 
 }  // namespace warhol
