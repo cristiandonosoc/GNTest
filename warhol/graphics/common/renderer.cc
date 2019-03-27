@@ -8,7 +8,9 @@
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 #include "warhol/graphics/common/renderer_backend.h"
+#include "warhol/graphics/common/mesh.h"
 #include "warhol/graphics/common/shader.h"
+#include "warhol/graphics/common/texture.h"
 #include "warhol/window/common/window.h"
 
 namespace warhol {
@@ -74,19 +76,26 @@ void ShutdownRenderer(Renderer* renderer) {
 
 // void WindowSizeChanged(Renderer* renderer, uint32_t width, uint32_t height) {}
 
+// Mesh ------------------------------------------------------------------------
+
+bool RendererStageMesh(Renderer* renderer, Mesh* mesh) {
+  ASSERT(Valid(renderer));
+  ASSERT(mesh->uuid != 0);
+
+  return renderer->backend->StageMesh(mesh);
+}
+
+void RendererUnstageMesh(Renderer* renderer, Mesh* mesh) {
+  ASSERT(Valid(renderer));
+  renderer->backend->UnstageMesh(mesh);
+}
+
+// Shader ----------------------------------------------------------------------
+
 bool RendererStageShader(Renderer* renderer, Shader* shader) {
   ASSERT(Valid(renderer));
-
-  if (shader->uuid == 0) {
-    LOG(ERROR) << "Staging shader with UUID 0.";
-    return false;
-  }
-
-  if (!HasSource(shader)) {
-    LOG(ERROR) << "Attempting to load shader without sources (name: "
-               << shader->name << ").";
-    return false;
-  }
+  ASSERT(Valid(shader));
+  ASSERT(Loaded(shader));
 
   return renderer->backend->StageShader(shader);
 };
@@ -95,6 +104,23 @@ void RendererUnstageShader(Renderer* renderer, Shader* shader) {
   ASSERT(Valid(renderer));
   renderer->backend->UnstageShader(shader);
 };
+
+// Texture ---------------------------------------------------------------------
+
+bool RendererStageTexture(Renderer* renderer, Texture* texture) {
+  ASSERT(Valid(renderer));
+  ASSERT(Valid(texture));
+  ASSERT(Loaded(texture));
+
+  return renderer->backend->StageTexture(texture);
+}
+
+void RendererUnstageTexture(Renderer* renderer, Texture* texture) {
+  ASSERT(Valid(renderer));
+  renderer->backend->UnstageTexture(texture);
+}
+
+// Frame Lifetime --------------------------------------------------------------
 
 void RendererStartFrame(Renderer* renderer) {
   ASSERT(Valid(renderer));

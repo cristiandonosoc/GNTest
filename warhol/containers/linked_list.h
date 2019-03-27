@@ -23,29 +23,41 @@ struct LinkedList {
   LinkNode<T>* head = nullptr;
   LinkNode<T>* tail = nullptr;
 
-  struct Iterator {
-    Iterator() = default;
-    Iterator(LinkNode<T>* t) : elem(t) {}
+  // ***** Container-ish API.
 
-    DEFAULT_COPY_AND_ASSIGN(Iterator);
-    DEFAULT_MOVE_AND_ASSIGN(Iterator);
+  struct ForwardIterator;
 
-    bool operator==(const Iterator& rhs) const {
+  ForwardIterator begin() { return ForwardIterator(head); }
+  ForwardIterator end() { return nullptr; }
+
+  size_t size() const { return count; }
+  bool empty() const { return count == 0; }
+
+  // ***** ForwardIterator Implementation.
+
+  struct ForwardIterator {
+    ForwardIterator() = default;
+    ForwardIterator(LinkNode<T>* t) : elem(t) {}
+
+    DEFAULT_COPY_AND_ASSIGN(ForwardIterator);
+    DEFAULT_MOVE_AND_ASSIGN(ForwardIterator);
+
+    bool operator==(const ForwardIterator& rhs) const {
       return elem == rhs.elem;
     }
 
-    bool operator!=(const Iterator& rhs) const {
+    bool operator!=(const ForwardIterator& rhs) const {
       return elem != rhs.elem;
     }
 
-    Iterator& operator++() {
+    ForwardIterator& operator++() {
       elem = elem->next;
       return *this;
     }
 
-    Iterator operator++(int) {
+    ForwardIterator operator++(int) {
       elem = elem->next;
-      return Iterator(elem->next);
+      return ForwardIterator(elem->next);
     }
 
     T* operator->() { return &elem->value; }
@@ -54,8 +66,6 @@ struct LinkedList {
     LinkNode<T>* elem = nullptr;
   };
 
-  Iterator begin() { return Iterator(head); }
-  Iterator end() { return nullptr; }
 };
 
 template <typename T>

@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include "warhol/containers/linked_list.h"
+
 namespace warhol {
 
 enum class WindowEvent : uint32_t;
@@ -16,14 +18,13 @@ struct InputState;
 struct Window;
 
 struct WindowBackend {
-  virtual ~WindowBackend();
+  virtual ~WindowBackend() = default;
 
   // Interface -----------------------------------------------------------------
 
   virtual bool Init(Window*) = 0;
   virtual void Shutdown() = 0;
-  virtual std::pair<WindowEvent*, size_t> UpdateWindow(Window*,
-                                                       InputState*) = 0;
+  virtual LinkedList<WindowEvent> UpdateWindow(Window*, InputState*) = 0;
 
   // *** VULKAN SPECIFIC ***
 

@@ -38,6 +38,23 @@ config("sdl2_config") {
   }
 }
 
+source_set("sdl_common") {
+  sources = [
+    "sdl_input.cc",
+    "sdl_input.h",
+  ]
+
+  public_configs = [
+    ":sdl2_config",
+  ]
+
+  deps = [
+    "//warhol/input",
+    "//warhol/utils",
+  ]
+
+}
+
 source_set("sdl_vulkan") {
   sources = [
     "sdl_vulkan_window_manager.cc",
@@ -49,7 +66,7 @@ source_set("sdl_vulkan") {
   ]
 
   deps = [
-    "//warhol/input",
+    ":sdl_common",
     "//warhol/utils",
     "//warhol/window/common",
   ]
@@ -66,7 +83,7 @@ source_set("sdl_opengl") {
   ]
 
   deps = [
-    "//warhol/input",
+    ":sdl_common",
     "//warhol/utils",
     "//warhol/window/common",
   ]

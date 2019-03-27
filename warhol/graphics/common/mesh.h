@@ -34,6 +34,11 @@ struct Mesh {
   std::vector<uint32_t> indices;
 };
 
+inline bool Valid(Mesh* mesh) { return mesh->uuid != 0; }
+inline bool Loaded(Mesh* mesh) {
+  return !mesh->vertices.empty() && !mesh->indices.empty();
+}
+
 inline size_t VerticesSize(Mesh* mesh) {
   return mesh->vertices.size() * sizeof(Vertex);
 }

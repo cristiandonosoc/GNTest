@@ -30,8 +30,4 @@ void UnloadShader(Shader* shader) {
   shader->frag_source.clear();
 }
 
-bool HasSource(Shader* shader) {
-  return !shader->vert_source.empty() && !shader->frag_source.empty();
-}
-
 }  // namespace warhol

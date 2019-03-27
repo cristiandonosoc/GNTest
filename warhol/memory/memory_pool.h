@@ -21,7 +21,7 @@ struct MemoryPool {
 
 inline bool Valid(MemoryPool* pool) { return !!pool->data; }
 
-void InitMemoryPool(size_t bytes, MemoryPool*);
+void InitMemoryPool(MemoryPool*, size_t bytes);
 
 // Will not deallocate, but rather treat the memory as cleared.
 void ResetMemoryPool(MemoryPool*);

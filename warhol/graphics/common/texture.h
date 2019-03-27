@@ -29,7 +29,8 @@ struct Texture {
   ClearOnMove<uint8_t*> data;
 };
 
-inline bool Valid(Texture* texture) { return texture->data.has_value(); }
+inline bool Valid(Texture* texture) { return texture->uuid != 0; }
+inline bool Loaded(Texture* texture) { return texture->data.has_value(); }
 
 uint32_t GetNextTextureUUID();
 

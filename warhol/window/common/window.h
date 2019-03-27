@@ -37,14 +37,28 @@ void SuscribeWindowBackendFactoryFunction(WindowBackendType,
                                           WindowBackendFactoryFunction);
 
 struct Window {
+  // Amount of frames to keep track of in order to get an average frame time.
+  static constexpr int kFrameTimesCounts = 128;
+
   ~Window();   // "RAII" semantics.
 
-  size_t width = 0;
-  size_t height = 0;
-  float frame_delta = 0;          // Delta within the last frame in seconds.
-  float frame_delta_average = 0;  // Rolling average over kRollingAverageFrames.
-  float frame_rate = 0;           // 1 / frame_delta_average.
-  float seconds = 0;              // Seconds since Init was called.
+  int width = 0;
+  int height = 0;
+
+  // TODO(Cristian): All timing shouldn't be within window, but on platform!
+
+  // Total time since the start of the game.
+  uint64_t total_time = 0;
+  float seconds = 0;
+  float frame_delta = 0;
+
+  float frame_delta_accum = 0;  // The accumulated average.
+  float frame_delta_average = 0;
+  float frame_rate = 0;
+
+  // TODO(Cristian): When we're interested, start tracking these times.
+  float frame_times[kFrameTimesCounts];
+  int frame_times_index = 0;
 
   WindowBackendType backend_type = WindowBackendType::kLast;
   std::unique_ptr<WindowBackend> backend;
@@ -54,14 +68,13 @@ struct Window {
 
 inline bool Valid(Window* wm) { return !!wm->backend; }
 
-// If false, the window manager will be invalid.
-// TODO(Cristian): Pass in flags.
+// TODO(Cristian): Pass in WindowInitOptions!
 bool InitWindow(Window*, WindowBackendType);
 
 // Will be called on destructor if window manager is valid.
 void ShutdownWindow(Window*);
 
-std::pair<WindowEvent*, size_t> UpdateWindow(Window*, InputState*);
+LinkedList<WindowEvent> UpdateWindow(Window*, InputState*);
 
 // *** VULKAN SPECIFIC ***
 //
