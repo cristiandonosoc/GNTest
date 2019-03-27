@@ -40,8 +40,8 @@ CreateWindowBackend(WindowBackendType type) {
 
 }  // namespace
 
-void SuscribeWindowBackendFactory(WindowBackendType type,
-                                  WindowBackendFactoryFunction factory) {
+void SuscribeWindowBackendFactoryFunction(
+    WindowBackendType type, WindowBackendFactoryFunction factory) {
   LOG(DEBUG) << "Suscribing Window Manager Backend: " << ToString(type);
 
   FactoryMap* factory_map = GetFactoryMap();
@@ -76,7 +76,7 @@ void ShutdownWindow(Window* window) {
   Reset(window);
 }
 
-std::pair<WindowEvent*, size_t>
+LinkedList<WindowEvent>
 UpdateWindow(Window* window, InputState* input) {
   ASSERT(Valid(window));
   return window->backend->UpdateWindow(window, input);

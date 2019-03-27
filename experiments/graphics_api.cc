@@ -63,20 +63,23 @@ const std::vector<uint32_t> indices = {
 
 int main() {
 
-  // **** WINDOW ****
+  LOG(DEBUG) << "Initializing window.";
+
   Window window;
   if (!InitWindow(&window, WindowBackendType::kSDLOpenGL)) {
     LOG(ERROR) << "Could not start SDL.";
     return 1;
   }
 
-  // **** RENDERER ****
+  LOG(DEBUG) << "Initializing renderer.";
 
   Renderer renderer;
-  if (!InitRenderer(&renderer, RendererType::kVulkan, &window)) {
+  if (!InitRenderer(&renderer, RendererType::kOpenGL, &window)) {
     LOG(ERROR) << "Could not start renderer.";
     return 1;
   }
+
+  LOG(DEBUG) << "Loading shaders.";
 
   Shader shader;
   const char* shader_name = "common";
@@ -91,7 +94,7 @@ int main() {
     return 1;
   }
 
-  // **** MESH ****
+  LOG(DEBUG) << "Loading meshes.";
 
   Mesh mesh;
   mesh.uuid = GetNextMeshUUID();    // Created by hand.
@@ -103,7 +106,7 @@ int main() {
     return 1;
   }
 
-  // **** TEXTURE ****
+  LOG(DEBUG) << "Loading textures.";
 
   Texture texture;
   TextureType texture_type = TextureType::kOpenGL;
@@ -119,7 +122,14 @@ int main() {
     return 1;
   }
 
-  // **** CAMERA ****
+  LOG(DEBUG) << "Setting Memory Pool.";
+
+  // Start pushing rendering actions.
+  MemoryPool memory_pool;
+  InitMemoryPool(&memory_pool, MEGABYTES(1));
+
+
+  LOG(DEBUG) << "Setting camera.";
 
   Camera camera;
   camera.view = glm::lookAt(glm::vec3{2.0f, 2.0f, 2.0f}, {}, {0, 0, 0.1f});
@@ -128,13 +138,7 @@ int main() {
                        (float)window.width / (float)window.height,
                        0.1f, 100.f);
 
-  // **** MEMORY POOL *****
-
-  // Start pushing rendering actions.
-  MemoryPool memory_pool;
-  InitMemoryPool(MEGABYTES(1), &memory_pool);
-
-  // **** RENDERER ACTIONS ****
+  LOG(DEBUG) << "Set rendering commands.";
 
   LinkedList<MeshRenderAction> mesh_action_list;
   auto* mesh_action = PushIntoListFromPool(&mesh_action_list, &memory_pool);
@@ -148,18 +152,21 @@ int main() {
   command->shader = &shader;
   command->mesh_actions = &mesh_action_list;
 
-  // **** GAME LOOP ****
+  LOG(DEBUG) << "Staring game loop.";
 
   InputState input = InputState::Create();
 
-  while (true) {
-    auto [events, event_count] = UpdateWindow(&window, &input);
-    for (uint32_t i = 0; i < event_count; i++) {
-      if (events[i] == WindowEvent::kQuit)
+  bool running = true;
+  while (running) {
+    auto events = UpdateWindow(&window, &input);
+    for (WindowEvent event : events) {
+      if (event == WindowEvent::kQuit) {
+        running = false;
         break;
+      }
     }
 
-    if (input.keys_up[GET_KEY(Escape)])
+    if (!running || input.keys_up[GET_KEY(Escape)])
       break;
 
     RendererStartFrame(&renderer);
@@ -168,5 +175,4 @@ int main() {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(16));
   }
-
 }

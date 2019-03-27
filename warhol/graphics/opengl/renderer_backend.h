@@ -52,23 +52,23 @@ struct OpenGLRendererBackend : public RendererBackend {
   DELETE_COPY_AND_ASSIGN(OpenGLRendererBackend);
   DEFAULT_MOVE_AND_ASSIGN(OpenGLRendererBackend);
 
-  bool loaded = false;
-
   // Maps from external resource UUID to internal objects.
   std::map<uint64_t, uint32_t> loaded_shaders;
   std::map<uint64_t, MeshHandles> loaded_meshes;
   std::map<uint64_t, uint32_t> loaded_textures;
 
   // Buffer that holds the camera matrices.
-  uint32_t camera_ubo = 0;
+  ClearOnMove<uint32_t> camera_ubo = 0;
+
   // If the last camera was already set, we don't need to re-send the uniforms.
   Camera* last_set_camera = nullptr;
+
+  bool loaded = false;
 
   // Virtual interface ---------------------------------------------------------
 
   bool Init(Renderer*, Window*) override;
   void Shutdown() override;
-  void ExecuteCommands(RenderCommand*, size_t command_count) override;
   bool StageShader(Shader*) override;
   void UnstageShader(Shader*) override;
   bool StageMesh(Mesh*) override;

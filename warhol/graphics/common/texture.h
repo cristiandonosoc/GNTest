@@ -32,7 +32,8 @@ struct Texture {
 inline bool Valid(Texture* texture) { return texture->uuid != 0; }
 inline bool Loaded(Texture* texture) { return texture->data.has_value(); }
 
-uint32_t GetNextTextureUUID();
+// Thread safe. Will advance the UUID;
+uint64_t GetNextTextureUUID();
 
 // Needed to do some pre-processing, like inverting axis for OpenGL.
 enum class TextureType {

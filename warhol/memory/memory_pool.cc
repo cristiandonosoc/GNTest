@@ -5,10 +5,10 @@
 
 namespace warhol {
 
-void InitMemoryPool(size_t bytes, MemoryPool* pool) {
+void InitMemoryPool(MemoryPool* pool, size_t size) {
   ASSERT(!Valid(pool));
-  pool->size = bytes;
-  pool->data = std::make_unique<uint8_t[]>(bytes);
+  pool->size = size;
+  pool->data = std::make_unique<uint8_t[]>(size);
 }
 
 void ResetMemoryPool(MemoryPool* pool) {

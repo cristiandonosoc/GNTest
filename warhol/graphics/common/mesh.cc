@@ -3,6 +3,7 @@
 
 #include "warhol/graphics/common/mesh.h"
 
+#include <atomic>
 #include <unordered_map>
 
 #include <third_party/tiny_obj_loader/tiny_obj_loader.h>
@@ -14,7 +15,7 @@ namespace warhol {
 
 namespace {
 
-uint64_t kNextMeshUUID = 1;
+std::atomic<uint64_t> kNextMeshUUID = 1;
 
 }  // namespace
 

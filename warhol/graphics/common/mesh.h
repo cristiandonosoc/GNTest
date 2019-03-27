@@ -49,7 +49,7 @@ inline size_t IndicesSize(Mesh* mesh) {
 
 bool LoadMesh(const std::string&, Mesh*);
 
-// Will advance the UUID.
+// Thread safe. Will advance the UUID.
 uint64_t GetNextMeshUUID();
 
 }  // namespace warhol

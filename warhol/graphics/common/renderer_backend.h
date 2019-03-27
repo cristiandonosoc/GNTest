@@ -19,13 +19,12 @@ struct Window;
 // Abstract interface all graphics backends must implement.
 
 struct RendererBackend {
-  virtual ~RendererBackend();
+  virtual ~RendererBackend() = default;
 
   // Virtual interface.
 
   virtual bool Init(Renderer*, Window*) = 0;
   virtual void Shutdown() = 0;
-  virtual void ExecuteCommands(RenderCommand*, size_t command_count) = 0;
 
   virtual bool StageMesh(Mesh*) = 0;
   virtual void UnstageMesh(Mesh*) = 0;

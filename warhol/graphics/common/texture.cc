@@ -3,12 +3,22 @@
 
 #include "warhol/graphics/common/texture.h"
 
+#include <atomic>
+
 #include <third_party/stb/stb_image.h>
 
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
+
+namespace {
+
+std::atomic<uint64_t> kNextTextureUUID = 1;
+
+};
+
+uint64_t GetNextTextureUUID() { return kNextTextureUUID++; }
 
 Texture::~Texture() {
   if (Valid(this))

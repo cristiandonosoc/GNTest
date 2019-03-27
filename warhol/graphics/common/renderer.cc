@@ -35,7 +35,10 @@ std::unique_ptr<RendererBackend>
 CreateRendererBackend(RendererType type) {
   FactoryMap* factory_map = GetFactoryMap();
   auto it = factory_map->find(type);
-  ASSERT(it != factory_map->end());
+  if (it == factory_map->end()) {
+    LOG(ERROR) << "Could not find renderer backend: " << ToString(type);
+    NOT_REACHED("Non renderer backend. See logs.");
+  }
 
   RendererBackendFactoryFunction factory = it->second;
   return factory();
@@ -137,6 +140,19 @@ void RendererEndFrame(Renderer* renderer) {
   ASSERT(Valid(renderer));
   renderer->backend->EndFrame(renderer);
 
+}
+
+// Misc ------------------------------------------------------------------------
+
+const char* ToString(RendererType type) {
+  switch (type) {
+    case RendererType::kOpenGL: return "OpenGL";
+    case RendererType::kVulkan: return "Vulkan";
+    case RendererType::kLast: return "Last";
+  }
+
+  NOT_REACHED("Invalid renderer type.");
+  return nullptr;
 }
 
 }  // namespace warhol

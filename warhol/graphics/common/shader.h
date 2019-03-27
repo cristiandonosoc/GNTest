@@ -21,12 +21,14 @@ inline bool Loaded(Shader* shader) {
   return !shader->vert_source.empty() && !shader->frag_source.empty();
 }
 
-// Will load the source, won't actually compile.
+// Will load the source, won't actually compile it.
+// That happens on RendererUploadShader.
 bool LoadShader(const std::string& path, Shader*);
+
 // Will only remove the data.
 void UnloadShader(Shader*);
 
-// Will advance the UUID.
+// Thread safe. Will advance the UUID.
 uint64_t GetNextShaderUUID();
 
 }  // namespace warhol

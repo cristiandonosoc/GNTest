@@ -13,6 +13,27 @@
 namespace warhol {
 namespace opengl {
 
+// Backend Suscription ---------------------------------------------------------
+
+namespace {
+
+std::unique_ptr<RendererBackend> CreateOpenGLRenderer() {
+  return std::make_unique<OpenGLRendererBackend>();
+}
+
+struct BackendSuscriptor {
+  BackendSuscriptor() {
+    SuscribeRendererBackendFactory(RendererType::kOpenGL, CreateOpenGLRenderer);
+  }
+};
+
+// Trigger the suscription.
+BackendSuscriptor backend_suscriptor;
+
+} // namespace
+
+// Init ------------------------------------------------------------------------
+
 namespace {
 
 const char*
@@ -31,8 +52,6 @@ Gl3wInitResultToString(int res) {
 
 }  // namespace
 
-// Init ------------------------------------------------------------------------
-
 bool OpenGLInit(OpenGLRendererBackend* opengl) {
   int res = gl3wInit();
   if (res != GL3W_OK) {
@@ -40,16 +59,57 @@ bool OpenGLInit(OpenGLRendererBackend* opengl) {
     return false;
   }
 
-  GL_CHECK(glGenBuffers(1, &opengl->camera_ubo));
-  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, opengl->camera_ubo));
+  uint32_t camera_ubo;
+  GL_CHECK(glGenBuffers(1, &camera_ubo));
+  opengl->camera_ubo = camera_ubo;
+
+  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, opengl->camera_ubo.value));
   GL_CHECK(glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL,
                         GL_STATIC_DRAW));
   GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, NULL));
 
-  GL_CHECK(glBindBufferBase(GL_UNIFORM_BUFFER, 0, opengl->camera_ubo));
+  GL_CHECK(glBindBufferBase(GL_UNIFORM_BUFFER, 0, opengl->camera_ubo.value));
 
   opengl->loaded = true;
   return true;
+}
+
+bool OpenGLRendererBackend::Init(Renderer*, Window*) {
+  return OpenGLInit(this);
+}
+
+// Shutdown --------------------------------------------------------------------
+
+namespace {
+
+void DeleteMeshHandles(MeshHandles* handles);   // Forward declaration.
+
+void OpenGLShutdown(OpenGLRendererBackend* opengl) {
+  ASSERT(Valid(opengl));
+
+  for (auto& [shader_uuid, handle] : opengl->loaded_shaders) {
+    GL_CHECK(glDeleteProgram(handle));
+  }
+  opengl->loaded_shaders.clear();
+
+  for (auto& [mesh_uuid, handles] : opengl->loaded_meshes) {
+    DeleteMeshHandles(&handles);
+  }
+  opengl->loaded_meshes.clear();
+
+  if (opengl->camera_ubo.has_value()) {
+    GL_CHECK(glDeleteBuffers(1, &opengl->camera_ubo.value));
+    opengl->camera_ubo = 0;
+  }
+  opengl->camera_ubo.clear();
+
+  opengl->loaded = false;
+}
+
+}  // namespace
+
+void OpenGLRendererBackend::Shutdown() {
+  return OpenGLShutdown(this);
 }
 
 // Stage Shader ----------------------------------------------------------------
@@ -147,6 +207,10 @@ bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
   return true;
 }
 
+bool OpenGLRendererBackend::StageShader(Shader* shader) {
+  return OpenGLStageShader(this, shader);
+}
+
 // Unstage Shader --------------------------------------------------------------
 
 void OpenGLUnstageShader(OpenGLRendererBackend* opengl, Shader* shader) {
@@ -155,6 +219,10 @@ void OpenGLUnstageShader(OpenGLRendererBackend* opengl, Shader* shader) {
 
   GL_CHECK(glDeleteProgram(it->second));
   opengl->loaded_shaders.erase(it);
+}
+
+void OpenGLRendererBackend::UnstageShader(Shader* shader) {
+  OpenGLUnstageShader(this, shader);
 }
 
 // Stage Mesh ------------------------------------------------------------------
@@ -234,6 +302,10 @@ bool OpenGLStageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
   return true;
 }
 
+bool OpenGLRendererBackend::StageMesh(Mesh* mesh) {
+  return OpenGLStageMesh(this, mesh);
+}
+
 // Unstage Mesh ----------------------------------------------------------------
 
 void OpenGLUnstageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
@@ -244,7 +316,13 @@ void OpenGLUnstageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
   opengl->loaded_meshes.erase(it);
 }
 
+void OpenGLRendererBackend::UnstageMesh(Mesh* mesh) {
+  OpenGLUnstageMesh(this, mesh);
+}
+
 // Stage Texture ---------------------------------------------------------------
+
+namespace {
 
 bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
   auto it = opengl->loaded_textures.find(texture->uuid);
@@ -282,7 +360,15 @@ bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
   return true;
 }
 
+}  // namespace
+
+bool OpenGLRendererBackend::StageTexture(Texture* texture) {
+  return OpenGLStageTexture(this, texture);
+}
+
 // Unstage Texture -------------------------------------------------------------
+
+namespace {
 
 void OpenGLUnstageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
   auto it = opengl->loaded_textures.find(texture->uuid);
@@ -292,7 +378,15 @@ void OpenGLUnstageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
   opengl->loaded_textures.erase(it);
 }
 
+}  // namespace
+
+void OpenGLRendererBackend::UnstageTexture(Texture* texture) {
+  OpenGLUnstageTexture(this, texture);
+}
+
 // Start Frame -----------------------------------------------------------------
+
+namespace {
 
 void OpenGLStartFrame(Renderer* renderer) {
   GL_CHECK(glClearColor(renderer->clear_color.x,
@@ -300,6 +394,12 @@ void OpenGLStartFrame(Renderer* renderer) {
                         renderer->clear_color.z,
                         1.0f));
   GL_CHECK(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+}
+
+}  // namespace
+
+void OpenGLRendererBackend::StartFrame(Renderer* renderer) {
+  OpenGLStartFrame(renderer);
 }
 
 // Execute Commands ------------------------------------------------------------
@@ -311,7 +411,7 @@ void SetCameraMatrices(OpenGLRendererBackend* opengl, Camera* camera) {
     return;
 
   void* data = &camera->projection;
-  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, opengl->camera_ubo));
+  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, opengl->camera_ubo.value));
   GL_CHECK(glBufferSubData(GL_UNIFORM_BUFFER, 0, 2 * sizeof(glm::mat4), data));
   GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, NULL));
 
@@ -331,8 +431,6 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
   }
   GL_CHECK(glBindVertexArray(NULL));
 }
-
-}  // namespace
 
 void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
                            LinkedList<RenderCommand>* commands) {
@@ -356,72 +454,24 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
   }
 }
 
-// Shutdown --------------------------------------------------------------------
-
-void OpenGLShutdown(OpenGLRendererBackend* opengl) {
-  ASSERT(Valid(opengl));
-
-  for (auto& [shader_uuid, handle] : opengl->loaded_shaders) {
-    GL_CHECK(glDeleteProgram(handle));
-  }
-
-  for (auto& [mesh_uuid, handles] : opengl->loaded_meshes) {
-    DeleteMeshHandles(&handles);
-  }
-
-  if (opengl->camera_ubo != 0) {
-    GL_CHECK(glDeleteBuffers(1, &opengl->camera_ubo));
-    opengl->camera_ubo = 0;
-  }
-
-  opengl->loaded = false;
-}
-
-// Virtual Interface "Dispatch" ------------------------------------------------
-
-bool OpenGLRendererBackend::Init(Renderer*, Window*) {
-  return OpenGLInit(this);
-}
-
-void OpenGLRendererBackend::Shutdown() {
-  return OpenGLShutdown(this);
-}
-
-bool OpenGLRendererBackend::StageShader(Shader* shader) {
-  return OpenGLStageShader(this, shader);
-}
-
-void OpenGLRendererBackend::UnstageShader(Shader* shader) {
-  OpenGLUnstageShader(this, shader);
-}
-
-bool OpenGLRendererBackend::StageMesh(Mesh* mesh) {
-  return OpenGLStageMesh(this, mesh);
-}
-
-void OpenGLRendererBackend::UnstageMesh(Mesh* mesh) {
-  OpenGLUnstageMesh(this, mesh);
-}
-
-bool OpenGLRendererBackend::StageTexture(Texture* texture) {
-  return OpenGLStageTexture(this, texture);
-}
-
-void OpenGLRendererBackend::UnstageTexture(Texture* texture) {
-  OpenGLUnstageTexture(this, texture);
-}
-
-void OpenGLRendererBackend::StartFrame(Renderer* renderer) {
-  OpenGLStartFrame(renderer);
-}
+}  // namespace
 
 void OpenGLRendererBackend::ExecuteCommands(
     Renderer*, LinkedList<RenderCommand>* commands) {
   OpenGLExecuteCommands(this, commands);
 }
 
+// End Frame -------------------------------------------------------------------
+
 void OpenGLRendererBackend::EndFrame(Renderer*) {
   // No op.
+}
+
+// Misc ------------------------------------------------------------------------
+
+OpenGLRendererBackend::~OpenGLRendererBackend() {
+  if (Valid(this))
+    OpenGLShutdown(this);
 }
 
 }  // namespace opengl

@@ -28,8 +28,9 @@ struct Window;
 // Backend Suscription ---------------------------------------------------------
 
 enum class RendererType {
+  kOpenGL,
   kVulkan,
-  kLast,  // DO NOT specialize with numbers.
+  kLast,
 };
 const char* ToString(RendererType);
 
