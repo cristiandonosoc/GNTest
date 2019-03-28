@@ -8,9 +8,9 @@
 #include <warhol/graphics/common/shader.h>
 #include <warhol/graphics/common/renderer.h>
 #include <warhol/input/input.h>
-#include <warhol/window/common/window.h>
 #include <warhol/scene/camera.h>
 #include <warhol/utils/log.h>
+#include <warhol/window/common/window.h>
 
 #include <warhol/memory/memory_pool.h>
 
@@ -156,6 +156,7 @@ int main() {
 
   InputState input = InputState::Create();
 
+  Vec3 delta;
   bool running = true;
   while (running) {
     auto events = UpdateWindow(&window, &input);
@@ -169,10 +170,26 @@ int main() {
     if (!running || input.keys_up[GET_KEY(Escape)])
       break;
 
+    delta.x += 0.1f * window.frame_delta;
+    delta.y += 0.2f * window.frame_delta;
+    delta.z += 0.05f * window.frame_delta;
+    delta *= 1.1f;
+
+    if (delta.x > 1.0f) delta.x -= 1.0f;
+    if (delta.y > 1.0f) delta.y -= 1.0f;
+    if (delta.z > 1.0f) delta.z -= 1.0f;
+
+
+    renderer.clear_color = delta;
+
     RendererStartFrame(&renderer);
     RendererExecuteCommands(&renderer, &command_list);
     RendererEndFrame(&renderer);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    WindowSwapBuffers(&window);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(33));
   }
+
+  LOG(DEBUG) << "Adios, amigo!";
 }

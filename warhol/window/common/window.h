@@ -74,7 +74,19 @@ bool InitWindow(Window*, WindowBackendType);
 // Will be called on destructor if window manager is valid.
 void ShutdownWindow(Window*);
 
+// Gets the window events and calculate inputs.
+// TODO(donosoc): Eventually separate window from inputs, even if behind the
+//                scenes they could be using the same backend (eg. SDL).
 LinkedList<WindowEvent> UpdateWindow(Window*, InputState*);
+
+// Some window managers have an explicit call for swapping buffers, notably
+// OpenGL. Since each window manager is different, we let the backend take
+// care of that functionality.
+//
+// In renderers that don't need this, this will be a no-op.
+//
+// NOTE: If v-sync is enabled, this will block on it.
+void WindowSwapBuffers(Window*);
 
 // *** VULKAN SPECIFIC ***
 //

@@ -42,6 +42,10 @@ std::string GetBasePath() {
   return PathJoin({std::move(base_path), ".."});
 }
 
+// GetNanoseconds --------------------------------------------------------------
+
+namespace {
+
 uint64_t GetHighPerformaceCounter() {
   LARGE_INTEGER counter;
   QueryPerformanceCounter(&counter);
@@ -52,6 +56,18 @@ uint64_t GetHighPerformaceFrequency() {
   LARGE_INTEGER frequency;
   QueryPerformanceFrequency(&frequency);
   return (uint64_t)frequency.QuadPart;
+}
+
+thread_local uint64_t last_counter = GetHighPerformaceCounter();
+
+}  // namespace
+
+uint64_t GetNanoseconds() {
+  uint64_t now = GetHighPerformaceCounter();
+  uint64_t diff = now - last_counter;
+  last_counter = now;
+
+  return diff / GetHighPerformaceFrequency();
 }
 
 }  // namespace warhol

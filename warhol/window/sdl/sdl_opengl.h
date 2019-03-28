@@ -35,6 +35,7 @@ struct SDLOpenGLWindow : public WindowBackend {
   bool Init(Window*) override;
   void Shutdown() override;
   LinkedList<WindowEvent> UpdateWindow(Window*, InputState*) override;
+  void SwapBuffers() override;
 };
 
 inline bool Valid(SDLOpenGLWindow* sdl) {

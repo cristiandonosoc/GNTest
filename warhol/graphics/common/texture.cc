@@ -35,13 +35,16 @@ bool LoadTexture(const std::string& path, TextureType texture_type,
   }
 
   Texture tmp;
-  tmp.data = stbi_load(path.c_str(), &tmp.x, &tmp.y, &tmp.channels, 4);
+  tmp.data = stbi_load(path.c_str(), &tmp.x, &tmp.y, &tmp.channels,
+                       STBI_rgb_alpha);
   if (!tmp.data.value) {
-    LOG(ERROR) << "Could not load texture in " << path;
+    LOG(ERROR) << "Could not load texture in " << path << ": "
+               << stbi_failure_reason();
     return false;
   }
 
   *out_texture = std::move(tmp);
+  out_texture->uuid = GetNextTextureUUID();
   return true;
 }
 

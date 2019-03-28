@@ -76,7 +76,7 @@ bool RendererStageShader(Renderer*, Shader*);
 void RendererUnstageShader(Renderer*, Shader*);
 
 bool RendererStageTexture(Renderer*, Texture*);
-void RendererUnstageShader(Renderer*, Texture*);
+void RendererUnstageTexture(Renderer*, Texture*);
 
 void RendererStartFrame(Renderer*);
 void RendererExecuteCommands(Renderer*, LinkedList<RenderCommand>* commands);

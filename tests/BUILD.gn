@@ -6,7 +6,9 @@ source_set("tests_lib") {
   testonly = true
   sources = [
     "euler_angles.cc",
+    "linked_list.cc",
     "memory_blocks.cc",
+    "memory_pool.cc",
     "optional.cc",
   ]
 
@@ -16,6 +18,7 @@ source_set("tests_lib") {
 
   deps = [
     "//warhol/math",
+    "//warhol/memory",
   ]
 }
 

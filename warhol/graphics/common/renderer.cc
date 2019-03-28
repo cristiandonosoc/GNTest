@@ -48,8 +48,6 @@ CreateRendererBackend(RendererType type) {
 
 void SuscribeRendererBackendFactory(RendererType type,
                                     RendererBackendFactoryFunction factory) {
-  LOG(DEBUG) << "Suscribing Renderer Backend: " << ToString(type);
-
   FactoryMap* factory_map = GetFactoryMap();
   ASSERT(factory_map->find(type) == factory_map->end());
   factory_map->insert({type, factory});
@@ -139,7 +137,6 @@ void RendererExecuteCommands(Renderer* renderer,
 void RendererEndFrame(Renderer* renderer) {
   ASSERT(Valid(renderer));
   renderer->backend->EndFrame(renderer);
-
 }
 
 // Misc ------------------------------------------------------------------------

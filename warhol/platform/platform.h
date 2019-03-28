@@ -15,7 +15,6 @@ std::string GetBasePath();
 std::string GetCurrentExecutablePath();
 std::string GetCurrentExecutableDirectory();
 
-uint64_t GetHighPerformaceCounter();
-uint64_t GetHighPerformanceFrequency();
+uint64_t GetNanoseconds();
 
 }  // namespace warhol

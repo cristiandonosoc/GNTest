@@ -65,23 +65,41 @@ struct LinkedList {
 
     LinkNode<T>* elem = nullptr;
   };
-
 };
 
 template <typename T>
+inline bool Empty(LinkedList<T>* list) {
+  return list->count == 0;
+}
+
+template <typename T>
 void PushIntoList(LinkedList<T>* list, LinkNode<T>* node) {
-  (void)list;
-  (void)node;
-  NOT_IMPLEMENTED();
+  if (Empty(list)) {
+    list->head = node;
+    list->tail = node;
+    list->count++;
+    return;
+  }
+
+  ASSERT(list->tail);
+  list->tail->next = node;
+  list->tail = node;
 }
 
 // Will allocate into the pool first and then create a node into the list.
 template <typename T>
 T* PushIntoListFromPool(LinkedList<T>* list, MemoryPool* pool) {
-  (void)list;
-  (void)pool;
-  NOT_IMPLEMENTED();
-  return nullptr;
+  LinkNode<T>* node = PushIntoPool<LinkNode<T>>(pool);
+  PushIntoList(list, node);
+  return &node->value;
+}
+
+template <typename T>
+T* PushIntoListFromPool(LinkedList<T>* list, MemoryPool* pool, T t) {
+  LinkNode<T>* node = PushIntoPool<LinkNode<T>>(pool);
+  PushIntoList(list, node);
+  node->value = std::move(t);
+  return &node->value;
 }
 
 }  // namespace warhol

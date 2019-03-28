@@ -42,14 +42,12 @@ CreateWindowBackend(WindowBackendType type) {
 
 void SuscribeWindowBackendFactoryFunction(
     WindowBackendType type, WindowBackendFactoryFunction factory) {
-  LOG(DEBUG) << "Suscribing Window Manager Backend: " << ToString(type);
-
   FactoryMap* factory_map = GetFactoryMap();
   ASSERT(factory_map->find(type) == factory_map->end());
   factory_map->insert({type, factory});
 }
 
-// InitWindow -----------------------------------------------------------
+// InitWindow ------------------------------------------------------------------
 
 namespace {
 
@@ -70,17 +68,30 @@ bool InitWindow(Window* window, WindowBackendType type) {
   return success;
 }
 
+// Shutdown --------------------------------------------------------------------
+
 void ShutdownWindow(Window* window) {
   ASSERT(Valid(window));
   window->backend->Shutdown();
   Reset(window);
 }
 
+// UpdateWindow ----------------------------------------------------------------
+
 LinkedList<WindowEvent>
 UpdateWindow(Window* window, InputState* input) {
   ASSERT(Valid(window));
   return window->backend->UpdateWindow(window, input);
 }
+
+// WindowSwapBuffers -----------------------------------------------------------
+
+void WindowSwapBuffers(Window* window) {
+  ASSERT(Valid(window));
+  return window->backend->SwapBuffers();
+}
+
+// Vulkan Extensions -----------------------------------------------------------
 
 std::vector<const char*>
 WindowGetVulkanInstanceExtensions(Window* window) {

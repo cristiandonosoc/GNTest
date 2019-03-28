@@ -3,6 +3,7 @@
 
 #include "warhol/platform/platform.h"
 
+#include <time.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -40,7 +41,10 @@ std::string GetBasePath() {
   return PathJoin({std::move(base_path), ".."});
 }
 
-#error GetPerformanceCounter not imlemented.
-#error GetPerformanceFrequency not implemented.
+uint64_t GetNanoseconds() {
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  return now.tv_sec * 1000000000 + now.tv_nsec;
+}
 
 }  // namespace warhol

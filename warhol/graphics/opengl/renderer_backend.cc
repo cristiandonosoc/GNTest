@@ -50,8 +50,6 @@ Gl3wInitResultToString(int res) {
   return "";
 }
 
-}  // namespace
-
 bool OpenGLInit(OpenGLRendererBackend* opengl) {
   int res = gl3wInit();
   if (res != GL3W_OK) {
@@ -73,6 +71,8 @@ bool OpenGLInit(OpenGLRendererBackend* opengl) {
   opengl->loaded = true;
   return true;
 }
+
+}  // namespace
 
 bool OpenGLRendererBackend::Init(Renderer*, Window*) {
   return OpenGLInit(this);
@@ -140,7 +140,7 @@ bool CompileShader(Shader* shader, const char* source, GLenum shader_kind,
     return false;
   }
 
-  *out_handle = false;
+  *out_handle = handle;
   return true;
 }
 
@@ -150,11 +150,9 @@ bool CompileVertShader(Shader* shader, uint32_t* out_handle) {
 }
 
 bool CompileFragShader(Shader* shader, uint32_t* out_handle) {
-  return CompileShader(shader, shader->vert_source.c_str(), GL_FRAGMENT_SHADER,
+  return CompileShader(shader, shader->frag_source.c_str(), GL_FRAGMENT_SHADER,
                        out_handle);
 }
-
-}  // namespace
 
 bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
   auto it = opengl->loaded_shaders.find(shader->uuid);
@@ -207,11 +205,15 @@ bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
   return true;
 }
 
+}  // namespace
+
 bool OpenGLRendererBackend::StageShader(Shader* shader) {
   return OpenGLStageShader(this, shader);
 }
 
 // Unstage Shader --------------------------------------------------------------
+
+namespace {
 
 void OpenGLUnstageShader(OpenGLRendererBackend* opengl, Shader* shader) {
   auto it = opengl->loaded_shaders.find(shader->uuid);
@@ -220,6 +222,8 @@ void OpenGLUnstageShader(OpenGLRendererBackend* opengl, Shader* shader) {
   GL_CHECK(glDeleteProgram(it->second));
   opengl->loaded_shaders.erase(it);
 }
+
+}  // namespace
 
 void OpenGLRendererBackend::UnstageShader(Shader* shader) {
   OpenGLUnstageShader(this, shader);
@@ -248,16 +252,19 @@ void DeleteMeshHandles(MeshHandles* handles) {
   GL_CHECK(glDeleteVertexArrays(1, &handles->vao));
 }
 
+
 void BindMeshHandles(MeshHandles* handles) {
+  // Always bind the VAO first, so that it doesn't overwrite.
+  GL_CHECK(glBindVertexArray(handles->vao));
   GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, handles->vbo));
   GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handles->ebo));
-  GL_CHECK(glBindVertexArray(handles->vao));
 }
 
 void UnbindMeshHandles() {
+  // Always unbind the VAO first, so that it doesn't overwrite.
+  GL_CHECK(glBindVertexArray(NULL));
   GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, NULL));
   GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, NULL));
-  GL_CHECK(glBindVertexArray(NULL));
 }
 
 void BufferVertices(Mesh* mesh) {
@@ -282,8 +289,6 @@ void BufferIndices(Mesh* mesh) {
           mesh->indices.data(), GL_STATIC_DRAW));
 }
 
-}  // namespace
-
 bool OpenGLStageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
   auto it = opengl->loaded_meshes.find(mesh->uuid);
   if (it != opengl->loaded_meshes.end()) {
@@ -299,14 +304,20 @@ bool OpenGLStageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
 
   UnbindMeshHandles();
 
+  opengl->loaded_meshes[mesh->uuid] = std::move(handles);
+
   return true;
 }
+
+}  // namespace
 
 bool OpenGLRendererBackend::StageMesh(Mesh* mesh) {
   return OpenGLStageMesh(this, mesh);
 }
 
 // Unstage Mesh ----------------------------------------------------------------
+
+namespace {
 
 void OpenGLUnstageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
   auto it = opengl->loaded_meshes.find(mesh->uuid);
@@ -315,6 +326,8 @@ void OpenGLUnstageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
   DeleteMeshHandles(&it->second);
   opengl->loaded_meshes.erase(it);
 }
+
+}  // namespace
 
 void OpenGLRendererBackend::UnstageMesh(Mesh* mesh) {
   OpenGLUnstageMesh(this, mesh);

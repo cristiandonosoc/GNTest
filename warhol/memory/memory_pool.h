@@ -13,13 +13,16 @@
 namespace warhol {
 
 struct MemoryPool {
-  size_t size = 0;      // In bytes.
-  size_t current = 0;   // Where the next byte will be taken from.
+  size_t size = 0;                // In bytes.
+  uint8_t* current = nullptr;     // Where the next byte will be taken from.
 
   std::unique_ptr<uint8_t[]> data;
 };
 
 inline bool Valid(MemoryPool* pool) { return !!pool->data; }
+
+// In bytes.
+size_t Used(MemoryPool* pool);
 
 void InitMemoryPool(MemoryPool*, size_t bytes);
 
@@ -32,9 +35,11 @@ void ShutdownMemoryPool(MemoryPool*);
 template <typename T>
 T* PushIntoPool(MemoryPool* pool) {
   ASSERT(Valid(pool));
+  ASSERT(pool->current + sizeof(T) < pool->data.get() + pool->size);
 
-  NOT_IMPLEMENTED();
-  return nullptr;
+  T* value = (T*)pool->current;
+  pool->current += sizeof(T);
+  return value;
 }
 
 

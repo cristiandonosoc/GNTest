@@ -210,6 +210,12 @@ SDLOpenGLWindow::UpdateWindow(Window* window, InputState* input) {
   return SDLOpenGLUpdateWindow(this, window, input);
 }
 
+// SwapBuffers -----------------------------------------------------------------
+
+void SDLOpenGLWindow::SwapBuffers() {
+  SDL_GL_SwapWindow(this->sdl_window.value);
+}
+
 // Misc ------------------------------------------------------------------------
 
 SDLOpenGLWindow::~SDLOpenGLWindow() {

@@ -102,12 +102,6 @@ void HandleMouse(InputState* input) {
   input->mouse_offset = input->mouse.pos - input->prev_mouse.pos;
 }
 
-void HandleMouseWheelEvent(const SDL_MouseWheelEvent* wheel_event,
-                           InputState* input) {
-  input->mouse.wheel.x = wheel_event->x;
-  input->mouse.wheel.y = wheel_event->y;
-}
-
 void HandleMouseWheelEvent(const SDL_MouseWheelEvent& wheel_event,
                            InputState* input) {
   input->mouse.wheel.x = wheel_event.x;

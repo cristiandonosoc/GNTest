@@ -143,9 +143,9 @@ struct HashPair3 {
 using Vec2 = Pair<float>;
 
 struct Vec3 {
-  float x;
-  float y;
-  float z;
+  float x = 0;
+  float y = 0;
+  float z = 0;
 
   Vec3() = default;
   Vec3(int x, int y, int z) : x((float)x), y((float)y), z((float)z) {}

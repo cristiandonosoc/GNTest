@@ -26,6 +26,9 @@ struct WindowBackend {
   virtual void Shutdown() = 0;
   virtual LinkedList<WindowEvent> UpdateWindow(Window*, InputState*) = 0;
 
+  // No-op if the window manager doesn't require it.
+  virtual void SwapBuffers() {};
+
   // *** VULKAN SPECIFIC ***
 
   // These functions must be subclassed if needed. If a backend doesn't need
