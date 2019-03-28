@@ -3,8 +3,8 @@
 
 // Attributes ------------------------------------------------------------------
 
-in vec3 in_color;
-in vec2 in_uv;
+in vec3 color;
+in vec2 uv;
 
 out vec4 out_color;
 
@@ -15,6 +15,6 @@ uniform sampler2D tex_sampler;
 // Code ------------------------------------------------------------------------
 
 void main() {
-  out_color = vec4(in_color, 1.0f);
-  // out_color = texture(tex_sampler, in_uv);
+  out_color = vec4(color, 1.0f);
+  // out_color = texture(tex_sampler, uv);
 }

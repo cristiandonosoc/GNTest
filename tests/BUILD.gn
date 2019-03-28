@@ -7,7 +7,6 @@ source_set("tests_lib") {
   sources = [
     "euler_angles.cc",
     "linked_list.cc",
-    "memory_blocks.cc",
     "memory_pool.cc",
     "optional.cc",
   ]

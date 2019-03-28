@@ -7,8 +7,8 @@ layout (location = 0) in vec3 in_pos;
 layout (location = 1) in vec3 in_color;
 layout (location = 2) in vec2 in_uv;
 
-out vec3 out_color;
-out vec2 out_uv;
+out vec3 color;
+out vec2 uv;
 
 // Uniforms --------------------------------------------------------------------
 
@@ -21,6 +21,6 @@ layout (std140) uniform Camera {
 
 void main() {
   gl_Position = camera.proj * camera.view * vec4(in_pos, 1.0);
-  out_color = in_color;
-  out_uv = in_uv;
+  color = in_pos;
+  uv = in_uv;
 }
