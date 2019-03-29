@@ -94,17 +94,21 @@ int main() {
     return 1;
   }
 
+  LOG(DEBUG) << "Is shader staged? "
+             << RendererIsShaderStaged(&renderer, &shader);
+
   LOG(DEBUG) << "Loading meshes.";
 
   Mesh mesh;
   mesh.uuid = GetNextMeshUUID();    // Created by hand.
   mesh.vertices = vertices;
   mesh.indices = indices;
-
   if (!RendererStageMesh(&renderer, &mesh)) {
     LOG(ERROR) << "Could not load mesh into renderer.";
     return 1;
   }
+
+  LOG(DEBUG) << "Is mesh staged? " << RendererIsMeshStaged(&renderer, &mesh);
 
   LOG(DEBUG) << "Loading textures.";
 
@@ -121,6 +125,9 @@ int main() {
                << " into renderer.";
     return 1;
   }
+
+  LOG(DEBUG) << "Is texture staged? "
+             << RendererIsTextureStaged(&renderer, &texture);
 
   LOG(DEBUG) << "Setting Memory Pool.";
 
@@ -143,6 +150,8 @@ int main() {
   LinkedList<MeshRenderAction> mesh_action_list;
   auto* mesh_action = PushIntoListFromPool(&mesh_action_list, &memory_pool);
   mesh_action->mesh = &mesh;
+  mesh_action->textures = &texture;
+  mesh_action->texture_count = 1;
 
   LinkedList<RenderCommand> command_list;
   auto* command = PushIntoListFromPool(&command_list, &memory_pool);
@@ -173,13 +182,6 @@ int main() {
     delta.x += 0.1f * window.frame_delta;
     delta.y += 0.2f * window.frame_delta;
     delta.z += 0.05f * window.frame_delta;
-    delta *= 1.1f;
-
-    if (delta.x > 1.0f) delta.x -= 1.0f;
-    if (delta.y > 1.0f) delta.y -= 1.0f;
-    if (delta.z > 1.0f) delta.z -= 1.0f;
-
-
     renderer.clear_color = delta;
 
     RendererStartFrame(&renderer);

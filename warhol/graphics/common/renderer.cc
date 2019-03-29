@@ -91,6 +91,11 @@ void RendererUnstageMesh(Renderer* renderer, Mesh* mesh) {
   renderer->backend->UnstageMesh(mesh);
 }
 
+bool RendererIsMeshStaged(Renderer* renderer, Mesh* mesh) {
+  ASSERT(Valid(renderer));
+  return renderer->backend->IsMeshStaged(mesh);
+}
+
 // Shader ----------------------------------------------------------------------
 
 bool RendererStageShader(Renderer* renderer, Shader* shader) {
@@ -106,6 +111,11 @@ void RendererUnstageShader(Renderer* renderer, Shader* shader) {
   renderer->backend->UnstageShader(shader);
 };
 
+bool RendererIsShaderStaged(Renderer* renderer, Shader* shader) {
+  ASSERT(Valid(renderer));
+  return renderer->backend->IsShaderStaged(shader);
+}
+
 // Texture ---------------------------------------------------------------------
 
 bool RendererStageTexture(Renderer* renderer, Texture* texture) {
@@ -119,6 +129,11 @@ bool RendererStageTexture(Renderer* renderer, Texture* texture) {
 void RendererUnstageTexture(Renderer* renderer, Texture* texture) {
   ASSERT(Valid(renderer));
   renderer->backend->UnstageTexture(texture);
+}
+
+bool RendererIsTextureStaged(Renderer* renderer, Texture* texture) {
+  ASSERT(Valid(renderer));
+  return renderer->backend->IsTextureStaged(texture);
 }
 
 // Frame Lifetime --------------------------------------------------------------

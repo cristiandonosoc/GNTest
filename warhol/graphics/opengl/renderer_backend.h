@@ -69,12 +69,19 @@ struct OpenGLRendererBackend : public RendererBackend {
 
   bool Init(Renderer*, Window*) override;
   void Shutdown() override;
-  bool StageShader(Shader*) override;
-  void UnstageShader(Shader*) override;
+
   bool StageMesh(Mesh*) override;
   void UnstageMesh(Mesh*) override;
+  bool IsMeshStaged(Mesh*) override;
+
+  bool StageShader(Shader*) override;
+  void UnstageShader(Shader*) override;
+  bool IsShaderStaged(Shader*) override;
+
   bool StageTexture(Texture*) override;
   void UnstageTexture(Texture*) override;
+  bool IsTextureStaged(Texture*) override;
+
   void StartFrame(Renderer*) override;
   void ExecuteCommands(Renderer*, LinkedList<RenderCommand>*) override;
   void EndFrame(Renderer*) override;

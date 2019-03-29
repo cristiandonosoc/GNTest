@@ -28,12 +28,15 @@ struct RendererBackend {
 
   virtual bool StageMesh(Mesh*) = 0;
   virtual void UnstageMesh(Mesh*) = 0;
+  virtual bool IsMeshStaged(Mesh*) = 0;
 
   virtual bool StageShader(Shader*) = 0;
   virtual void UnstageShader(Shader*) = 0;
+  virtual bool IsShaderStaged(Shader*) = 0;
 
   virtual bool StageTexture(Texture*) = 0;
   virtual void UnstageTexture(Texture*) = 0;
+  virtual bool IsTextureStaged(Texture*) = 0;
 
   virtual void StartFrame(Renderer*) = 0;
   virtual void ExecuteCommands(Renderer*, LinkedList<RenderCommand>*) = 0;

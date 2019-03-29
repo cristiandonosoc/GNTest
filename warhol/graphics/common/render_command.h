@@ -69,7 +69,8 @@ struct MeshRenderAction {
   UniformValue* values = nullptr;
   uint32_t value_count = 0;
 
-
+  Texture* textures = nullptr;
+  uint32_t texture_count = 0;
 };
 
 enum class RenderCommandType {

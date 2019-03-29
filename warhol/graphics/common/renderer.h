@@ -71,12 +71,15 @@ void AddRenderCommand(RenderCommand*, UniformValue* values, size_t count);
 
 bool RendererStageMesh(Renderer*, Mesh*);
 void RendererUnstageMesh(Renderer*, Mesh*);
+bool RendererIsMeshStaged(Renderer*, Mesh*);
 
 bool RendererStageShader(Renderer*, Shader*);
 void RendererUnstageShader(Renderer*, Shader*);
+bool RendererIsShaderStaged(Renderer*, Shader*);
 
 bool RendererStageTexture(Renderer*, Texture*);
 void RendererUnstageTexture(Renderer*, Texture*);
+bool RendererIsTextureStaged(Renderer*, Texture*);
 
 void RendererStartFrame(Renderer*);
 void RendererExecuteCommands(Renderer*, LinkedList<RenderCommand>* commands);

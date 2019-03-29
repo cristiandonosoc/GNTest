@@ -57,6 +57,8 @@ bool OpenGLInit(OpenGLRendererBackend* opengl) {
     return false;
   }
 
+  glEnable(GL_DEPTH_TEST);
+
   uint32_t camera_ubo;
   GL_CHECK(glGenBuffers(1, &camera_ubo));
   opengl->camera_ubo = camera_ubo;
@@ -110,6 +112,115 @@ void OpenGLShutdown(OpenGLRendererBackend* opengl) {
 
 void OpenGLRendererBackend::Shutdown() {
   return OpenGLShutdown(this);
+}
+
+// Stage Mesh ------------------------------------------------------------------
+
+namespace {
+
+MeshHandles GenerateMeshHandles() {
+  uint32_t buffers[2];
+  GL_CHECK(glGenBuffers(ARRAY_SIZE(buffers), buffers));
+
+  uint32_t vao;
+  GL_CHECK(glGenVertexArrays(1, &vao));
+
+  MeshHandles handles;
+  handles.vbo = buffers[0];
+  handles.ebo = buffers[1];
+  handles.vao = vao;
+  return handles;
+}
+
+void DeleteMeshHandles(MeshHandles* handles) {
+  GL_CHECK(glDeleteBuffers(2, (GLuint*)handles));
+  GL_CHECK(glDeleteVertexArrays(1, &handles->vao));
+}
+
+
+void BindMeshHandles(MeshHandles* handles) {
+  // Always bind the VAO first, so that it doesn't overwrite.
+  GL_CHECK(glBindVertexArray(handles->vao));
+  GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, handles->vbo));
+  GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handles->ebo));
+}
+
+void UnbindMeshHandles() {
+  // Always unbind the VAO first, so that it doesn't overwrite.
+  GL_CHECK(glBindVertexArray(NULL));
+  GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, NULL));
+  GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, NULL));
+}
+
+void BufferVertices(Mesh* mesh) {
+  GL_CHECK(glBufferData(GL_ARRAY_BUFFER, VerticesSize(mesh),
+          mesh->vertices.data(), GL_STATIC_DRAW));
+
+  // Pos.
+  GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0));
+  GL_CHECK(glEnableVertexAttribArray(0));
+  // Color.
+  GL_CHECK(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+          (void*)offsetof(Vertex, color)));
+  GL_CHECK(glEnableVertexAttribArray(1));
+  // UV.
+  GL_CHECK(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+          (void*)offsetof(Vertex, uv)));
+  GL_CHECK(glEnableVertexAttribArray(2));
+}
+
+void BufferIndices(Mesh* mesh) {
+  GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, IndicesSize(mesh),
+          mesh->indices.data(), GL_STATIC_DRAW));
+}
+
+bool OpenGLStageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
+  auto it = opengl->loaded_meshes.find(mesh->uuid);
+  if (it != opengl->loaded_meshes.end()) {
+    LOG(ERROR) << "Reloading mesh " << mesh->name;
+    return false;
+  }
+
+  MeshHandles handles = GenerateMeshHandles();
+  BindMeshHandles(&handles);
+
+  BufferVertices(mesh);
+  BufferIndices(mesh);
+
+  UnbindMeshHandles();
+
+  opengl->loaded_meshes[mesh->uuid] = std::move(handles);
+
+  return true;
+}
+
+}  // namespace
+
+bool OpenGLRendererBackend::StageMesh(Mesh* mesh) {
+  return OpenGLStageMesh(this, mesh);
+}
+
+inline bool OpenGLRendererBackend::IsMeshStaged(Mesh* mesh) {
+  ASSERT(Valid(this));
+  return this->loaded_meshes.count(mesh->uuid) > 0;
+}
+
+// Unstage Mesh ----------------------------------------------------------------
+
+namespace {
+
+void OpenGLUnstageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
+  auto it = opengl->loaded_meshes.find(mesh->uuid);
+  ASSERT(it != opengl->loaded_meshes.end());
+
+  DeleteMeshHandles(&it->second);
+  opengl->loaded_meshes.erase(it);
+}
+
+}  // namespace
+
+void OpenGLRendererBackend::UnstageMesh(Mesh* mesh) {
+  OpenGLUnstageMesh(this, mesh);
 }
 
 // Stage Shader ----------------------------------------------------------------
@@ -211,6 +322,11 @@ bool OpenGLRendererBackend::StageShader(Shader* shader) {
   return OpenGLStageShader(this, shader);
 }
 
+bool OpenGLRendererBackend::IsShaderStaged(Shader* shader) {
+  ASSERT(Valid(this));
+  return this->loaded_shaders.count(shader->uuid) > 0;
+}
+
 // Unstage Shader --------------------------------------------------------------
 
 namespace {
@@ -227,110 +343,6 @@ void OpenGLUnstageShader(OpenGLRendererBackend* opengl, Shader* shader) {
 
 void OpenGLRendererBackend::UnstageShader(Shader* shader) {
   OpenGLUnstageShader(this, shader);
-}
-
-// Stage Mesh ------------------------------------------------------------------
-
-namespace {
-
-MeshHandles GenerateMeshHandles() {
-  uint32_t buffers[2];
-  GL_CHECK(glGenBuffers(ARRAY_SIZE(buffers), buffers));
-
-  uint32_t vao;
-  GL_CHECK(glGenVertexArrays(1, &vao));
-
-  MeshHandles handles;
-  handles.vbo = buffers[0];
-  handles.ebo = buffers[1];
-  handles.vao = vao;
-  return handles;
-}
-
-void DeleteMeshHandles(MeshHandles* handles) {
-  GL_CHECK(glDeleteBuffers(2, (GLuint*)handles));
-  GL_CHECK(glDeleteVertexArrays(1, &handles->vao));
-}
-
-
-void BindMeshHandles(MeshHandles* handles) {
-  // Always bind the VAO first, so that it doesn't overwrite.
-  GL_CHECK(glBindVertexArray(handles->vao));
-  GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, handles->vbo));
-  GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handles->ebo));
-}
-
-void UnbindMeshHandles() {
-  // Always unbind the VAO first, so that it doesn't overwrite.
-  GL_CHECK(glBindVertexArray(NULL));
-  GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, NULL));
-  GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, NULL));
-}
-
-void BufferVertices(Mesh* mesh) {
-  GL_CHECK(glBufferData(GL_ARRAY_BUFFER, VerticesSize(mesh),
-          mesh->vertices.data(), GL_STATIC_DRAW));
-
-  // Pos.
-  GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0));
-  GL_CHECK(glEnableVertexAttribArray(0));
-  // Color.
-  GL_CHECK(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-          (void*)offsetof(Vertex, color)));
-  GL_CHECK(glEnableVertexAttribArray(1));
-  // UV.
-  GL_CHECK(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-          (void*)offsetof(Vertex, uv)));
-  GL_CHECK(glEnableVertexAttribArray(2));
-}
-
-void BufferIndices(Mesh* mesh) {
-  GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, IndicesSize(mesh),
-          mesh->indices.data(), GL_STATIC_DRAW));
-}
-
-bool OpenGLStageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
-  auto it = opengl->loaded_meshes.find(mesh->uuid);
-  if (it != opengl->loaded_meshes.end()) {
-    LOG(ERROR) << "Reloading mesh " << mesh->name;
-    return false;
-  }
-
-  MeshHandles handles = GenerateMeshHandles();
-  BindMeshHandles(&handles);
-
-  BufferVertices(mesh);
-  BufferIndices(mesh);
-
-  UnbindMeshHandles();
-
-  opengl->loaded_meshes[mesh->uuid] = std::move(handles);
-
-  return true;
-}
-
-}  // namespace
-
-bool OpenGLRendererBackend::StageMesh(Mesh* mesh) {
-  return OpenGLStageMesh(this, mesh);
-}
-
-// Unstage Mesh ----------------------------------------------------------------
-
-namespace {
-
-void OpenGLUnstageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
-  auto it = opengl->loaded_meshes.find(mesh->uuid);
-  ASSERT(it != opengl->loaded_meshes.end());
-
-  DeleteMeshHandles(&it->second);
-  opengl->loaded_meshes.erase(it);
-}
-
-}  // namespace
-
-void OpenGLRendererBackend::UnstageMesh(Mesh* mesh) {
-  OpenGLUnstageMesh(this, mesh);
 }
 
 // Stage Texture ---------------------------------------------------------------
@@ -377,6 +389,11 @@ bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
 
 bool OpenGLRendererBackend::StageTexture(Texture* texture) {
   return OpenGLStageTexture(this, texture);
+}
+
+bool OpenGLRendererBackend::IsTextureStaged(Texture* texture) {
+  ASSERT(Valid(this));
+  return this->loaded_textures.count(texture->uuid) > 0;
 }
 
 // Unstage Texture -------------------------------------------------------------
@@ -434,13 +451,23 @@ void SetCameraMatrices(OpenGLRendererBackend* opengl, Camera* camera) {
 void ExecuteMeshActions(OpenGLRendererBackend* opengl,
                         LinkedList<MeshRenderAction>* mesh_actions) {
   for (MeshRenderAction& action : *mesh_actions) {
-    auto it = opengl->loaded_meshes.find(action.mesh->uuid);
-    ASSERT(it != opengl->loaded_meshes.end());
+    auto mesh_it = opengl->loaded_meshes.find(action.mesh->uuid);
+    ASSERT(mesh_it != opengl->loaded_meshes.end());
 
-    MeshHandles& handles = it->second;
+    MeshHandles& handles = mesh_it->second;
     GL_CHECK(glBindVertexArray(handles.vao));
-    GL_CHECK(glDrawElements(GL_TRIANGLES, action.mesh->indices.size() / 3,
+    GL_CHECK(glDrawElements(GL_TRIANGLES, action.mesh->indices.size(),
                             GL_UNSIGNED_INT, NULL));
+
+    for (uint32_t i = 0; i < action.texture_count; i++) {
+      Texture* texture = action.textures + i;
+      auto tex_it = opengl->loaded_textures.find(texture->uuid);
+      ASSERT(tex_it != opengl->loaded_textures.end());
+
+
+      GL_CHECK(glActiveTexture(GL_TEXTURE0));
+      GL_CHECK(glBindTexture(GL_TEXTURE_2D, tex_it->second));
+    }
   }
   GL_CHECK(glBindVertexArray(NULL));
 }
