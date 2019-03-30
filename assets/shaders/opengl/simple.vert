@@ -1,7 +1,9 @@
 #version 330 core
 #extension GL_ARB_separate_shader_objects : enable
 
-//INCLUDE "common.gl"
+// NOTE: //# format is a warhol specific extension.
+
+//#INCLUDE "common.gl"
 
 // Attributes ------------------------------------------------------------------
 

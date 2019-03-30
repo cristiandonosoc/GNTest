@@ -16,7 +16,7 @@ TEST_CASE("MemoryPool") {
     std::vector<int> values;
     std::vector<int*> pointers;
     for (int i = 0; i < 10; i++) {
-      pointers.push_back(PushIntoPool<int>(&pool));
+      pointers.push_back(PushIntoMemoryPool<int>(&pool));
       values.push_back(i * i);
       *pointers.back() = values.back();
     }

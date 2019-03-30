@@ -82,8 +82,9 @@ int main() {
   LOG(DEBUG) << "Loading shaders.";
 
   Shader shader;
-  const char* shader_name = "common";
-  if (!LoadShader(GetShaderPath(shader_name, ShaderPathType::kOpenGL),
+  const char* shader_name = "simple";
+  if (!LoadShader("simple_shader",
+                  GetShaderPath(shader_name, ShaderPathType::kOpenGL),
                   &shader)) {
     LOG(ERROR) << "Could not load shader " << shader_name;
     return 1;
@@ -134,7 +135,6 @@ int main() {
   // Start pushing rendering actions.
   MemoryPool memory_pool;
   InitMemoryPool(&memory_pool, MEGABYTES(1));
-
 
   LOG(DEBUG) << "Setting camera.";
 

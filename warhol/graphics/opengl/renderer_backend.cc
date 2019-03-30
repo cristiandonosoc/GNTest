@@ -137,7 +137,6 @@ void DeleteMeshHandles(MeshHandles* handles) {
   GL_CHECK(glDeleteVertexArrays(1, &handles->vao));
 }
 
-
 void BindMeshHandles(MeshHandles* handles) {
   // Always bind the VAO first, so that it doesn't overwrite.
   GL_CHECK(glBindVertexArray(handles->vao));
@@ -378,7 +377,7 @@ void SetUniforms(MeshRenderAction* action, ShaderDescription* description) {
   if (description->vert_ubo_binding > -1) {
     ASSERT(description->vert_ubo_handle > 0);
     GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, description->vert_ubo_handle));
-    GL_CHECK(glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4),
+    GL_CHECK(glBufferData(GL_UNIFORM_BUFFER, action->vert_count,
                           action->vert_values, GL_STREAM_DRAW));
   }
 

@@ -4,15 +4,29 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace warhol {
 
 
+struct Uniform {
+  std::string name;
+  uint32_t size;      // In bytes.
+};
+
 struct Shader {
   uint64_t uuid = 0;  // Set up by the renderer.
   std::string name;
+  std::string path;
 
-  // Resetable.
+  int vert_ubo_size = -1;
+  std::vector<Uniform> vert_uniforms;
+
+  int frag_ubo_size = -1;
+  std::vector<Uniform> frag_uniforms;
+
+  // Resetable state -----------------------------------------------------------
+
   std::string vert_source;
   std::string frag_source;
 };
@@ -24,7 +38,7 @@ inline bool Loaded(Shader* shader) {
 
 // Will load the source, won't actually compile it.
 // That happens on RendererUploadShader.
-bool LoadShader(const std::string& path, Shader*);
+bool LoadShader(const std::string& name, const std::string& path, Shader*);
 
 // Will only remove the data.
 void UnloadShader(Shader*);

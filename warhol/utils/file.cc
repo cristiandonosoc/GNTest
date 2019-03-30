@@ -9,7 +9,7 @@
 
 namespace warhol {
 
-bool ReadWholeFile(const std::string& path,
+bool ReadWholeFile(const std::string_view& path,
                    std::string* out,
                    bool add_extra_zero) {
   FILE* file;
