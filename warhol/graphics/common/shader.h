@@ -12,6 +12,7 @@ struct Shader {
   uint64_t uuid = 0;  // Set up by the renderer.
   std::string name;
 
+  // Resetable.
   std::string vert_source;
   std::string frag_source;
 };

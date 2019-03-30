@@ -16,58 +16,14 @@ struct Camera;
 struct Mesh;
 struct Shader;
 
-// A Shader can have any combination of this uniforms.
-//
-// The set is determined by the shader uniform layout.
-enum class Uniform : uint32_t {
-  kModelMatrixX,
-  kModelMatrixY,
-  kModelMatrixZ,
-  kModelMatrixW,
-
-  kViewMatrixX,
-  kViewMatrixY,
-  kViewMatrixZ,
-  kViewMatrixW,
-
-  kProjectionMatrixX,
-  kProjectionMatrixY,
-  kProjectionMatrixZ,
-  kProjectionMatrixW,
-
-  kUser0,
-  kUser1,
-  kUser2,
-  kUser3,
-  kUser4,
-  kUser5,
-  kUser6,
-  kUser7,
-
-  kLast,
-};
-const char* ToString(Uniform);
-
-// Where a particular texture is bound.
-enum class TextureBind {
-  kTex0,
-  kTex1,
-  kTex2,
-  kTex3,
-  kLast,
-};
-const char* ToString(TextureBind);
-
-struct UniformValue {
-  Uniform uniform;
-  float x, y, z, w;
-};
-
 struct MeshRenderAction {
   Mesh* mesh = nullptr;
 
-  UniformValue* values = nullptr;
-  uint32_t value_count = 0;
+  float* vert_values = nullptr;
+  uint32_t vert_count = 0;    // Count of floats.
+
+  float* frag_values = nullptr;
+  uint32_t frag_count = 0;    // Count of floats.
 
   Texture* textures = nullptr;
   uint32_t texture_count = 0;

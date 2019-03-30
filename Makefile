@@ -9,7 +9,7 @@ test: FORCE
 	out/tests
 
 win: FORCE
-	ninja.exe -C out opengl_example
+	ninja.exe -C out experiments:graphics_api
 
 shaders: FORCE
 	glslangValidator -V assets/shaders/vulkan/demo.vert -o out/assets/shaders/vulkan/demo.vert.spv

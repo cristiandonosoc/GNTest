@@ -89,8 +89,8 @@ void DeleteMeshHandles(MeshHandles* handles);   // Forward declaration.
 void OpenGLShutdown(OpenGLRendererBackend* opengl) {
   ASSERT(Valid(opengl));
 
-  for (auto& [shader_uuid, handle] : opengl->loaded_shaders) {
-    GL_CHECK(glDeleteProgram(handle));
+  for (auto& [shader_uuid, description] : opengl->loaded_shaders) {
+    ShutdownShader(&description);
   }
   opengl->loaded_shaders.clear();
 
@@ -227,44 +227,6 @@ void OpenGLRendererBackend::UnstageMesh(Mesh* mesh) {
 
 namespace {
 
-bool CompileShader(Shader* shader, const char* source, GLenum shader_kind,
-                   uint32_t* out_handle) {
-  uint32_t handle = glCreateShader(shader_kind);
-  if (!handle) {
-    LOG(ERROR) << "Shader " << shader->name << ": Could not allocate shader.";
-    return false;
-  }
-
-  // Compile the shader source.
-  const GLchar* gl_src = source;
-  GL_CHECK(glShaderSource(handle, 1, &gl_src, 0));
-  GL_CHECK(glCompileShader(handle));
-
-  GLint success = 0;
-  GL_CHECK(glGetShaderiv(handle, GL_COMPILE_STATUS, &success));
-  if (success == GL_FALSE) {
-    GLchar log[2048];
-    GL_CHECK(glGetShaderInfoLog(handle, sizeof(log), 0, log));
-    GL_CHECK(glDeleteShader(handle));
-    LOG(ERROR) << "Shader " << shader->name << ": Error compiling "
-               << GLEnumToString(shader_kind) << " shader: " << log;
-    return false;
-  }
-
-  *out_handle = handle;
-  return true;
-}
-
-bool CompileVertShader(Shader* shader, uint32_t* out_handle) {
-  return CompileShader(shader, shader->vert_source.c_str(), GL_VERTEX_SHADER,
-                       out_handle);
-}
-
-bool CompileFragShader(Shader* shader, uint32_t* out_handle) {
-  return CompileShader(shader, shader->frag_source.c_str(), GL_FRAGMENT_SHADER,
-                       out_handle);
-}
-
 bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
   auto it = opengl->loaded_shaders.find(shader->uuid);
   if (it != opengl->loaded_shaders.end()) {
@@ -272,47 +234,11 @@ bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
     return false;
   }
 
-  // Compile the shaders and and program.
-  uint32_t vert_handle = 0;
-  uint32_t frag_handle = 0;
-  if (!CompileVertShader(shader, &vert_handle) ||
-      !CompileFragShader(shader, &frag_handle)) {
+  ShaderDescription description;
+  if (!UploadShader(shader, &description))
     return false;
-  }
 
-  uint32_t prog_handle = glCreateProgram();
-  if (prog_handle == 0) {
-    LOG(ERROR) << "glCreateProgram: could not allocate a program";
-    return false;
-  }
-
-  // Link 'em.
-  GL_CHECK(glAttachShader(prog_handle, vert_handle));
-  GL_CHECK(glAttachShader(prog_handle, frag_handle));
-  GL_CHECK(glLinkProgram(prog_handle));
-  glDeleteShader(vert_handle);
-  glDeleteShader(frag_handle);
-
-  GLint success = 0;
-  GL_CHECK(glGetProgramiv(prog_handle, GL_LINK_STATUS, &success));
-  if (success == GL_FALSE) {
-    GLchar log[2048];
-    GL_CHECK(glGetProgramInfoLog(prog_handle, sizeof(log), 0, log));
-    LOG(ERROR) << "Could not link shader: " << log;
-    return false;
-  }
-
-  // Get the uniform buffer blocks.
-  const char* block_name = "Camera";
-  uint32_t block_index = glGetUniformBlockIndex(prog_handle, block_name);
-  if (block_index == GL_INVALID_INDEX) {
-    LOG(ERROR) << "Could not find uniform buffer block " << block_name;
-    glDeleteProgram(prog_handle);
-    return false;
-  }
-
-  GL_CHECK(glUniformBlockBinding(prog_handle, block_index, 0));
-  opengl->loaded_shaders[shader->uuid] = prog_handle;
+  opengl->loaded_shaders[shader->uuid] = std::move(description);
   return true;
 }
 
@@ -335,7 +261,7 @@ void OpenGLUnstageShader(OpenGLRendererBackend* opengl, Shader* shader) {
   auto it = opengl->loaded_shaders.find(shader->uuid);
   ASSERT(it != opengl->loaded_shaders.end());
 
-  GL_CHECK(glDeleteProgram(it->second));
+  ShutdownShader(&it->second);
   opengl->loaded_shaders.erase(it);
 }
 
@@ -448,11 +374,33 @@ void SetCameraMatrices(OpenGLRendererBackend* opengl, Camera* camera) {
   opengl->last_set_camera = camera;
 }
 
+void SetUniforms(MeshRenderAction* action, ShaderDescription* description) {
+  if (description->vert_ubo_binding > -1) {
+    ASSERT(description->vert_ubo_handle > 0);
+    GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, description->vert_ubo_handle));
+    GL_CHECK(glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4),
+                          action->vert_values, GL_STREAM_DRAW));
+  }
+
+  if (description->frag_ubo_binding > -1) {
+    NOT_REACHED("Should not be here.");
+    ASSERT(description->frag_ubo_handle > 0);
+    /* GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, description->frag_ubo_handle)); */
+    /* GL_CHECK(glBufferSubData( */
+    /*     GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), action->frag_values)); */
+  }
+
+  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, NULL));
+}
+
 void ExecuteMeshActions(OpenGLRendererBackend* opengl,
+                        ShaderDescription* shader_desc,
                         LinkedList<MeshRenderAction>* mesh_actions) {
   for (MeshRenderAction& action : *mesh_actions) {
     auto mesh_it = opengl->loaded_meshes.find(action.mesh->uuid);
     ASSERT(mesh_it != opengl->loaded_meshes.end());
+
+    SetUniforms(&action, shader_desc);
 
     MeshHandles& handles = mesh_it->second;
     GL_CHECK(glBindVertexArray(handles.vao));
@@ -477,14 +425,15 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
   for (auto& command : *commands) {
     auto shader_it = opengl->loaded_shaders.find(command.shader->uuid);
     ASSERT(shader_it != opengl->loaded_shaders.end());
+    ShaderDescription& shader_desc = shader_it->second;
 
-    GL_CHECK(glUseProgram(shader_it->second));
+    GL_CHECK(glUseProgram(shader_desc.program_handle));
 
     SetCameraMatrices(opengl, command.camera);
 
     switch (command.type) {
       case RenderCommandType::kMesh:
-        ExecuteMeshActions(opengl, command.mesh_actions);
+        ExecuteMeshActions(opengl, &shader_desc, command.mesh_actions);
         break;
       case RenderCommandType::kLast:
         NOT_REACHED("Invalid render command type.");

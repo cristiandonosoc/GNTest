@@ -61,12 +61,6 @@ void ShutdownRenderer(Renderer*);
 
 void WindowSizeChanged(Renderer*, uint32_t width, uint32_t height);
 
-// Each render command has to come accompanied with all the appropiate uniform
-// values.
-//
-// See warhol/graphics/common/render_command.h for more details.
-void AddRenderCommand(RenderCommand*, UniformValue* values, size_t count);
-
 // Resource Uploading.
 
 bool RendererStageMesh(Renderer*, Mesh*);

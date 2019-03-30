@@ -153,6 +153,12 @@ int main() {
   mesh_action->textures = &texture;
   mesh_action->texture_count = 1;
 
+  auto* model = PushIntoMemoryPool<glm::mat4>(&memory_pool);
+  *model = glm::mat4(1);
+
+  mesh_action->vert_values = (float*)model;
+  mesh_action->vert_count = 1;
+
   LinkedList<RenderCommand> command_list;
   auto* command = PushIntoListFromPool(&command_list, &memory_pool);
 
@@ -184,13 +190,17 @@ int main() {
     delta.z += 0.05f * window.frame_delta;
     renderer.clear_color = delta;
 
+    *model = glm::rotate(glm::mat4(1.0f),
+                         window.seconds * glm::radians(90.0f),
+                         glm::vec3(0, 0, 1));
+
     RendererStartFrame(&renderer);
     RendererExecuteCommands(&renderer, &command_list);
     RendererEndFrame(&renderer);
 
     WindowSwapBuffers(&window);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(33));
+    std::this_thread::sleep_for(std::chrono::milliseconds(16));
   }
 
   LOG(DEBUG) << "Adios, amigo!";

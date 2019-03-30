@@ -33,7 +33,7 @@ void ResetMemoryPool(MemoryPool*);
 void ShutdownMemoryPool(MemoryPool*);
 
 template <typename T>
-T* PushIntoPool(MemoryPool* pool) {
+T* PushIntoMemoryPool(MemoryPool* pool) {
   ASSERT(Valid(pool));
   ASSERT(pool->current + sizeof(T) < pool->data.get() + pool->size);
 
