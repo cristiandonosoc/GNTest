@@ -197,7 +197,7 @@ SDLOpenGLUpdateWindow(SDLOpenGLWindow* sdl, Window* window, InputState* input) {
   // Chain the events into a linked list.
   LinkedList<WindowEvent> event_list;
   for (int i = 0; i < sdl->event_index; i++) {
-    WindowEvent* e = PushIntoListFromPool(&event_list, &sdl->memory_pool);
+    WindowEvent* e = PushIntoListFromMemoryPool(&event_list, &sdl->memory_pool);
     *e = sdl->events[i];
   }
   return event_list;

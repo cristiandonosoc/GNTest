@@ -19,14 +19,10 @@ struct Shader;
 struct MeshRenderAction {
   Mesh* mesh = nullptr;
 
+  // The counts of this are defined in shader.
   float* vert_values = nullptr;
-  uint32_t vert_count = 0;    // Count of floats.
-
   float* frag_values = nullptr;
-  uint32_t frag_count = 0;    // Count of floats.
-
   Texture* textures = nullptr;
-  uint32_t texture_count = 0;
 };
 
 enum class RenderCommandType {

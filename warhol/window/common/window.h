@@ -60,6 +60,12 @@ struct Window {
   float frame_times[kFrameTimesCounts];
   int frame_times_index = 0;
 
+
+  static constexpr size_t kMaxUtf8Chars = 255;
+  char utf8_chars_inputted[kMaxUtf8Chars + 1];
+  int utf8_index = 0;
+
+
   WindowBackendType backend_type = WindowBackendType::kLast;
   std::unique_ptr<WindowBackend> backend;
 };

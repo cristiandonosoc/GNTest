@@ -9,6 +9,7 @@
 #include <warhol/graphics/common/renderer.h>
 #include <warhol/input/input.h>
 #include <warhol/scene/camera.h>
+#include <warhol/ui/imgui/imgui.h>
 #include <warhol/utils/log.h>
 #include <warhol/window/common/window.h>
 
@@ -17,6 +18,7 @@
 #include <warhol/utils/glm_impl.h>
 
 using namespace warhol;
+using namespace warhol::imgui;
 
 namespace {
 
@@ -79,6 +81,13 @@ int main() {
     return 1;
   }
 
+  LOG(DEBUG) << "Initializing imgui.";
+  ImguiContext imgui_context;
+  if (!InitImgui(&renderer, &window, &imgui_context)) {
+    LOG(ERROR) << "Could not start imgui.";
+    return 1;
+  }
+
   LOG(DEBUG) << "Loading shaders.";
 
   Shader shader;
@@ -89,6 +98,9 @@ int main() {
     LOG(ERROR) << "Could not load shader " << shader_name;
     return 1;
   }
+
+  shader.vert_ubo_size = sizeof(glm::mat4);
+  shader.texture_count = 1;
 
   if (!RendererStageShader(&renderer, &shader)) {
     LOG(ERROR) << "Could not load shader " << shader_name;
@@ -145,28 +157,6 @@ int main() {
                        (float)window.width / (float)window.height,
                        0.1f, 100.f);
 
-  LOG(DEBUG) << "Set rendering commands.";
-
-  LinkedList<MeshRenderAction> mesh_action_list;
-  auto* mesh_action = PushIntoListFromPool(&mesh_action_list, &memory_pool);
-  mesh_action->mesh = &mesh;
-  mesh_action->textures = &texture;
-  mesh_action->texture_count = 1;
-
-  auto* model = PushIntoMemoryPool<glm::mat4>(&memory_pool);
-  *model = glm::mat4(1);
-
-  mesh_action->vert_values = (float*)model;
-  mesh_action->vert_count = 1;
-
-  LinkedList<RenderCommand> command_list;
-  auto* command = PushIntoListFromPool(&command_list, &memory_pool);
-
-  command->type = RenderCommandType::kMesh;
-  command->camera = &camera;
-  command->shader = &shader;
-  command->mesh_actions = &mesh_action_list;
-
   LOG(DEBUG) << "Staring game loop.";
 
   InputState input = InputState::Create();
@@ -182,6 +172,10 @@ int main() {
       }
     }
 
+    ImguiNewFrame(&imgui_context);
+    if (imgui_context.keyboard_captured || imgui_context.mouse_captured)
+      LOG(DEBUG) << "Captured.";
+
     if (!running || input.keys_up[GET_KEY(Escape)])
       break;
 
@@ -190,9 +184,36 @@ int main() {
     delta.z += 0.05f * window.frame_delta;
     renderer.clear_color = delta;
 
+    ResetMemoryPool(&memory_pool);
+
+    LinkedList<MeshRenderAction> mesh_action_list;
+    auto* mesh_action = PushIntoListFromMemoryPool(&mesh_action_list,
+                                                   &memory_pool);
+    mesh_action->mesh = &mesh;
+    mesh_action->textures = &texture;
+
+    auto* model = PushIntoMemoryPool<glm::mat4>(&memory_pool);
+    *model = glm::mat4(1);
+
+    mesh_action->vert_values = (float*)model;
+
+    LinkedList<RenderCommand> command_list;
+    auto* command = PushIntoListFromMemoryPool(&command_list, &memory_pool);
+
+    command->type = RenderCommandType::kMesh;
+    command->camera = &camera;
+    command->shader = &shader;
+    command->mesh_actions = &mesh_action_list;
+
+
+
     *model = glm::rotate(glm::mat4(1.0f),
                          window.seconds * glm::radians(90.0f),
                          glm::vec3(0, 0, 1));
+
+    /* RenderCommand imgui_command = ImguiGetRenderCommand(&imgui_context); */
+    /* PushIntoListFromMemoryPool(&command_list, &memory_pool, */
+    /*                            std::move(imgui_command)); */
 
     RendererStartFrame(&renderer);
     RendererExecuteCommands(&renderer, &command_list);

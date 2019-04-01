@@ -88,14 +88,14 @@ void PushIntoList(LinkedList<T>* list, LinkNode<T>* node) {
 
 // Will allocate into the pool first and then create a node into the list.
 template <typename T>
-T* PushIntoListFromPool(LinkedList<T>* list, MemoryPool* pool) {
+T* PushIntoListFromMemoryPool(LinkedList<T>* list, MemoryPool* pool) {
   LinkNode<T>* node = PushIntoMemoryPool<LinkNode<T>>(pool);
   PushIntoList(list, node);
   return &node->value;
 }
 
 template <typename T>
-T* PushIntoListFromPool(LinkedList<T>* list, MemoryPool* pool, T t) {
+T* PushIntoListFromMemoryPool(LinkedList<T>* list, MemoryPool* pool, T t) {
   LinkNode<T>* node = PushIntoMemoryPool<LinkNode<T>>(pool);
   PushIntoList(list, node);
   node->value = std::move(t);

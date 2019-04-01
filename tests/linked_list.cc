@@ -28,7 +28,7 @@ TEST_CASE("LinkedList") {
     }
   }
 
-  SECTION("PushIntoListFromPool Without Value") {
+  SECTION("PushIntoListFromMemoryPool Without Value") {
     MemoryPool pool;
     InitMemoryPool(&pool, KILOBYTES(1));
 
@@ -36,7 +36,7 @@ TEST_CASE("LinkedList") {
 
     std::vector<size_t> values(5);
     for (size_t i = 0; i < values.size(); i++) {
-      size_t* val = PushIntoListFromPool(&list, &pool);
+      size_t* val = PushIntoListFromMemoryPool(&list, &pool);
       values[i] = i * i;
       *val = values[i];
     }
@@ -48,7 +48,7 @@ TEST_CASE("LinkedList") {
     }
   }
 
-  SECTION("PushIntoListFromPool With Value") {
+  SECTION("PushIntoListFromMemoryPool With Value") {
     MemoryPool pool;
     InitMemoryPool(&pool, KILOBYTES(1));
 
@@ -56,7 +56,7 @@ TEST_CASE("LinkedList") {
     std::vector<size_t> values(5);
     for (size_t i = 0; i < values.size(); i++) {
       values[i] = i * i + 1;
-      size_t* val = PushIntoListFromPool(&list, &pool, values[i]);
+      size_t* val = PushIntoListFromMemoryPool(&list, &pool, values[i]);
       CHECK(*val == values[i]);
     }
 

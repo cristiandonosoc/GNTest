@@ -100,8 +100,8 @@ uint32_t BindBufferBase(uint32_t binding) {
   return ubo_handle;
 }
 
-bool InternalUploadShader(Shader* shader, ShaderDescription* description) {
-  *description = {};  // Clear out.
+bool InternalUploadShader(Shader* shader, ShaderHandles* handles) {
+  *handles = {};  // Clear out.
 
   // Compile the shaders and and program.
   uint32_t vert_handle = 0;
@@ -115,23 +115,23 @@ bool InternalUploadShader(Shader* shader, ShaderDescription* description) {
   if (prog_handle == 0)
     return false;
 
-  description->program_handle = prog_handle;
+  handles->program_handle = prog_handle;
 
   // Get the uniform buffer blocks.
   if (!LinkUniformBinding("Camera", prog_handle, 0)) {
     LOG(ERROR) << "Uniform block binding is not optional.";
     return false;
   }
-  description->camera_binding = 0;
+  handles->camera_binding = 0;
 
   if (LinkUniformBinding("VertUniforms", prog_handle, 1)) {
-    description->vert_ubo_binding = 1;
-    description->vert_ubo_handle = BindBufferBase(1);
+    handles->vert_ubo_binding = 1;
+    handles->vert_ubo_handle = BindBufferBase(1);
   }
 
   if (LinkUniformBinding("FragUniforms", prog_handle, 2)) {
-    description->frag_ubo_binding = 2;
-    description->frag_ubo_handle = BindBufferBase(2);
+    handles->frag_ubo_binding = 2;
+    handles->frag_ubo_handle = BindBufferBase(2);
   }
 
   return true;
@@ -139,7 +139,7 @@ bool InternalUploadShader(Shader* shader, ShaderDescription* description) {
 
 }  // namespace
 
-bool UploadShader(Shader* shader, ShaderDescription* shader_desc) {
+bool UploadShader(Shader* shader, ShaderHandles* shader_desc) {
   bool result = InternalUploadShader(shader, shader_desc);
   if (!result) {
     ShutdownShader(shader_desc);
@@ -155,17 +155,17 @@ bool UploadShader(Shader* shader, ShaderDescription* shader_desc) {
   return true;
 }
 
-void ShutdownShader(ShaderDescription* description) {
-  if (description->program_handle > 0)
-    GL_CHECK(glDeleteProgram(description->program_handle));
+void ShutdownShader(ShaderHandles* handles) {
+  if (handles->program_handle > 0)
+    GL_CHECK(glDeleteProgram(handles->program_handle));
 
-  if (description->vert_ubo_handle > 0)
-    GL_CHECK(glDeleteBuffers(1, &description->vert_ubo_handle));
+  if (handles->vert_ubo_handle > 0)
+    GL_CHECK(glDeleteBuffers(1, &handles->vert_ubo_handle));
 
-  if (description->frag_ubo_handle > 0)
-    GL_CHECK(glDeleteBuffers(1, &description->frag_ubo_handle));
+  if (handles->frag_ubo_handle > 0)
+    GL_CHECK(glDeleteBuffers(1, &handles->frag_ubo_handle));
 
-  *description = {};    // Clear.
+  *handles = {};    // Clear.
 }
 
 }  // namespace opengl

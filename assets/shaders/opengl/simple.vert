@@ -5,6 +5,9 @@
 
 //#INCLUDE "common.gl"
 
+// TODO(Cristian): Continue with the compilation eventually.
+#define UNIFORM_BLOCK(block_name) layout(std140) uniform block_name
+
 // Attributes ------------------------------------------------------------------
 
 layout (location = 0) in vec3 in_pos;

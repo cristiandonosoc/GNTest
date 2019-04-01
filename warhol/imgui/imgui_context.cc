@@ -1,6 +1,7 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
+#if 0
 #include "warhol/imgui/imgui_context.h"
 
 #include <third_party/imgui/imgui.h>
@@ -32,30 +33,6 @@ bool ImguiContext::Init() {
     LOG(ERROR) << "Could not initialize Imgui Renderer";
     return false;
   }
-
-  // Keyboard mapping. ImGui will use those indices to peek into the
-  // io.KeysDown[] array.
-  io_->KeyMap[ImGuiKey_Tab] = GET_KEY(Tab);
-  io_->KeyMap[ImGuiKey_LeftArrow] = GET_KEY(Left);
-  io_->KeyMap[ImGuiKey_RightArrow] = GET_KEY(Right);
-  io_->KeyMap[ImGuiKey_UpArrow] = GET_KEY(Up);
-  io_->KeyMap[ImGuiKey_DownArrow] = GET_KEY(Down);
-  io_->KeyMap[ImGuiKey_PageUp] = GET_KEY(PageUp);
-  io_->KeyMap[ImGuiKey_PageDown] = GET_KEY(PageDown);
-  io_->KeyMap[ImGuiKey_Home] = GET_KEY(Home);
-  io_->KeyMap[ImGuiKey_End] = GET_KEY(End);
-  io_->KeyMap[ImGuiKey_Insert] = GET_KEY(Insert);
-  io_->KeyMap[ImGuiKey_Delete] = GET_KEY(Delete);
-  io_->KeyMap[ImGuiKey_Backspace] = GET_KEY(Backspace);
-  io_->KeyMap[ImGuiKey_Space] = GET_KEY(Space);
-  io_->KeyMap[ImGuiKey_Enter] = GET_KEY(Enter);
-  io_->KeyMap[ImGuiKey_Escape] = GET_KEY(Escape);
-  io_->KeyMap[ImGuiKey_A] = GET_KEY(A);
-  io_->KeyMap[ImGuiKey_C] = GET_KEY(C);
-  io_->KeyMap[ImGuiKey_V] = GET_KEY(V);
-  io_->KeyMap[ImGuiKey_X] = GET_KEY(X);
-  io_->KeyMap[ImGuiKey_Y] = GET_KEY(Y);
-  io_->KeyMap[ImGuiKey_Z] = GET_KEY(Z);
 
   // Cursors
   // TODO(Cristian): Check for cursor errors.
@@ -166,3 +143,4 @@ ImguiContext::mouse_captured() const {
 }
 
 }  // namespace warhol
+#endif

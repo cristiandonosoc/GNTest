@@ -8,7 +8,6 @@
 
 namespace warhol {
 
-
 struct Uniform {
   std::string name;
   uint32_t size;      // In bytes.
@@ -19,11 +18,13 @@ struct Shader {
   std::string name;
   std::string path;
 
-  int vert_ubo_size = -1;
+  int vert_ubo_size = -1;     // In bytes.
   std::vector<Uniform> vert_uniforms;
 
-  int frag_ubo_size = -1;
+  int frag_ubo_size = -1;     // In bytes.
   std::vector<Uniform> frag_uniforms;
+
+  int texture_count = -1;
 
   // Resetable state -----------------------------------------------------------
 
@@ -38,7 +39,9 @@ inline bool Loaded(Shader* shader) {
 
 // Will load the source, won't actually compile it.
 // That happens on RendererUploadShader.
-bool LoadShader(const std::string& name, const std::string& path, Shader*);
+bool LoadShader(const std::string_view& name,
+                const std::string_view& path,
+                Shader*);
 
 // Will only remove the data.
 void UnloadShader(Shader*);

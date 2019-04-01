@@ -26,6 +26,10 @@ struct MeshHandles {
   uint32_t vao = 0;
 };
 
+struct TextureHandles {
+  uint32_t tex_handle = 0;
+};
+
 struct OpenGLRendererBackend : public RendererBackend {
   OpenGLRendererBackend() = default;
   ~OpenGLRendererBackend();   // RAII "semantics".
@@ -33,9 +37,9 @@ struct OpenGLRendererBackend : public RendererBackend {
   DEFAULT_MOVE_AND_ASSIGN(OpenGLRendererBackend);
 
   // Maps from external resource UUID to internal objects.
-  std::map<uint64_t, ShaderDescription> loaded_shaders;
+  std::map<uint64_t, ShaderHandles> loaded_shaders;
   std::map<uint64_t, MeshHandles> loaded_meshes;
-  std::map<uint64_t, uint32_t> loaded_textures;
+  std::map<uint64_t, TextureHandles> loaded_textures;
 
   // Buffer that holds the camera matrices.
   ClearOnMove<uint32_t> camera_ubo = 0;

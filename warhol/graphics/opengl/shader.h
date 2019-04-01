@@ -11,7 +11,7 @@ struct Shader;
 
 namespace opengl {
 
-struct ShaderDescription {
+struct ShaderHandles {
   uint32_t program_handle = 0;
 
   // Uniform block bindings.
@@ -26,8 +26,8 @@ struct ShaderDescription {
 };
 
 // Uploads the shader and queries it's uniform locations.
-bool UploadShader(Shader* shader, ShaderDescription* description);
-void ShutdownShader(ShaderDescription*);
+bool UploadShader(Shader* shader, ShaderHandles* description);
+void ShutdownShader(ShaderHandles*);
 
 }  // namespace opengl
 }  // namespace warhol

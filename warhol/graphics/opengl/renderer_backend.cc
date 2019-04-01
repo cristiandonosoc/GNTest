@@ -89,8 +89,8 @@ void DeleteMeshHandles(MeshHandles* handles);   // Forward declaration.
 void OpenGLShutdown(OpenGLRendererBackend* opengl) {
   ASSERT(Valid(opengl));
 
-  for (auto& [shader_uuid, description] : opengl->loaded_shaders) {
-    ShutdownShader(&description);
+  for (auto& [shader_uuid, handles] : opengl->loaded_shaders) {
+    ShutdownShader(&handles);
   }
   opengl->loaded_shaders.clear();
 
@@ -233,11 +233,11 @@ bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
     return false;
   }
 
-  ShaderDescription description;
-  if (!UploadShader(shader, &description))
+  ShaderHandles handles;
+  if (!UploadShader(shader, &handles))
     return false;
 
-  opengl->loaded_shaders[shader->uuid] = std::move(description);
+  opengl->loaded_shaders[shader->uuid] = std::move(handles);
   return true;
 }
 
@@ -306,7 +306,9 @@ bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
                         texture->data.value));
   GL_CHECK(glGenerateMipmap(GL_TEXTURE_2D));
 
-  opengl->loaded_textures[texture->uuid] = handle;
+  TextureHandles handles;
+  handles.tex_handle = handle;
+  opengl->loaded_textures[texture->uuid] = std::move(handles);
   return true;
 }
 
@@ -329,7 +331,7 @@ void OpenGLUnstageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
   auto it = opengl->loaded_textures.find(texture->uuid);
   ASSERT(it != opengl->loaded_textures.end());
 
-  GL_CHECK(glDeleteTextures(1, &it->second));
+  GL_CHECK(glDeleteTextures(1, &it->second.tex_handle));
   opengl->loaded_textures.erase(it);
 }
 
@@ -373,18 +375,21 @@ void SetCameraMatrices(OpenGLRendererBackend* opengl, Camera* camera) {
   opengl->last_set_camera = camera;
 }
 
-void SetUniforms(MeshRenderAction* action, ShaderDescription* description) {
-  if (description->vert_ubo_binding > -1) {
-    ASSERT(description->vert_ubo_handle > 0);
-    GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, description->vert_ubo_handle));
-    GL_CHECK(glBufferData(GL_UNIFORM_BUFFER, action->vert_count,
-                          action->vert_values, GL_STREAM_DRAW));
+void SetUniforms(Shader* shader, ShaderHandles* handles,
+                 MeshRenderAction* action) {
+  if (handles->vert_ubo_binding > -1) {
+    ASSERT(handles->vert_ubo_handle > 0);
+    GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, handles->vert_ubo_handle));
+    GL_CHECK(glBufferData(GL_UNIFORM_BUFFER,
+                          shader->vert_ubo_size,
+                          action->vert_values,
+                          GL_STREAM_DRAW));
   }
 
-  if (description->frag_ubo_binding > -1) {
+  if (handles->frag_ubo_binding > -1) {
     NOT_REACHED("Should not be here.");
-    ASSERT(description->frag_ubo_handle > 0);
-    /* GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, description->frag_ubo_handle)); */
+    ASSERT(handles->frag_ubo_handle > 0);
+    /* GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, handles->frag_ubo_handle)); */
     /* GL_CHECK(glBufferSubData( */
     /*     GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), action->frag_values)); */
   }
@@ -393,27 +398,28 @@ void SetUniforms(MeshRenderAction* action, ShaderDescription* description) {
 }
 
 void ExecuteMeshActions(OpenGLRendererBackend* opengl,
-                        ShaderDescription* shader_desc,
+                        Shader* shader,
+                        ShaderHandles* shader_desc,
                         LinkedList<MeshRenderAction>* mesh_actions) {
   for (MeshRenderAction& action : *mesh_actions) {
     auto mesh_it = opengl->loaded_meshes.find(action.mesh->uuid);
     ASSERT(mesh_it != opengl->loaded_meshes.end());
 
-    SetUniforms(&action, shader_desc);
+    SetUniforms(shader, shader_desc, &action);
 
     MeshHandles& handles = mesh_it->second;
     GL_CHECK(glBindVertexArray(handles.vao));
     GL_CHECK(glDrawElements(GL_TRIANGLES, action.mesh->indices.size(),
                             GL_UNSIGNED_INT, NULL));
 
-    for (uint32_t i = 0; i < action.texture_count; i++) {
+    for (int i = 0; i < shader->texture_count; i++) {
       Texture* texture = action.textures + i;
       auto tex_it = opengl->loaded_textures.find(texture->uuid);
       ASSERT(tex_it != opengl->loaded_textures.end());
 
 
       GL_CHECK(glActiveTexture(GL_TEXTURE0));
-      GL_CHECK(glBindTexture(GL_TEXTURE_2D, tex_it->second));
+      GL_CHECK(glBindTexture(GL_TEXTURE_2D, tex_it->second.tex_handle));
     }
   }
   GL_CHECK(glBindVertexArray(NULL));
@@ -424,7 +430,7 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
   for (auto& command : *commands) {
     auto shader_it = opengl->loaded_shaders.find(command.shader->uuid);
     ASSERT(shader_it != opengl->loaded_shaders.end());
-    ShaderDescription& shader_desc = shader_it->second;
+    ShaderHandles& shader_desc = shader_it->second;
 
     GL_CHECK(glUseProgram(shader_desc.program_handle));
 
@@ -432,7 +438,8 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
 
     switch (command.type) {
       case RenderCommandType::kMesh:
-        ExecuteMeshActions(opengl, &shader_desc, command.mesh_actions);
+        ExecuteMeshActions(opengl, command.shader, &shader_desc,
+                           command.mesh_actions);
         break;
       case RenderCommandType::kLast:
         NOT_REACHED("Invalid render command type.");

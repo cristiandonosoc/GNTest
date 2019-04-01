@@ -27,9 +27,6 @@ struct SDLOpenGLWindow : public WindowBackend {
   int event_index = 0;
   WindowEvent events[4];
 
-  int utf8_index = 0;
-  char utf8_chars_inputted[256];
-
   // Virtual Interface ---------------------------------------------------------
 
   bool Init(Window*) override;

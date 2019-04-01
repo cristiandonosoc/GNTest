@@ -51,69 +51,22 @@ bool ParseShader(const std::string_view& base_path, SubShaderType shader_type,
   if (!ReadWholeFile(shader_path, &source))
     return false;
 
-  auto lines = SplitToLines(source);
-  if (lines.empty()) {
-    LOG(ERROR) << "Empty shader.";
-    return false;
-  }
+  *out = {};
+  out->source = std::move(source);
 
-
-
-  // Look for key parts of the shader.
-  struct IncludeFile {
-    size_t line_index;   // The line to be appended at.
-    std::string source;
-  };
-  std::vector<IncludeFile> include_files;
-  bool uniforms_found = false;
-  std::vector<Uniform> uniforms;
-  for (size_t i; i < lines.size(); i++) {
-    auto& line = lines[i];
-    if (line.find("//#INCLUDE") == 0) {
-      std::string include_source;
-      if (!ParseInclude(line, base_path, &include_source))
-        return false;
-      include_files.push_back({i, std::move(include_source)});
-    } else if (line.find("UNIFORM_BLOCK") == 0) {
-      if (uniforms_found) {
-        LOG(ERROR) << "Uniform block already found.";
-        return false;
-      }
-
-      uniforms_found = true;
-      if (ParseUniforms(lines, i, &uniforms))
-        return false;
-    }
-  }
-
-  // Join the lines together.
-  std::vector<std::string_view> new_lines;
-  for (size_t i = 0; i < lines.size(); i++) {
-    // We see if we need to append a include file.
-    for (auto& include_file : include_files) {
-      if (include_file.line_index == i) {
-        new_lines.push_back(include_file.source);
-        continue;
-      }
-    }
-
-    new_lines.push_back(lines[i]);
-  }
-
-
-  out->source = Join(new_lines, "\n");
-  out->uniforms = std::move(uniforms);
   return true;
 };
 
 uint32_t GetUniformsSize(const std::vector<Uniform>& uniforms) {
-  uint32_t result;
+  uint32_t result = 0;
   for (auto& uniform : uniforms) {
     result += uniform.size;
   }
 
   return result;
 }
+
+}  // namespace
 
 uint64_t GetNextShaderUUID() { return kNextShaderUUID++; }
 
@@ -139,6 +92,9 @@ bool LoadShader(const std::string_view& name,
   shader->frag_source = std::move(frag_parse.source);
   shader->frag_ubo_size = GetUniformsSize(frag_parse.uniforms);
   shader->frag_uniforms = std::move(frag_parse.uniforms);
+
+  // TODO(Cristian): Detect texture count.
+  shader->texture_count = 0;
 
   return true;
 }
