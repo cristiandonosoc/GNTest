@@ -8,11 +8,14 @@
 #include <memory>
 
 #include "warhol/utils/assert.h"
+#include "warhol/utils/macros.h"
 #include "warhol/utils/types.h"
 
 namespace warhol {
 
 struct MemoryPool {
+  RAII_CONSTRUCTORS(MemoryPool);
+
   size_t size = 0;                // In bytes.
   uint8_t* current = nullptr;     // Where the next byte will be taken from.
 

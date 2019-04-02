@@ -94,6 +94,7 @@ int main() {
   const char* shader_name = "simple";
   if (!LoadShader("simple_shader",
                   GetShaderPath(shader_name, ShaderPathType::kOpenGL),
+                  ShaderType::kOpenGL,
                   &shader)) {
     LOG(ERROR) << "Could not load shader " << shader_name;
     return 1;

@@ -65,7 +65,7 @@ bool LoadMesh(const std::string& model_path, Mesh* mesh) {
   }
 
   mesh->uuid = GetNextMeshUUID();
-  LOG(INFO) << "Loaded model " << mesh->uuid
+  LOG(INFO) << "Loaded model " << mesh->uuid.value
             << ". Vertices: " << mesh->vertices.size()
             << ", Indices: " << mesh->indices.size();
   return mesh;

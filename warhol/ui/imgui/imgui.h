@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "warhol/scene/camera.h"
 #include "warhol/ui/imgui/imgui_renderer.h"
 #include "warhol/utils/macros.h"
 
@@ -29,11 +30,12 @@ struct ImguiContext {
   bool keyboard_captured = false;
   bool mouse_captured = false;
 
-  ImguiRenderer renderer;
+  Camera camera;
+  ImguiRenderer imgui_renderer;
 };
 
 inline bool Valid(ImguiContext* imgui) {
-  return !!imgui->io && Valid(&imgui->renderer);
+  return !!imgui->io && Valid(&imgui->imgui_renderer);
 }
 
 // Both the renderer and window must outlive the imgui context.

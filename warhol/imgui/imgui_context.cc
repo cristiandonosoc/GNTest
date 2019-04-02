@@ -1,7 +1,6 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#if 0
 #include "warhol/imgui/imgui_context.h"
 
 #include <third_party/imgui/imgui.h>
@@ -143,4 +142,3 @@ ImguiContext::mouse_captured() const {
 }
 
 }  // namespace warhol
-#endif

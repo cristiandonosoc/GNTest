@@ -75,20 +75,23 @@ bool ImguiRenderer::Init(ImGuiIO* io) {
 
 void
 ImguiRenderer::CreateFontTexture(ImGuiIO* io) {
+  // Load as RGBA 31-bits (75% of the memory
+  // is wasted, but default font is so small)
+  // because it is more likely to be
+  // compatible with user's existing shaders.
+  // If your ImTextureId represent a
+  // higher-level concept than just a GL
+  // texture id, consider calling
+  // GetTexDataAsAlpha8() instead to save on
+  // GPU memory.
+
+
+
   // Build texture atlas
   unsigned char* pixels;
   int width, height;
   io->Fonts->GetTexDataAsRGBA32(
-      &pixels, &width, &height);  // Load as RGBA 32-bits (75% of the memory
-                                  // is wasted, but default font is so small)
-                                  // because it is more likely to be
-                                  // compatible with user's existing shaders.
-                                  // If your ImTextureId represent a
-                                  // higher-level concept than just a GL
-                                  // texture id, consider calling
-                                  // GetTexDataAsAlpha8() instead to save on
-                                  // GPU memory.
-
+      &pixels, &width, &height);
   // Upload texture to graphics system
   /* GLint last_texture; */
   /* glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture); */

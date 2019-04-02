@@ -5,6 +5,9 @@
 
 #include <third_party/imgui/imgui.h>
 
+#include "warhol/utils/glm_impl.h"
+
+#include "warhol/graphics/common/render_command.h"
 #include "warhol/input/input.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
@@ -56,7 +59,10 @@ bool InitImgui(Renderer* renderer, ImguiContext* imgui) {
   imgui->io = &ImGui::GetIO();
   ASSERT(imgui->io);
 
-  if (InitImguiRenderer(renderer, &imgui->renderer))
+  imgui->camera.projection = glm::mat4(1.0f);
+  imgui->camera.view = glm::mat4(1.0f);
+
+  if (InitImguiRenderer(renderer, &imgui->imgui_renderer))
     return false;
 
   MapIO(imgui->io);
@@ -73,8 +79,8 @@ ImguiContext::~ImguiContext() {
 void ShutdownImgui(ImguiContext* imgui) {
   ASSERT(!Valid(imgui));
 
-  if (Valid(&imgui->renderer))
-    ShutdownImguiRenderer(&imgui->renderer);
+  if (Valid(&imgui->imgui_renderer))
+    ShutdownImguiRenderer(&imgui->imgui_renderer);
 
   ImGui::DestroyContext();
 }
@@ -112,7 +118,6 @@ void RestartKeys(Window* window, InputState* input, ImGuiIO* io) {
   // TODO(Cristian): Update cursors.
 }
 
-
 }  // namespace
 
 
@@ -132,7 +137,48 @@ void ImguiNewFrame(Window* window, InputState* input, ImguiContext* imgui) {
 
 // Get RenderCommand -----------------------------------------------------------
 
-RenderCommand ImguiGetRenderCommand(ImguiContext*);
+RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
+  ASSERT(Valid(imgui));
+
+  ImGuiIO* io = imgui->io;
+  ImDrawData* draw_data = ImGui::GetDrawData();
+
+  // Avoid rendering when minimized, scale coordinates for retina displays
+  // (screen coordinates != framebuffer coordinates)
+  int fb_width =
+      (int)(draw_data->DisplaySize.x * io->DisplayFramebufferScale.x);
+  int fb_height =
+      (int)(draw_data->DisplaySize.y * io->DisplayFramebufferScale.y);
+  if (fb_width <= 0 || fb_height <= 0)
+    return {};
+
+  imgui->camera.viewport_p1 = {0, 0};
+  imgui->camera.viewport_p2 = {fb_width, fb_height};
+
+  float L = draw_data->DisplayPos.x;
+  float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
+  float T = draw_data->DisplayPos.y;
+  float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
+  imgui->camera.projection = glm::ortho(L, R, B, T);
+
+  // Create the draw list.
+  for (size_t i = 0; i < draw_data->CmdListCount; i++) {
+    ImDrawList* cmd_list = draw_data->CmdLists[i];
+    ImDrawIdx* index_buffer_offset = nullptr;
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+}
 
 }  // namespace imgui
 }  // namespace warhol

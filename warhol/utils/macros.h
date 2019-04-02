@@ -35,6 +35,14 @@
   #define __PRETTY_FUNCTION__ __FUNCTION__
 #endif
 
+// Most resource holder objects within warhol have this constructor format,
+// so a macro here make sense.
+#define RAII_CONSTRUCTORS(class_name) \
+  class_name() = default;             \
+  ~class_name();                      \
+  DELETE_COPY_AND_ASSIGN(class_name); \
+  DEFAULT_MOVE_AND_ASSIGN(class_name);
+
 #define DECLARE_CONSTRUCTOR(class_name) class_name();
 #define DELETE_CONSTRUCTOR(class_name) class_name() = delete;
 #define DEFAULT_CONSTRUCTOR(class_name) class_name() = default;

@@ -20,7 +20,6 @@ namespace {
 void Reset(Renderer* renderer) {
   renderer->window = nullptr;
   renderer->backend.reset();
-  renderer->render_commands.clear();
 }
 
 using FactoryMap =
@@ -63,6 +62,7 @@ Renderer::~Renderer() {
 bool InitRenderer(Renderer* renderer, RendererType type, Window* window) {
   ASSERT(type != RendererType::kLast);
 
+  renderer->type = type;
   renderer->backend = CreateRendererBackend(type);
   return renderer->backend->Init(renderer, window);
 }

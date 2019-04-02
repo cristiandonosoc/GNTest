@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "warhol/math/vec.h"
+#include "warhol/utils/clear_on_move.h"
 #include "warhol/utils/macros.h"
 
 namespace warhol {
@@ -26,7 +27,7 @@ struct Vertex {
 size_t Hash(const Vertex&);
 
 struct Mesh {
-  uint64_t uuid = 0;     //  Zero is reserved.
+  ClearOnMove<uint64_t> uuid = 0;     //  Zero is reserved.
 
   std::string name;
 
@@ -37,7 +38,7 @@ struct Mesh {
 bool LoadMesh(const std::string&, Mesh*);
 
 
-inline bool Valid(Mesh* mesh) { return mesh->uuid != 0; }
+inline bool Valid(Mesh* mesh) { return mesh->uuid.value != 0; }
 inline bool Loaded(Mesh* mesh) {
   return !mesh->vertices.empty() && !mesh->indices.empty();
 }

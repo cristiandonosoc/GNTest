@@ -44,6 +44,7 @@ bool LoadTexture(const std::string& path, TextureType texture_type,
   }
 
   *out_texture = std::move(tmp);
+  out_texture->free_function = stbi_image_free;
   out_texture->uuid = GetNextTextureUUID();
   return true;
 }
@@ -51,8 +52,10 @@ bool LoadTexture(const std::string& path, TextureType texture_type,
 void UnloadTexture(Texture* texture) {
   ASSERT(Valid(texture));
 
-  stbi_image_free(texture->data.value);
-  texture->data.clear();
+  if (texture->free_function && texture->data.has_value()) {
+    texture->free_function(texture->data.value);
+    texture->data.clear();
+  }
 }
 
 const char* ToString(TextureType type) {

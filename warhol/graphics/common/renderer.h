@@ -18,6 +18,7 @@
 namespace warhol {
 
 struct Shader;
+struct UnstructuredBuffer;
 struct Window;
 
 // Renderers are implemented in terms of backends (OpenGL, Vulkan, etc.).
@@ -43,14 +44,14 @@ void SuscribeRendererBackendFactory(RendererType,
 // Renderer --------------------------------------------------------------------
 
 struct Renderer {
-  ~Renderer();  // "RAII" semantics.
+  RAII_CONSTRUCTORS(Renderer);
 
   Vec3 clear_color;
 
   Window* window = nullptr;
-  std::unique_ptr<RendererBackend> backend;
 
-  std::vector<RenderCommand> render_commands;
+  RendererType type = RendererType::kLast;
+  std::unique_ptr<RendererBackend> backend;
 };
 
 inline bool Valid(Renderer* r) { return !!r->backend; }
@@ -74,6 +75,10 @@ bool RendererIsShaderStaged(Renderer*, Shader*);
 bool RendererStageTexture(Renderer*, Texture*);
 void RendererUnstageTexture(Renderer*, Texture*);
 bool RendererIsTextureStaged(Renderer*, Texture*);
+
+bool RendererStageUnstructuredBuffer(Renderer*, UnstructuredBuffer*);
+bool RendererUnstageUnstructuredBuffer(Renderer*, UnstructuredBuffer*);
+bool RendererIsUnstructuredBufferStaged(Renderer*, UnstructuredBuffer*);
 
 void RendererStartFrame(Renderer*);
 void RendererExecuteCommands(Renderer*, LinkedList<RenderCommand>* commands);

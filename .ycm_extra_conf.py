@@ -55,6 +55,7 @@ flags = [
 
 '-D', 'WARHOL_SDL_ENABLED',
 '-D', 'WARHOL_VULKAN_ENABLED',
+'-D', 'WARHOL_OPENGL_ENABLED',
 
 # Linux
 '-I', os.path.join('usr', 'include'),

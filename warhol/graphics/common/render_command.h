@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "warhol/math/vec.h"
 #include "warhol/containers/linked_list.h"
 #include "warhol/graphics/common/texture.h"
 
@@ -27,11 +28,29 @@ struct MeshRenderAction {
 
 enum class RenderCommandType {
   kMesh,
-  kLast,
+  kNoop,
+};
+
+struct RenderCommandConfig {
+  // Use a blend equation.
+  bool blend_enabled = true;
+  // Do face culling.
+  bool cull_faces = true;
+  // Use the depth buffer.
+  bool depth_test = true;
+
+  // Use scissor (only draw part of the framebuffer).
+  bool use_scissor = false;
+  Pair<int> scissor_p1;   // lower left corner.
+  Pair<int> scissor_p2;   // Upper right corner.
+
+  // Only draw wireframes.
+  bool wireframe_mode = false;
 };
 
 struct RenderCommand {
-  RenderCommandType type = RenderCommandType::kLast;
+  RenderCommandType type = RenderCommandType::kNoop;
+  RenderCommandConfig config;
 
   Camera* camera;
   Shader* shader;

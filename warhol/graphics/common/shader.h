@@ -6,7 +6,15 @@
 #include <string>
 #include <vector>
 
+#include "warhol/utils/clear_on_move.h"
+#include "warhol/utils/macros.h"
+
 namespace warhol {
+
+enum class ShaderType {
+  kOpenGL,
+  kVulkan,
+};
 
 struct Uniform {
   std::string name;
@@ -14,7 +22,8 @@ struct Uniform {
 };
 
 struct Shader {
-  uint64_t uuid = 0;  // Set up by the renderer.
+  ClearOnMove<uint64_t> uuid = 0;  // Set up by the renderer.
+
   std::string name;
   std::string path;
 
@@ -28,11 +37,12 @@ struct Shader {
 
   // Resetable state -----------------------------------------------------------
 
-  std::string vert_source;
-  std::string frag_source;
+  // The source will depend on what renderer backend is consuming this data.
+  std::vector<uint8_t> vert_source;
+  std::vector<uint8_t> frag_source;
 };
 
-inline bool Valid(Shader* shader) { return shader->uuid != 0; }
+inline bool Valid(Shader* shader) { return shader->uuid.value != 0; }
 inline bool Loaded(Shader* shader) {
   return !shader->vert_source.empty() && !shader->frag_source.empty();
 }
@@ -41,6 +51,7 @@ inline bool Loaded(Shader* shader) {
 // That happens on RendererUploadShader.
 bool LoadShader(const std::string_view& name,
                 const std::string_view& path,
+                ShaderType shader_type,
                 Shader*);
 
 // Will only remove the data.

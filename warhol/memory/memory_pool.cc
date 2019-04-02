@@ -16,7 +16,14 @@ void ResetMemoryPool(MemoryPool* pool) {
   pool->current = pool->data.get();
 }
 
+MemoryPool::~MemoryPool() {
+  if (Valid(this))
+    ShutdownMemoryPool(this);
+}
+
 void ShutdownMemoryPool(MemoryPool* pool) {
+  ASSERT(Valid(pool));
+
   pool->size = 0;
   pool->current = nullptr;
   pool->data.reset();
