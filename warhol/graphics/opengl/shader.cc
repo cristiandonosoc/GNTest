@@ -42,12 +42,14 @@ bool CompileShader(Shader* shader, const char* source, GLenum shader_kind,
 }
 
 bool CompileVertShader(Shader* shader, uint32_t* out_handle) {
-  return CompileShader(shader, shader->vert_source.c_str(), GL_VERTEX_SHADER,
-                       out_handle);
+  return CompileShader(shader, (char*)shader->vert_source.data(),
+                       GL_VERTEX_SHADER, out_handle);
 }
 
 bool CompileFragShader(Shader* shader, uint32_t* out_handle) {
-  return CompileShader(shader, shader->frag_source.c_str(), GL_FRAGMENT_SHADER,
+  return CompileShader(shader,
+                       (char*)shader->frag_source.data(),
+                       GL_FRAGMENT_SHADER,
                        out_handle);
 }
 

@@ -38,6 +38,7 @@ struct Shader {
   // Resetable state -----------------------------------------------------------
 
   // The source will depend on what renderer backend is consuming this data.
+  // TODO: Use a memory pool for this.
   std::vector<uint8_t> vert_source;
   std::vector<uint8_t> frag_source;
 };
@@ -53,6 +54,8 @@ bool LoadShader(const std::string_view& name,
                 const std::string_view& path,
                 ShaderType shader_type,
                 Shader*);
+
+std::string ShaderSourceAsString(const std::vector<uint8_t>& src);
 
 // Will only remove the data.
 void UnloadShader(Shader*);

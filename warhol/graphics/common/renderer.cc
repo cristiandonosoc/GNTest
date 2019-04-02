@@ -81,7 +81,7 @@ void ShutdownRenderer(Renderer* renderer) {
 
 bool RendererStageMesh(Renderer* renderer, Mesh* mesh) {
   ASSERT(Valid(renderer));
-  ASSERT(mesh->uuid != 0);
+  ASSERT(mesh->uuid.has_value());
 
   return renderer->backend->StageMesh(mesh);
 }

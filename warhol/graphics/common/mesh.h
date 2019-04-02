@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "warhol/math/vec.h"
+#include "warhol/memory/memory_pool.h"
 #include "warhol/utils/clear_on_move.h"
 #include "warhol/utils/macros.h"
 
@@ -31,24 +32,27 @@ struct Mesh {
 
   std::string name;
 
-  std::vector<Vertex> vertices;
-  std::vector<uint32_t> indices;
+  MemoryPool vertices;
+  MemoryPool indices;
+
+  uint32_t vertex_size = 0;
+  uint32_t vertex_count = 0;
+  uint32_t index_count = 0;
+
+  bool loaded = false;
 };
 
 bool LoadMesh(const std::string&, Mesh*);
-
+void InitMeshPools(Mesh*, size_t vert_size, size_t index_size);
 
 inline bool Valid(Mesh* mesh) { return mesh->uuid.value != 0; }
-inline bool Loaded(Mesh* mesh) {
-  return !mesh->vertices.empty() && !mesh->indices.empty();
-}
 
 inline size_t VerticesSize(Mesh* mesh) {
-  return mesh->vertices.size() * sizeof(Vertex);
+  return mesh->vertex_count * mesh->vertex_size;
 }
 
 inline size_t IndicesSize(Mesh* mesh) {
-  return mesh->indices.size() * sizeof(uint32_t);
+  return mesh->index_count * sizeof(uint32_t);
 }
 
 // Thread safe. Will advance the UUID.

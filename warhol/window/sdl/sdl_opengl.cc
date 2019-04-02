@@ -50,6 +50,8 @@ void SDLOpenGLShutdown(SDLOpenGLWindow* sdl) {
 
   if (Valid(&sdl->memory_pool))
     ShutdownMemoryPool(&sdl->memory_pool);
+
+  sdl->window = nullptr;
 }
 
 }  // namespace
@@ -93,6 +95,7 @@ bool SDLOpenGLInit(SDLOpenGLWindow* sdl, Window* window) {
   SDL_GL_SetSwapInterval(1);  // Enable v-sync.
   SDL_GetWindowSize(sdl->sdl_window.value, &window->width, &window->height);
 
+  sdl->window = window;
   InitMemoryPool(&sdl->memory_pool, KILOBYTES(1));
   return true;
 }
@@ -144,8 +147,9 @@ void PushEvent(SDLOpenGLWindow* sdl, WindowEvent event) {
 }
 
 void PushUtf8Char(SDLOpenGLWindow* sdl, char c) {
-  ASSERT(sdl->utf8_index < ARRAY_SIZE(sdl->utf8_chars_inputted));
-  sdl->utf8_chars_inputted[sdl->utf8_index++] = c;
+  Window* window = sdl->window;
+  ASSERT(window->utf8_index < ARRAY_SIZE(window->utf8_chars_inputted));
+  window->utf8_chars_inputted[window->utf8_index++] = c;
 }
 
 void HandleWindowEvent(const SDL_WindowEvent& window_event,
@@ -165,7 +169,7 @@ SDLOpenGLUpdateWindow(SDLOpenGLWindow* sdl, Window* window, InputState* input) {
 
   // Restart the state.
   sdl->event_index = 0;
-  sdl->utf8_index = 0;
+  sdl->window->utf8_index = 0;
   ResetMemoryPool(&sdl->memory_pool);
 
   CalculateFramerate(window);

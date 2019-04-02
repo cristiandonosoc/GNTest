@@ -23,6 +23,8 @@ struct SDLOpenGLWindow : public WindowBackend {
   ClearOnMove<SDL_GLContext> gl_context = NULL;
   MemoryPool memory_pool;
 
+  Window* window = nullptr;   // Not owning. Must outlive.
+
   // Array of events that can happen within a frame.
   int event_index = 0;
   WindowEvent events[4];

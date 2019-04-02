@@ -31,9 +31,16 @@ const char* SubShaderTypeToString(SubShaderType type) {
 }
 
 struct ShaderParseResult {
-  std::string source;
+  std::vector<uint8_t> source;
   std::vector<Uniform> uniforms;
 };
+
+std::vector<uint8_t> StringToSource(const std::string& str) {
+  std::vector<uint8_t> src;
+  src.reserve(str.size());
+  src.insert(src.end(), str.begin(), str.end());
+  return src;
+}
 
 bool ParseShader(const std::string_view& base_path, SubShaderType shader_type,
                  ShaderParseResult* out) {
@@ -52,7 +59,7 @@ bool ParseShader(const std::string_view& base_path, SubShaderType shader_type,
     return false;
 
   *out = {};
-  out->source = std::move(source);
+  out->source = StringToSource(std::move(source));
 
   return true;
 };
@@ -72,7 +79,14 @@ uint64_t GetNextShaderUUID() { return kNextShaderUUID++; }
 
 bool LoadShader(const std::string_view& name,
                 const std::string_view& base_path,
+                ShaderType shader_type,
                 Shader* shader) {
+
+  if (shader_type == ShaderType::kVulkan) {
+    LOG(ERROR) << "Vulkan shader type not supported yet.";
+    return false;
+  }
+
   ShaderParseResult vert_parse;
   if (!ParseShader(base_path, SubShaderType::kVertex, &vert_parse))
     return false;
@@ -104,6 +118,13 @@ void UnloadShader(Shader* shader) {
   shader->frag_source.clear();
   shader->vert_ubo_size = -1;
   shader->frag_ubo_size = -1;
+}
+
+std::string ShaderSourceAsString(const std::vector<uint8_t>& src) {
+  std::string str;
+  str.reserve(src.size());
+  str.insert(str.end(), src.begin(), src.end());
+  return str;
 }
 
 }  // namespace warhol

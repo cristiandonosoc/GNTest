@@ -29,9 +29,4 @@ void ShutdownMemoryPool(MemoryPool* pool) {
   pool->data.reset();
 }
 
-size_t Used(MemoryPool* pool) {
-  ASSERT(Valid(pool));
-  return pool->current - pool->data.get();
-}
-
 }  // namespace warhol

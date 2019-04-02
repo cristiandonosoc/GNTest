@@ -41,7 +41,18 @@ bool LoadMesh(const std::string& model_path, Mesh* mesh) {
   // We only want to insert unique vertices.
   std::unordered_map<size_t, uint32_t> vertex_ht;
 
-  mesh->vertices.reserve(attrib.vertices.size() + attrib.texcoords.size());
+  // TODO: Precalculate the size needed instead of copying everything over...
+  //       twice!
+
+  // We reserve a huuuuge memory pool for the vertices and indices.
+  MemoryPool vert_pool;
+  InitMemoryPool(&vert_pool, MEGABYTES(64));
+  size_t vert_count = 0;
+
+  MemoryPool index_pool;
+  InitMemoryPool(&index_pool, MEGABYTES(16));
+  size_t index_count = 0;
+
   for (const auto& shape : shapes) {
     for (const auto& index : shape.mesh.indices) {
       Vertex vertex = {};
@@ -57,17 +68,34 @@ bool LoadMesh(const std::string& model_path, Mesh* mesh) {
 
       size_t vertex_hash = Hash(vertex);
       // We see if we need to emplace it.
-      auto [it, ok] = vertex_ht.insert({vertex_hash, mesh->vertices.size()});
-      if (ok)
-        mesh->vertices.push_back(std::move(vertex));
-      mesh->indices.push_back(it->second);
+      auto [it, ok] = vertex_ht.insert({vertex_hash, Used(&vert_pool)});
+      if (ok) {
+        PushIntoMemoryPool(&vert_pool, std::move(vertex));
+        vert_count++;
+      }
+      PushIntoMemoryPool(&index_pool, (uint32_t)it->second);
+      index_count++;
     }
   }
 
+  // Now that we have the loaded sizes, we can move it over.
+  // TODO: Pools should have some kind of bucketing instead of giving you the
+  //       exact amount.
+  InitMeshPools(mesh, Used(&vert_pool), Used(&index_pool));
+
+  memcpy(mesh->vertices.data.get(), vert_pool.data.get(), Used(&vert_pool));
+  mesh->vertex_size = sizeof(Vertex);
+  mesh->vertex_count = vert_count;
+
+  memcpy(mesh->indices.data.get(), index_pool.data.get(), Used(&index_pool));
+  mesh->index_count = index_count;
+
   mesh->uuid = GetNextMeshUUID();
-  LOG(INFO) << "Loaded model " << mesh->uuid.value
-            << ". Vertices: " << mesh->vertices.size()
-            << ", Indices: " << mesh->indices.size();
+  LOG(INFO) << "Loaded model " << mesh->uuid.value << std::endl
+            << "Vertices: " << mesh->vertex_count << "("
+            << BytesToString(VerticesSize(mesh)) << ")" << std::endl
+            << "Indices: " << mesh->index_count << "("
+            << BytesToString(IndicesSize(mesh));
   return mesh;
 }
 

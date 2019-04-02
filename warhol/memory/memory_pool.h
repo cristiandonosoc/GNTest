@@ -24,8 +24,13 @@ struct MemoryPool {
 
 inline bool Valid(MemoryPool* pool) { return !!pool->data; }
 
+inline bool Empty(MemoryPool* pool) { return pool->size == 0; }
+
 // In bytes.
-size_t Used(MemoryPool* pool);
+inline size_t Used(MemoryPool* pool) {
+  ASSERT(Valid(pool));
+  return pool->current - pool->data.get();
+}
 
 void InitMemoryPool(MemoryPool*, size_t bytes);
 
@@ -45,6 +50,11 @@ T* PushIntoMemoryPool(MemoryPool* pool) {
   return value;
 }
 
-
+template <typename T>
+T* PushIntoMemoryPool(MemoryPool* pool, T t) {
+  T* val = PushIntoMemoryPool<T>(pool);
+  *val = std::move(t);
+  return val;
+}
 
 }  // namespace warhol
