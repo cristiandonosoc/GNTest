@@ -153,7 +153,7 @@ void UnbindMeshHandles() {
 
 void BufferVertices(Mesh* mesh) {
   GL_CHECK(glBufferData(GL_ARRAY_BUFFER, VerticesSize(mesh),
-          mesh->vertices.data(), GL_STATIC_DRAW));
+          Data(&mesh->vertices), GL_STATIC_DRAW));
 
   // Pos.
   GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0));
@@ -170,15 +170,18 @@ void BufferVertices(Mesh* mesh) {
 
 void BufferIndices(Mesh* mesh) {
   GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, IndicesSize(mesh),
-          mesh->indices.data(), GL_STATIC_DRAW));
+          Data(&mesh->indices), GL_STATIC_DRAW));
 }
 
 bool OpenGLStageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
-  auto it = opengl->loaded_meshes.find(mesh->uuid);
+  uint64_t uuid = mesh->uuid.value;
+  auto it = opengl->loaded_meshes.find(uuid);
   if (it != opengl->loaded_meshes.end()) {
     LOG(ERROR) << "Reloading mesh " << mesh->name;
     return false;
   }
+
+  ASSERT(HasData(mesh));
 
   MeshHandles handles = GenerateMeshHandles();
   BindMeshHandles(&handles);
@@ -188,7 +191,7 @@ bool OpenGLStageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
 
   UnbindMeshHandles();
 
-  opengl->loaded_meshes[mesh->uuid] = std::move(handles);
+  opengl->loaded_meshes[uuid] = std::move(handles);
 
   return true;
 }
@@ -201,7 +204,7 @@ bool OpenGLRendererBackend::StageMesh(Mesh* mesh) {
 
 inline bool OpenGLRendererBackend::IsMeshStaged(Mesh* mesh) {
   ASSERT(Valid(this));
-  return this->loaded_meshes.count(mesh->uuid) > 0;
+  return this->loaded_meshes.count(mesh->uuid.value) > 0;
 }
 
 // Unstage Mesh ----------------------------------------------------------------
@@ -209,7 +212,7 @@ inline bool OpenGLRendererBackend::IsMeshStaged(Mesh* mesh) {
 namespace {
 
 void OpenGLUnstageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
-  auto it = opengl->loaded_meshes.find(mesh->uuid);
+  auto it = opengl->loaded_meshes.find(mesh->uuid.value);
   ASSERT(it != opengl->loaded_meshes.end());
 
   DeleteMeshHandles(&it->second);
@@ -227,7 +230,8 @@ void OpenGLRendererBackend::UnstageMesh(Mesh* mesh) {
 namespace {
 
 bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
-  auto it = opengl->loaded_shaders.find(shader->uuid);
+  uint64_t uuid = shader->uuid.value;
+  auto it = opengl->loaded_shaders.find(uuid);
   if (it != opengl->loaded_shaders.end()) {
     LOG(ERROR) << "Shader " << shader->name << " is already loaded.";
     return false;
@@ -237,7 +241,7 @@ bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
   if (!UploadShader(shader, &handles))
     return false;
 
-  opengl->loaded_shaders[shader->uuid] = std::move(handles);
+  opengl->loaded_shaders[uuid] = std::move(handles);
   return true;
 }
 
@@ -249,7 +253,7 @@ bool OpenGLRendererBackend::StageShader(Shader* shader) {
 
 bool OpenGLRendererBackend::IsShaderStaged(Shader* shader) {
   ASSERT(Valid(this));
-  return this->loaded_shaders.count(shader->uuid) > 0;
+  return this->loaded_shaders.count(shader->uuid.value) > 0;
 }
 
 // Unstage Shader --------------------------------------------------------------
@@ -257,7 +261,7 @@ bool OpenGLRendererBackend::IsShaderStaged(Shader* shader) {
 namespace {
 
 void OpenGLUnstageShader(OpenGLRendererBackend* opengl, Shader* shader) {
-  auto it = opengl->loaded_shaders.find(shader->uuid);
+  auto it = opengl->loaded_shaders.find(shader->uuid.value);
   ASSERT(it != opengl->loaded_shaders.end());
 
   ShutdownShader(&it->second);
@@ -275,7 +279,8 @@ void OpenGLRendererBackend::UnstageShader(Shader* shader) {
 namespace {
 
 bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
-  auto it = opengl->loaded_textures.find(texture->uuid);
+  uint64_t uuid = texture->uuid.value;
+  auto it = opengl->loaded_textures.find(uuid);
   if (it != opengl->loaded_textures.end()) {
     LOG(ERROR) << "Shader " << texture->name << " is already loaded.";
     return false;
@@ -308,7 +313,7 @@ bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
 
   TextureHandles handles;
   handles.tex_handle = handle;
-  opengl->loaded_textures[texture->uuid] = std::move(handles);
+  opengl->loaded_textures[uuid] = std::move(handles);
   return true;
 }
 
@@ -320,7 +325,7 @@ bool OpenGLRendererBackend::StageTexture(Texture* texture) {
 
 bool OpenGLRendererBackend::IsTextureStaged(Texture* texture) {
   ASSERT(Valid(this));
-  return this->loaded_textures.count(texture->uuid) > 0;
+  return this->loaded_textures.count(texture->uuid.value) > 0;
 }
 
 // Unstage Texture -------------------------------------------------------------
@@ -328,7 +333,7 @@ bool OpenGLRendererBackend::IsTextureStaged(Texture* texture) {
 namespace {
 
 void OpenGLUnstageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
-  auto it = opengl->loaded_textures.find(texture->uuid);
+  auto it = opengl->loaded_textures.find(texture->uuid.value);
   ASSERT(it != opengl->loaded_textures.end());
 
   GL_CHECK(glDeleteTextures(1, &it->second.tex_handle));
@@ -402,19 +407,19 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
                         ShaderHandles* shader_desc,
                         LinkedList<MeshRenderAction>* mesh_actions) {
   for (MeshRenderAction& action : *mesh_actions) {
-    auto mesh_it = opengl->loaded_meshes.find(action.mesh->uuid);
+    auto mesh_it = opengl->loaded_meshes.find(action.mesh->uuid.value);
     ASSERT(mesh_it != opengl->loaded_meshes.end());
 
     SetUniforms(shader, shader_desc, &action);
 
     MeshHandles& handles = mesh_it->second;
     GL_CHECK(glBindVertexArray(handles.vao));
-    GL_CHECK(glDrawElements(GL_TRIANGLES, action.mesh->indices.size(),
+    GL_CHECK(glDrawElements(GL_TRIANGLES, action.mesh->index_count,
                             GL_UNSIGNED_INT, NULL));
 
     for (int i = 0; i < shader->texture_count; i++) {
       Texture* texture = action.textures + i;
-      auto tex_it = opengl->loaded_textures.find(texture->uuid);
+      auto tex_it = opengl->loaded_textures.find(texture->uuid.value);
       ASSERT(tex_it != opengl->loaded_textures.end());
 
 
@@ -428,7 +433,7 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
 void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
                            LinkedList<RenderCommand>* commands) {
   for (auto& command : *commands) {
-    auto shader_it = opengl->loaded_shaders.find(command.shader->uuid);
+    auto shader_it = opengl->loaded_shaders.find(command.shader->uuid.value);
     ASSERT(shader_it != opengl->loaded_shaders.end());
     ShaderHandles& shader_desc = shader_it->second;
 
@@ -441,6 +446,8 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
         ExecuteMeshActions(opengl, command.shader, &shader_desc,
                            command.mesh_actions);
         break;
+      case RenderCommandType::kNoop:
+        continue;
       case RenderCommandType::kLast:
         NOT_REACHED("Invalid render command type.");
     }

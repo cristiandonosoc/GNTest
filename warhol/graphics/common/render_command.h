@@ -29,6 +29,7 @@ struct MeshRenderAction {
 enum class RenderCommandType {
   kMesh,
   kNoop,
+  kLast,
 };
 
 struct RenderCommandConfig {
@@ -40,7 +41,6 @@ struct RenderCommandConfig {
   bool depth_test = true;
 
   // Use scissor (only draw part of the framebuffer).
-  bool use_scissor = false;
   Pair<int> scissor_p1;   // lower left corner.
   Pair<int> scissor_p2;   // Upper right corner.
 
@@ -49,7 +49,7 @@ struct RenderCommandConfig {
 };
 
 struct RenderCommand {
-  RenderCommandType type = RenderCommandType::kNoop;
+  RenderCommandType type = RenderCommandType::kLast;
   RenderCommandConfig config;
 
   Camera* camera;

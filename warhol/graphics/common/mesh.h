@@ -42,10 +42,13 @@ struct Mesh {
   bool loaded = false;
 };
 
-bool LoadMesh(const std::string&, Mesh*);
+bool LoadMesh(const std::string_view&, Mesh*);
 void InitMeshPools(Mesh*, size_t vert_size, size_t index_size);
 
 inline bool Valid(Mesh* mesh) { return mesh->uuid.value != 0; }
+inline bool HasData(Mesh* mesh) {
+  return Valid(&mesh->vertices) && Valid(&mesh->indices);
+}
 
 inline size_t VerticesSize(Mesh* mesh) {
   return mesh->vertex_count * mesh->vertex_size;

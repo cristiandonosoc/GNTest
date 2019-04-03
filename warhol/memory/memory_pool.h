@@ -22,6 +22,8 @@ struct MemoryPool {
   std::unique_ptr<uint8_t[]> data;
 };
 
+inline uint8_t* Data(MemoryPool* pool) { return pool->data.get(); }
+
 inline bool Valid(MemoryPool* pool) { return !!pool->data; }
 
 inline bool Empty(MemoryPool* pool) { return pool->size == 0; }
@@ -39,6 +41,14 @@ void ResetMemoryPool(MemoryPool*);
 
 // RAII semantics will take care of this also.
 void ShutdownMemoryPool(MemoryPool*);
+
+// Pushes arbitraty data into the memory pool.
+uint8_t* PushIntoMemoryPool(MemoryPool*, uint8_t* data, size_t size);
+
+template <typename T>
+T* PushIntoMemoryPool(MemoryPool* pool, T* data, size_t count) {
+  return (T*)PushIntoMemoryPool(pool, (uint8_t*)data, sizeof(T) * count);
+}
 
 template <typename T>
 T* PushIntoMemoryPool(MemoryPool* pool) {

@@ -26,7 +26,7 @@ size_t Hash(const Vertex& vertex) {
          (Hash(vertex.uv) << 1);
 }
 
-bool LoadMesh(const std::string& model_path, Mesh* mesh) {
+bool LoadMesh(const std::string_view& model_path, Mesh* mesh) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;
@@ -97,6 +97,15 @@ bool LoadMesh(const std::string& model_path, Mesh* mesh) {
             << "Indices: " << mesh->index_count << "("
             << BytesToString(IndicesSize(mesh));
   return mesh;
+}
+
+void InitMeshPools(Mesh* mesh, size_t vert_size, size_t index_size) {
+  LOG(DEBUG) << "Initializing mesh pools. Vertex: " << vert_size
+             << ", indices: " << index_size;
+  ASSERT(!Valid(&mesh->vertices));
+  InitMemoryPool(&mesh->vertices, vert_size);
+  ASSERT(!Valid(&mesh->indices));
+  InitMemoryPool(&mesh->indices, index_size);
 }
 
 }  // namespace warhol

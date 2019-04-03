@@ -26,6 +26,38 @@ TEST_CASE("MemoryPool") {
       CHECK(*ptr++ == values[i]);
     }
   }
+
+  SECTION("Direct pushing") {
+    MemoryPool pool;
+    InitMemoryPool(&pool, KILOBYTES(1));
+
+    std::vector<int> values;
+    values.reserve(10);
+    for (size_t i = 0; i < 10; i++) {
+      values.push_back(i * i);
+    }
+
+    {
+      int* ptr = PushIntoMemoryPool(&pool, values.data(), values.size());
+      REQUIRE(Used(&pool) == sizeof(int) * values.size());
+      for (int value : values) {
+        CHECK(*ptr++ == value);
+      }
+    }
+
+    ResetMemoryPool(&pool);
+
+    {
+      uint8_t* ptr = PushIntoMemoryPool(&pool, (uint8_t*)values.data(),
+                                        sizeof(int) * values.size());
+      REQUIRE(Used(&pool) == sizeof(int) * values.size());
+      int* int_ptr = (int*)ptr;
+      for (int value : values) {
+        CHECK(*int_ptr++ == value);
+      }
+
+    }
+  }
 }
 
 }  // namespace test

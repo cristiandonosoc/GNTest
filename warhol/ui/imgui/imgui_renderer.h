@@ -7,7 +7,7 @@
 
 #include "warhol/graphics/common/shader.h"
 #include "warhol/graphics/common/texture.h"
-#include "warhol/graphics/common/unstructured_buffer.h"
+#include "warhol/graphics/common/mesh.h"
 #include "warhol/utils/macros.h"
 
 namespace warhol {
@@ -22,9 +22,9 @@ struct ImguiRenderer {
   DELETE_COPY_AND_ASSIGN(ImguiRenderer);
   DEFAULT_MOVE_AND_ASSIGN(ImguiRenderer);
 
+  Mesh mesh;
   Shader shader;
   Texture font_texture;
-  UnstructuredBuffer buffer;
 
   ImGuiIO* io = nullptr;
   Renderer* renderer = nullptr;   // Must outlive.

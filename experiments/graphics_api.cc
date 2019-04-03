@@ -56,6 +56,7 @@ const std::vector<Vertex> vertices = {
     {0.0f,  1.0f}},
 };
 
+
 }  // namespace
 
 const std::vector<uint32_t> indices = {
@@ -81,12 +82,12 @@ int main() {
     return 1;
   }
 
-  LOG(DEBUG) << "Initializing imgui.";
-  ImguiContext imgui_context;
-  if (!InitImgui(&renderer, &window, &imgui_context)) {
-    LOG(ERROR) << "Could not start imgui.";
-    return 1;
-  }
+  /* LOG(DEBUG) << "Initializing imgui."; */
+  /* ImguiContext imgui_context; */
+  /* if (!InitImgui(&renderer, &window, &imgui_context)) { */
+  /*   LOG(ERROR) << "Could not start imgui."; */
+  /*   return 1; */
+  /* } */
 
   LOG(DEBUG) << "Loading shaders.";
 
@@ -115,8 +116,16 @@ int main() {
 
   Mesh mesh;
   mesh.uuid = GetNextMeshUUID();    // Created by hand.
-  mesh.vertices = vertices;
-  mesh.indices = indices;
+
+  mesh.vertex_size = sizeof(decltype(vertices)::value_type);
+  mesh.vertex_count = vertices.size();
+  mesh.index_count = indices.size();
+  InitMeshPools(&mesh,
+                mesh.vertex_size * mesh.vertex_count,
+                sizeof(uint32_t) * mesh.index_count);
+  PushIntoMemoryPool(&mesh.vertices, vertices.data(), vertices.size());
+  PushIntoMemoryPool(&mesh.indices, indices.data(), indices.size());
+
   if (!RendererStageMesh(&renderer, &mesh)) {
     LOG(ERROR) << "Could not load mesh into renderer.";
     return 1;
@@ -173,9 +182,9 @@ int main() {
       }
     }
 
-    ImguiNewFrame(&imgui_context);
-    if (imgui_context.keyboard_captured || imgui_context.mouse_captured)
-      LOG(DEBUG) << "Captured.";
+    /* ImguiNewFrame(&imgui_context); */
+    /* if (imgui_context.keyboard_captured || imgui_context.mouse_captured) */
+    /*   LOG(DEBUG) << "Captured."; */
 
     if (!running || input.keys_up[GET_KEY(Escape)])
       break;
