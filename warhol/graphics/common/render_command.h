@@ -9,20 +9,54 @@
 
 #include "warhol/math/vec.h"
 #include "warhol/containers/linked_list.h"
-#include "warhol/graphics/common/texture.h"
+#include "warhol/utils/log.h"
 
 namespace warhol {
 
 struct Camera;
 struct Mesh;
 struct Shader;
+struct Texture;
+
+// Index Range -----------------------------------------------------------------
+//
+// Packs size and offsets of the range.
+// | size (32 bits) | offset (32 bits |
+
+using IndexRange = uint64_t;
+
+constexpr uint64_t kBottom32Mask = 0xffffffffu;
+constexpr uint64_t kTop32Mask = kBottom32Mask << 32;
+
+inline IndexRange PushOffset(IndexRange range, uint64_t offset) {
+  uint64_t tmp = kTop32Mask | offset;
+  return (range & kTop32Mask) | tmp;
+}
+
+inline uint32_t GetOffset(IndexRange range) {
+  return kBottom32Mask & range;
+}
+
+inline IndexRange PushSize(IndexRange range, uint64_t size) {
+  uint64_t tmp = (size << 32);
+  return (range & kBottom32Mask) | tmp;
+}
+
+inline uint32_t GetSize(IndexRange range) {
+  return range >> 32;
+}
+
+// RenderCommand ---------------------------------------------------------------
+
 
 struct MeshRenderAction {
   Mesh* mesh = nullptr;
 
+  IndexRange indices;
+
   // The counts of this are defined in shader.
-  float* vert_values = nullptr;
-  float* frag_values = nullptr;
+  float* vert_uniforms = nullptr;
+  float* frag_uniforms = nullptr;
   Texture* textures = nullptr;
 };
 

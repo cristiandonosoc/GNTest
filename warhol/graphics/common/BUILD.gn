@@ -1,6 +1,19 @@
 # Copyright 2019, Cristián Donoso.
 # This code has a BSD license. See LICENSE.
 
+# Separated for testing purposes.
+source_set("render_command") {
+  sources = [
+    "render_command.h",
+  ]
+
+  deps = [
+    "//warhol/containers",
+    "//warhol/math",
+    "//warhol/utils",
+  ]
+}
+
 source_set("common") {
   public = [
     "renderer.h",
@@ -21,6 +34,7 @@ source_set("common") {
   ]
 
   deps = [
+    "//warhol/containers",
     "//third_party/stb",
     "//third_party/tiny_obj_loader",
     "//warhol/utils",

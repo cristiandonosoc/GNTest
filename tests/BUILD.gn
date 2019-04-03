@@ -9,6 +9,7 @@ source_set("tests_lib") {
     "linked_list.cc",
     "memory_pool.cc",
     "optional.cc",
+    "render_command.cc",
     "strings.cc",
   ]
 
@@ -17,6 +18,7 @@ source_set("tests_lib") {
   ]
 
   deps = [
+    "//warhol/graphics/common:render_command",
     "//warhol/math",
     "//warhol/memory",
     "//warhol/utils",
