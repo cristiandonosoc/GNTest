@@ -41,7 +41,10 @@ LocationStack* GetLocationStack() {
 void PrintLocationStack(const LocationStack& stack) {
   for (int i = stack.size - 1; i >= 0; i--) {
     const Location& loc = stack.locations[i];
-    printf("%.2d. %s [%s:%d]\n", i, loc.function, loc.file, loc.line);
+    printf("%.2d. %s [%s:%d]\n", stack.size - i - 1,
+                                 loc.function,
+                                 loc.file,
+                                 loc.line);
   }
   fflush(stdout);
 }

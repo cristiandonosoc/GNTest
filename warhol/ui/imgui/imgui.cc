@@ -13,6 +13,14 @@
 #include "warhol/utils/log.h"
 #include "warhol/window/common/window.h"
 
+// Imgui config verification check.
+// This is to verify that out imgui config wasn't overwritten by a imgui update.
+// Our imgui config is in warhol/ui/imgui/warhol_imgui_config.h
+// That config should be placed in third_party/imgui/imconfig.h
+#ifndef WARHOL_IMGUI_CONFIG
+#error No warhol imgui config loaded. Is third_party/imgui/imconfig.h correct?
+#endif
+
 namespace warhol {
 namespace imgui {
 
@@ -49,6 +57,7 @@ void MapIO(ImGuiIO* io) {
 }  // namespace
 
 bool InitImgui(Renderer* renderer, ImguiContext* imgui) {
+  SCOPE_LOCATION();
   if (Valid(imgui)) {
     LOG(ERROR) << "Imgui context already initialized.";
     return false;
@@ -58,14 +67,15 @@ bool InitImgui(Renderer* renderer, ImguiContext* imgui) {
   ImGui::CreateContext();
   imgui->io = &ImGui::GetIO();
   ASSERT(imgui->io);
+  MapIO(imgui->io);
 
   imgui->camera.projection = glm::mat4(1.0f);
   imgui->camera.view = glm::mat4(1.0f);
 
-  if (InitImguiRenderer(renderer, &imgui->imgui_renderer))
+  imgui->imgui_renderer.io = imgui->io;
+  if (!InitImguiRenderer(renderer, &imgui->imgui_renderer))
     return false;
 
-  MapIO(imgui->io);
   return true;
 }
 
@@ -77,7 +87,7 @@ ImguiContext::~ImguiContext() {
 }
 
 void ShutdownImgui(ImguiContext* imgui) {
-  ASSERT(!Valid(imgui));
+  ASSERT(Valid(imgui));
 
   if (Valid(&imgui->imgui_renderer))
     ShutdownImguiRenderer(&imgui->imgui_renderer);
@@ -85,8 +95,7 @@ void ShutdownImgui(ImguiContext* imgui) {
   ImGui::DestroyContext();
 }
 
-// New Frame -------------------------------------------------------------------
-
+// Start Frame -----------------------------------------------------------------
 
 namespace {
 
@@ -121,7 +130,7 @@ void RestartKeys(Window* window, InputState* input, ImGuiIO* io) {
 }  // namespace
 
 
-void ImguiNewFrame(Window* window, InputState* input, ImguiContext* imgui) {
+void ImguiStartFrame(Window* window, InputState* input, ImguiContext* imgui) {
   ASSERT(Valid(window));
   ASSERT(Valid(imgui));
 
@@ -133,6 +142,15 @@ void ImguiNewFrame(Window* window, InputState* input, ImguiContext* imgui) {
   RestartKeys(window, input, imgui->io);
 
   ImGui::NewFrame();
+}
+
+// End Frame -------------------------------------------------------------------
+
+void ImguiEndFrame(ImguiContext* imgui) {
+  ASSERT(Valid(imgui));
+  // Will finalize the draw data needed for getting the draw lists for getting
+  // the render command.
+  ImGui::Render();
 }
 
 // Get RenderCommand -----------------------------------------------------------
@@ -162,13 +180,91 @@ RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
   imgui->camera.projection = glm::ortho(L, R, B, T);
 
   // Create the draw list.
-  /* for (size_t i = 0; i < draw_data->CmdListCount; i++) { */
-  /*   ImDrawList* cmd_list = draw_data->CmdLists[i]; */
-  /*   ImDrawIdx* index_buffer_offset = nullptr; */
-  /* } */
+  ImVec2 pos = draw_data->DisplayPos;
+  for (int i = 0; i < draw_data->CmdListsCount; i++) {
+    ImDrawList* cmd_list = draw_data->CmdLists[i];
+    ImDrawIdx* index_buffer_offset = nullptr;
+
+    // This will start appending drawing data into the mesh buffer that's
+    // already staged into the renderer.
+    for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++) {
+      const ImDrawCmd* draw_cmd = &cmd_list->CmdBuffer[cmd_i];
+
+      MeshRenderAction render_action;
+      render_action.mesh = &imgui->imgui_renderer.mesh;
+      render_action.textures = &imgui->imgui_renderer.font_texture;
+
+      // We check if we need to apply scissoring.
+      Vec4 scissor_rect;
+      scissor_rect.x = draw_cmd->ClipRect.x - pos.x;
+      scissor_rect.y = draw_cmd->ClipRect.y - pos.y;
+      scissor_rect.z = draw_cmd->ClipRect.z - pos.x;
+      scissor_rect.w = draw_cmd->ClipRect.w - pos.y;
+      if (scissor_rect.x < fb_width && scissor_rect.y < fb_height &&
+          scissor_rect.z >= 0.0f && scissor_rect.w >= 0.0f) {
+        render_action.scissor = scissor_rect;
+      }
+
+
+
+    }
+
+
+  }
 
   return {};
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }  // namespace imgui
 }  // namespace warhol

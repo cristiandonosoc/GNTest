@@ -253,4 +253,11 @@ inline size_t Hash(const Vec3& vec) {
   return result;
 }
 
+struct Vec4 {
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
 }  // namespace warhol

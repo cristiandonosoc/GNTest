@@ -100,8 +100,10 @@ bool LoadMesh(const std::string_view& model_path, Mesh* mesh) {
 }
 
 void InitMeshPools(Mesh* mesh, size_t vert_size, size_t index_size) {
-  LOG(DEBUG) << "Initializing mesh pools. Vertex: " << vert_size
-             << ", indices: " << index_size;
+  LOG(DEBUG) << "Initializing mesh pools. Vertex: " << vert_size << " ("
+             << BytesToString(vert_size) << ")"
+             << ", indices: " << index_size << " (" << BytesToString(index_size)
+             << ").";
   ASSERT(!Valid(&mesh->vertices));
   InitMemoryPool(&mesh->vertices, vert_size);
   ASSERT(!Valid(&mesh->indices));

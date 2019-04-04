@@ -20,7 +20,28 @@ struct Location {
   const char* function;
 };
 
-// Thread local location stacks.
+// Thread local location stacks ------------------------------------------------
+//
+// This permits to create an explicit call stack by using the SCOPE_LOCATION()
+// macro. This stack is per-thread and can be queried by calling
+// GetLocaitonStack. Assertions will query this stack to create a contextual
+// stack trace. An actual stack trace would be better, but that would require
+// to link libunwind (or equivalent) and I don't really want to do that (plus
+// the windows compatibities issues).
+//
+// The macro is a no-op in optimized builds, so try to be liberal about its use.
+//
+// TODO: Add a context const char* so that the stack trace can have better
+//       contextual info.
+
+#ifndef NDEBUG
+#define SCOPE_LOCATION()                             \
+  ::warhol::LocationBlock scope_location_##__LINE__( \
+      {__FILE__, __LINE__, __PRETTY_FUNCTION__})
+#else
+#define SCOPE_LOCATION()
+#endif
+
 struct LocationStack {
   static constexpr size_t kMaxLocationStackSize = 16;
 
@@ -33,14 +54,11 @@ void PopLocation();
 LocationStack* GetLocationStack();
 void PrintLocationStack(const LocationStack&);
 
-#define SCOPE_LOCATION()                             \
-  ::warhol::LocationBlock scope_location_##__LINE__( \
-      {__FILE__, __LINE__, __PRETTY_FUNCTION__})
-
 struct LocationBlock {
   LocationBlock(Location location) {
     PushLocation(std::move(location));
   }
+
   ~LocationBlock() {
     PopLocation();
   }

@@ -3,12 +3,12 @@
 
 #pragma once
 
-#include <third_party/imgui/imgui.h>
-
 #include "warhol/graphics/common/shader.h"
 #include "warhol/graphics/common/texture.h"
 #include "warhol/graphics/common/mesh.h"
 #include "warhol/utils/macros.h"
+
+struct ImGuiIO;
 
 namespace warhol {
 
@@ -17,10 +17,7 @@ struct Renderer;
 namespace imgui {
 
 struct ImguiRenderer {
-  ImguiRenderer() = default;
-  ~ImguiRenderer();   // RAII
-  DELETE_COPY_AND_ASSIGN(ImguiRenderer);
-  DEFAULT_MOVE_AND_ASSIGN(ImguiRenderer);
+  RAII_CONSTRUCTORS(ImguiRenderer);
 
   Mesh mesh;
   Shader shader;
@@ -32,6 +29,7 @@ struct ImguiRenderer {
 
 inline bool Valid(ImguiRenderer* r) { return !!r->renderer && !!r->io; }
 
+// Requires ImGuiRenderer.io to be already set.
 bool InitImguiRenderer(Renderer*, ImguiRenderer*);
 void ShutdownImguiRenderer(ImguiRenderer*);
 

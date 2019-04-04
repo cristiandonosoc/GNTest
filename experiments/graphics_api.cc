@@ -65,7 +65,6 @@ const std::vector<uint32_t> indices = {
 };
 
 int main() {
-
   LOG(DEBUG) << "Initializing window.";
 
   Window window;
@@ -83,6 +82,7 @@ int main() {
   }
 
   LOG(DEBUG) << "Initializing imgui.";
+
   ImguiContext imgui_context;
   if (!InitImgui(&renderer, &imgui_context)) {
     LOG(ERROR) << "Could not start imgui.";
@@ -182,7 +182,7 @@ int main() {
       }
     }
 
-    /* ImguiNewFrame(&imgui_context); */
+    ImguiStartFrame(&window, &input, &imgui_context);
     /* if (imgui_context.keyboard_captured || imgui_context.mouse_captured) */
     /*   LOG(DEBUG) << "Captured."; */
 
@@ -222,6 +222,8 @@ int main() {
     /* RenderCommand imgui_command = ImguiGetRenderCommand(&imgui_context); */
     /* PushIntoListFromMemoryPool(&command_list, &memory_pool, */
     /*                            std::move(imgui_command)); */
+
+    ImguiEndFrame(&imgui_context);
 
     RendererStartFrame(&renderer);
     RendererExecuteCommands(&renderer, &command_list);

@@ -51,6 +51,7 @@ inline uint32_t GetSize(IndexRange range) {
 struct MeshRenderAction {
   Mesh* mesh = nullptr;
 
+  Vec4 scissor;
   IndexRange indices;
 
   // The counts of this are defined in the corresponding shader.
@@ -72,10 +73,6 @@ struct RenderCommandConfig {
   bool cull_faces = true;
   // Use the depth buffer.
   bool depth_test = true;
-
-  // Use scissor (only draw part of the framebuffer).
-  Pair<int> scissor_p1;   // lower left corner.
-  Pair<int> scissor_p2;   // Upper right corner.
 
   // Only draw wireframes.
   bool wireframe_mode = false;

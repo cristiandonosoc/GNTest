@@ -3,6 +3,7 @@
 
 #include "warhol/ui/imgui/imgui_renderer.h"
 
+#include "warhol/ui/imgui/imgui_shaders.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 #include "warhol/graphics/common/mesh.h"
@@ -15,85 +16,8 @@ namespace imgui {
 
 namespace {
 
-#ifdef WARHOL_OPENGL_ENABLED
-
-const char kOpenGLVertex[] = R"(
-#version 330 core
-
-// Attributes ------------------------------------------------------------------
-
-precision mediump float;
-
-layout (location = 0) in vec2 in_pos;
-layout (location = 2) in vec2 in_uv;
-layout (location = 1) in vec4 in_color;
-
-out vec4 color;
-out vec2 uv;
-
-// Uniforms --------------------------------------------------------------------
-
-layout (std140) uniform Camera {
-  mat4 proj;
-  mat4 view;
-} camera;
-
-void main() {
-  gl_Position = camera.proj * camera.view * vec4(in_pos.xy, 0, 1.0f);
-  color = in_color;
-  uv = in_uv;
-}
-)";
-
-const char kOpenGLFragment[] = R"(
-#version 330 core
-
-precision mediump float;
-
-uniform sampler2D u_tex_sampler0;
-
-in vec3 color;
-in vec2 uv;
-
-layout (location = 0) out vec4 out_color;
-
-void main() {
-  out_color = frag_color * texture(u_tex_sampler0, frag_uv);
-}
-)";
-
-Shader GetOpenGLImguiShader() {
-  Shader shader;
-  shader.name = "Imgui Shader";
-  shader.vert_ubo_size = 0;
-  shader.frag_ubo_size = 0;
-  shader.texture_count = 1;
-
-  std::vector<uint8_t> src;
-
-  size_t vert_size = sizeof(kOpenGLVertex);
-  src.reserve(vert_size);
-  src.insert(src.end(), kOpenGLVertex, kOpenGLVertex + vert_size);
-  shader.vert_source = src;
-
-  size_t frag_size = sizeof(kOpenGLFragment);
-  src.reserve(frag_size);
-  src.insert(src.end(), kOpenGLFragment, kOpenGLFragment+ frag_size);
-  shader.frag_source = src;
-
-  shader.uuid = GetNextShaderUUID();
-
-  return shader;
-}
-
-#else
-Shader GetOpenGLImguiShader() {
-  NOT_REACHED("OpenGL support not enabled.");
-  return {};
-}
-#endif
-
 bool CreateShader(Renderer* renderer, ImguiRenderer* imgui) {
+  SCOPE_LOCATION();
   Shader shader;
   switch (renderer->type) {
     case RendererType::kOpenGL:
@@ -113,13 +37,15 @@ bool CreateShader(Renderer* renderer, ImguiRenderer* imgui) {
   return true;
 }
 
-bool CreateBuffer(Renderer* renderer, ImguiRenderer* imgui) {
+bool CreateMesh(Renderer* renderer, ImguiRenderer* imgui) {
+  SCOPE_LOCATION();
   // Create a Mesh for creating a buffer.
   // A imgui vertex is 8 floats (32 bytes).
   // 512 kb of buffer is 16384 vertices, which seems reasonable.
   // The same amount of indices will use 4k, so we'll give it a bit more.
   // This number can be revisited if imgui uses more vertices.
   Mesh imgui_mesh;
+  imgui_mesh.uuid = GetNextMeshUUID();
   InitMeshPools(&imgui_mesh, KILOBYTES(512), KILOBYTES(16));
 
   if (!RendererStageMesh(renderer, &imgui_mesh))
@@ -130,6 +56,9 @@ bool CreateBuffer(Renderer* renderer, ImguiRenderer* imgui) {
 }
 
 bool CreateFontTexture(Renderer* renderer, ImguiRenderer* imgui) {
+  SCOPE_LOCATION();
+  ASSERT(imgui->io);
+
   // IMGUI AUTHOR NOTE:
   // Load as RGBA 32-bits (75% of the memory is wasted, but default font is
   // so small) because it is more likely to be compatible with user's existing
@@ -161,13 +90,14 @@ bool CreateFontTexture(Renderer* renderer, ImguiRenderer* imgui) {
 }  // namespace
 
 bool InitImguiRenderer(Renderer* renderer, ImguiRenderer* imgui) {
-  ASSERT(imgui->io);
-
+  SCOPE_LOCATION();
   if (!CreateShader(renderer, imgui) ||
-      !CreateBuffer(renderer, imgui) ||
+      !CreateMesh(renderer, imgui) ||
       !CreateFontTexture(renderer, imgui)) {
     return false;
   }
+
+  imgui->renderer = renderer;
   return true;
 }
 

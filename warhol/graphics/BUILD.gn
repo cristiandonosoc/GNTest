@@ -3,24 +3,10 @@
 
 # See the buildconfig file (set in .gn) for then *_enabled variables.
 
-config("common_config") {
-  defines = []
-
-  if (opengl_enabled) {
-    defines += [ "WARHOL_OPENGL_ENABLED" ]
-  }
-
-  if (vulkan_enabled) {
-    defines += [ "WARHOL_VULKAN_ENABLED" ]
-  }
-
-}
-
 if (opengl_enabled) {
   group("opengl_renderer") {
-
     public_configs = [
-      ":common_config",
+      ":renderer_macros",
     ]
 
     deps = [
@@ -33,7 +19,7 @@ if (vulkan_enabled) {
   group("vulkan_renderer") {
 
     public_configs = [
-      ":common_config",
+      ":renderer_macros",
     ]
 
     deps = [
@@ -42,4 +28,15 @@ if (vulkan_enabled) {
   }
 }
 
+# Adds common config to key out functionality
+config("renderer_macros") {
+  defines = []
 
+  if (opengl_enabled) {
+    defines += [ "WARHOL_OPENGL_ENABLED" ]
+  }
+
+  if (vulkan_enabled) {
+    defines += [ "WARHOL_VULKAN_ENABLED" ]
+  }
+}

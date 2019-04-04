@@ -10,6 +10,12 @@ source_set("imgui") {
     "imgui.cc",
     "imgui_renderer.cc",
     "imgui_renderer.h",
+    "imgui_shaders.cc",
+    "imgui_shaders.h",
+  ]
+
+  public_configs = [
+    ":renderer_macros",
   ]
 
   deps = [
@@ -19,4 +25,20 @@ source_set("imgui") {
     "//warhol/graphics/common:render_command"
   ]
 
+  public_deps = [
+    "//third_party/imgui",
+  ]
+}
+
+# Adds common config to key out functionality
+config("renderer_macros") {
+  defines = []
+
+  if (opengl_enabled) {
+    defines += [ "WARHOL_OPENGL_ENABLED" ]
+  }
+
+  if (vulkan_enabled) {
+    defines += [ "WARHOL_VULKAN_ENABLED" ]
+  }
 }
