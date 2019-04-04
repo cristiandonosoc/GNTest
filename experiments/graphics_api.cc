@@ -82,12 +82,12 @@ int main() {
     return 1;
   }
 
-  /* LOG(DEBUG) << "Initializing imgui."; */
-  /* ImguiContext imgui_context; */
-  /* if (!InitImgui(&renderer, &window, &imgui_context)) { */
-  /*   LOG(ERROR) << "Could not start imgui."; */
-  /*   return 1; */
-  /* } */
+  LOG(DEBUG) << "Initializing imgui.";
+  ImguiContext imgui_context;
+  if (!InitImgui(&renderer, &imgui_context)) {
+    LOG(ERROR) << "Could not start imgui.";
+    return 1;
+  }
 
   LOG(DEBUG) << "Loading shaders.";
 
@@ -205,7 +205,7 @@ int main() {
     auto* model = PushIntoMemoryPool<glm::mat4>(&memory_pool);
     *model = glm::mat4(1);
 
-    mesh_action->vert_values = (float*)model;
+    mesh_action->vert_uniforms = (float*)model;
 
     LinkedList<RenderCommand> command_list;
     auto* command = PushIntoListFromMemoryPool(&command_list, &memory_pool);
@@ -214,8 +214,6 @@ int main() {
     command->camera = &camera;
     command->shader = &shader;
     command->mesh_actions = &mesh_action_list;
-
-
 
     *model = glm::rotate(glm::mat4(1.0f),
                          window.seconds * glm::radians(90.0f),
@@ -230,8 +228,6 @@ int main() {
     RendererEndFrame(&renderer);
 
     WindowSwapBuffers(&window);
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(16));
   }
 
   LOG(DEBUG) << "Adios, amigo!";

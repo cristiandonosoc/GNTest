@@ -1,0 +1,22 @@
+# Copyright 2019, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+source_set("imgui") {
+  public = [
+    "imgui.h",
+  ]
+
+  sources = [
+    "imgui.cc",
+    "imgui_renderer.cc",
+    "imgui_renderer.h",
+  ]
+
+  deps = [
+    "//warhol/window/common",
+    "//warhol/input",
+    "//warhol/utils",
+    "//warhol/graphics/common:render_command"
+  ]
+
+}

@@ -1,9 +1,10 @@
 # Copyright 2019, Cristián Donoso.
 # This code has a BSD license. See LICENSE.
 
-# Separated for testing purposes.
+# Separated for to stop code just needind the render command on depending
+# on graphics functionality such as stb of tiny_obj.
 source_set("render_command") {
-  sources = [
+  public = [
     "render_command.h",
   ]
 
@@ -26,7 +27,6 @@ source_set("common") {
   sources = [
     "image.cc",
     "mesh.cc",
-    "render_command.h",
     "renderer.cc",
     "renderer_backend.h",
     "shader.cc",
@@ -34,6 +34,7 @@ source_set("common") {
   ]
 
   deps = [
+    ":render_command",
     "//warhol/containers",
     "//third_party/stb",
     "//third_party/tiny_obj_loader",

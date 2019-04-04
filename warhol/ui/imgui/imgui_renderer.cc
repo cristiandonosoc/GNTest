@@ -24,11 +24,11 @@ const char kOpenGLVertex[] = R"(
 
 precision mediump float;
 
-layout (location = 0) in vec3 in_pos;
-layout (location = 1) in vec3 in_color;
-layout (location = 2) in vec3 in_uv;
+layout (location = 0) in vec2 in_pos;
+layout (location = 2) in vec2 in_uv;
+layout (location = 1) in vec4 in_color;
 
-out vec3 color;
+out vec4 color;
 out vec2 uv;
 
 // Uniforms --------------------------------------------------------------------
@@ -39,7 +39,7 @@ layout (std140) uniform Camera {
 } camera;
 
 void main() {
-  gl_Position = camera.proj * camera.view * vec4(in_pos, 1.0f);
+  gl_Position = camera.proj * camera.view * vec4(in_pos.xy, 0, 1.0f);
   color = in_color;
   uv = in_uv;
 }
@@ -87,8 +87,9 @@ Shader GetOpenGLImguiShader() {
 }
 
 #else
-void GetOpenGLImguiShader(Shader*) {
+Shader GetOpenGLImguiShader() {
   NOT_REACHED("OpenGL support not enabled.");
+  return {};
 }
 #endif
 
@@ -118,13 +119,13 @@ bool CreateBuffer(Renderer* renderer, ImguiRenderer* imgui) {
   // 512 kb of buffer is 16384 vertices, which seems reasonable.
   // The same amount of indices will use 4k, so we'll give it a bit more.
   // This number can be revisited if imgui uses more vertices.
-  UnstructuredBuffer buffer;
-  InitUnstructuredBuffer(&buffer, KILOBYTES(512), KILOBYTES(16));
+  Mesh imgui_mesh;
+  InitMeshPools(&imgui_mesh, KILOBYTES(512), KILOBYTES(16));
 
-  if (!RendererStageUnstructuredBuffer(renderer, &buffer))
+  if (!RendererStageMesh(renderer, &imgui_mesh))
     return false;
 
-  imgui->buffer = std::move(buffer);
+  imgui->mesh = std::move(imgui_mesh);
   return true;
 }
 
@@ -179,9 +180,9 @@ ImguiRenderer::~ImguiRenderer() {
 
 void ShutdownImguiRenderer(ImguiRenderer* imgui) {
   ASSERT(Valid(imgui));
+  RendererUnstageMesh(imgui->renderer, &imgui->mesh);
   RendererUnstageShader(imgui->renderer, &imgui->shader);
   RendererUnstageTexture(imgui->renderer, &imgui->font_texture);
-  RendererUnstageUnstructuredBuffer(imgui->renderer, &imgui->buffer);
 }
 
 }  // namespace imgui

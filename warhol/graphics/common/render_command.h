@@ -48,13 +48,12 @@ inline uint32_t GetSize(IndexRange range) {
 
 // RenderCommand ---------------------------------------------------------------
 
-
 struct MeshRenderAction {
   Mesh* mesh = nullptr;
 
   IndexRange indices;
 
-  // The counts of this are defined in shader.
+  // The counts of this are defined in the corresponding shader.
   float* vert_uniforms = nullptr;
   float* frag_uniforms = nullptr;
   Texture* textures = nullptr;

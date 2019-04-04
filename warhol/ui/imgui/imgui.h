@@ -11,6 +11,7 @@ struct ImGuiIO;
 
 namespace warhol {
 
+struct InputState;
 struct Renderer;
 struct RenderCommand;
 struct Window;
@@ -18,10 +19,7 @@ struct Window;
 namespace imgui {
 
 struct ImguiContext {
-  ImguiContext() = default;
-  ~ImguiContext();    // RAII
-  DELETE_COPY_AND_ASSIGN(ImguiContext);
-  DEFAULT_MOVE_AND_ASSIGN(ImguiContext);
+  RAII_CONSTRUCTORS(ImguiContext);
 
   // This struct represents a handle to the imgui system.
   // Not owning, must outlive.
@@ -39,10 +37,10 @@ inline bool Valid(ImguiContext* imgui) {
 }
 
 // Both the renderer and window must outlive the imgui context.
-bool InitImgui(Renderer* renderer, Window* window, ImguiContext*);
+bool InitImgui(Renderer* renderer, ImguiContext*);
 void ShutdownImgui(ImguiContext*);
 
-void ImguiNewFrame(ImguiContext*);
+void ImguiNewFrame(Window*, InputState*, ImguiContext*);
 RenderCommand ImguiGetRenderCommand(ImguiContext*);
 
 }  // namespace imgui

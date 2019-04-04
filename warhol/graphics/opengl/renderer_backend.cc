@@ -387,7 +387,7 @@ void SetUniforms(Shader* shader, ShaderHandles* handles,
     GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, handles->vert_ubo_handle));
     GL_CHECK(glBufferData(GL_UNIFORM_BUFFER,
                           shader->vert_ubo_size,
-                          action->vert_values,
+                          action->vert_uniforms,
                           GL_STREAM_DRAW));
   }
 

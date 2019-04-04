@@ -18,7 +18,6 @@
 namespace warhol {
 
 struct Shader;
-struct UnstructuredBuffer;
 struct Window;
 
 // Renderers are implemented in terms of backends (OpenGL, Vulkan, etc.).
@@ -72,13 +71,11 @@ bool RendererStageShader(Renderer*, Shader*);
 void RendererUnstageShader(Renderer*, Shader*);
 bool RendererIsShaderStaged(Renderer*, Shader*);
 
+// TODO(Cristian): Add config for configuring mipmaps, formats, etc.
+//                 Right now is straight up direct tex2D.
 bool RendererStageTexture(Renderer*, Texture*);
 void RendererUnstageTexture(Renderer*, Texture*);
 bool RendererIsTextureStaged(Renderer*, Texture*);
-
-bool RendererStageUnstructuredBuffer(Renderer*, UnstructuredBuffer*);
-bool RendererUnstageUnstructuredBuffer(Renderer*, UnstructuredBuffer*);
-bool RendererIsUnstructuredBufferStaged(Renderer*, UnstructuredBuffer*);
 
 void RendererStartFrame(Renderer*);
 void RendererExecuteCommands(Renderer*, LinkedList<RenderCommand>* commands);

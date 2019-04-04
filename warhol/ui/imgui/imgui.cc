@@ -162,22 +162,12 @@ RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
   imgui->camera.projection = glm::ortho(L, R, B, T);
 
   // Create the draw list.
-  for (size_t i = 0; i < draw_data->CmdListCount; i++) {
-    ImDrawList* cmd_list = draw_data->CmdLists[i];
-    ImDrawIdx* index_buffer_offset = nullptr;
+  /* for (size_t i = 0; i < draw_data->CmdListCount; i++) { */
+  /*   ImDrawList* cmd_list = draw_data->CmdLists[i]; */
+  /*   ImDrawIdx* index_buffer_offset = nullptr; */
+  /* } */
 
-
-  }
-
-
-
-
-
-
-
-
-
-
+  return {};
 }
 
 }  // namespace imgui

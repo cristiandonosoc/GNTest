@@ -17,7 +17,7 @@ config("common_config") {
 }
 
 if (opengl_enabled) {
-  source_set("opengl_renderer") {
+  group("opengl_renderer") {
 
     public_configs = [
       ":common_config",
@@ -30,7 +30,7 @@ if (opengl_enabled) {
 }
 
 if (vulkan_enabled) {
-  source_set("vulkan_renderer") {
+  group("vulkan_renderer") {
 
     public_configs = [
       ":common_config",
