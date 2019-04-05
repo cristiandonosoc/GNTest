@@ -70,3 +70,12 @@ namespace ImGui
     void MyFunction(const char* name, const MyMatrix44& v);
 }
 */
+
+#ifndef WARHOL_IMGUI_CONFIG
+#define WARHOL_IMGUI_CONFIG
+
+#include <stdint.h>
+
+#define ImDrawIdx uint32_t
+
+#endif

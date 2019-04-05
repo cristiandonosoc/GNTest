@@ -3,6 +3,7 @@
 
 #include "warhol/ui/imgui/imgui_renderer.h"
 
+#include "warhol/ui/imgui/def.h"
 #include "warhol/ui/imgui/imgui_shaders.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"

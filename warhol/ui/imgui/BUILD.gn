@@ -3,6 +3,7 @@
 
 source_set("imgui") {
   public = [
+    "def.h",
     "imgui.h",
   ]
 

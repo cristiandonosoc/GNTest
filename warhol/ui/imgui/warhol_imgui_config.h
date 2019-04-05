@@ -74,6 +74,8 @@ namespace ImGui
 #ifndef WARHOL_IMGUI_CONFIG
 #define WARHOL_IMGUI_CONFIG
 
-#error Write imgui config!!!!!
+#include <stdint.h>
+
+#define ImDrawIdx uint32_t
 
 #endif

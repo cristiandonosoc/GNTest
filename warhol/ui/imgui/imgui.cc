@@ -179,11 +179,19 @@ RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
   float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
   imgui->camera.projection = glm::ortho(L, R, B, T);
 
+  // Reset the memory pools wher ethe new index data is going to be.
+  auto& imgui_renderer = imgui->imgui_renderer;
+  ResetMemoryPool(&imgui_renderer.mesh.vertices);
+  ResetMemoryPool(&imgui_renderer.mesh.indices);
+
+
+  // Represents how much in the indices mesh buffer we're in.
+  uint64_t index_buffer_offset = 0;
+
   // Create the draw list.
   ImVec2 pos = draw_data->DisplayPos;
   for (int i = 0; i < draw_data->CmdListsCount; i++) {
     ImDrawList* cmd_list = draw_data->CmdLists[i];
-    ImDrawIdx* index_buffer_offset = nullptr;
 
     // This will start appending drawing data into the mesh buffer that's
     // already staged into the renderer.
@@ -193,6 +201,25 @@ RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
       MeshRenderAction render_action;
       render_action.mesh = &imgui->imgui_renderer.mesh;
       render_action.textures = &imgui->imgui_renderer.font_texture;
+
+      // We push the vertices.
+      /* PushIntoMemoryPool(&imgui_renderer.mesh.vertices, */
+
+
+
+
+      IndexRange range = 0;
+      range = PushOffset(range, index_buffer_offset);
+      range = PushSize(range, draw_cmd->ElemCount);
+
+
+
+
+      // TODO: Add the data into the buffer.
+
+
+
+      // TODO: Stage it into the renderer.
 
       // We check if we need to apply scissoring.
       Vec4 scissor_rect;
@@ -207,6 +234,7 @@ RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
 
 
 
+      index_buffer_offset += draw_cmd->ElemCount;
     }
 
 
