@@ -91,7 +91,11 @@ bool CreateFontTexture(Renderer* renderer, ImguiRenderer* imgui) {
 }  // namespace
 
 bool InitImguiRenderer(Renderer* renderer, ImguiRenderer* imgui) {
+  ASSERT(!Valid(imgui));
   SCOPE_LOCATION();
+
+  InitMemoryPool(&imgui->memory_pool, KILOBYTES(64));
+
   if (!CreateShader(renderer, imgui) ||
       !CreateMesh(renderer, imgui) ||
       !CreateFontTexture(renderer, imgui)) {

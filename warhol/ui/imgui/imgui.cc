@@ -7,6 +7,7 @@
 
 #include "warhol/utils/glm_impl.h"
 
+#include "warhol/graphics/common/renderer.h"
 #include "warhol/graphics/common/render_command.h"
 #include "warhol/input/input.h"
 #include "warhol/utils/assert.h"
@@ -64,17 +65,18 @@ bool InitImgui(Renderer* renderer, ImguiContext* imgui) {
   }
 
   IMGUI_CHECKVERSION();
+
+  imgui->imgui_renderer.io = imgui->io;
+  if (!InitImguiRenderer(renderer, &imgui->imgui_renderer))
+    return false;
+
   ImGui::CreateContext();
   imgui->io = &ImGui::GetIO();
   ASSERT(imgui->io);
   MapIO(imgui->io);
 
-  imgui->camera.projection = glm::mat4(1.0f);
-  imgui->camera.view = glm::mat4(1.0f);
-
-  imgui->imgui_renderer.io = imgui->io;
-  if (!InitImguiRenderer(renderer, &imgui->imgui_renderer))
-    return false;
+  imgui->imgui_renderer.camera.projection = glm::mat4(1.0f);
+  imgui->imgui_renderer.camera.view = glm::mat4(1.0f);
 
   return true;
 }
@@ -158,6 +160,12 @@ void ImguiEndFrame(ImguiContext* imgui) {
 RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
   ASSERT(Valid(imgui));
 
+  // Reset the memory pools wher ethe new index data is going to be.
+  auto& imgui_renderer = imgui->imgui_renderer;
+  ResetMemoryPool(&imgui_renderer.memory_pool);
+  ResetMemoryPool(&imgui_renderer.mesh.vertices);
+  ResetMemoryPool(&imgui_renderer.mesh.indices);
+
   ImGuiIO* io = imgui->io;
   ImDrawData* draw_data = ImGui::GetDrawData();
 
@@ -170,23 +178,19 @@ RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
   if (fb_width <= 0 || fb_height <= 0)
     return {};
 
-  imgui->camera.viewport_p1 = {0, 0};
-  imgui->camera.viewport_p2 = {fb_width, fb_height};
+  imgui_renderer.camera.viewport_p1 = {0, 0};
+  imgui_renderer.camera.viewport_p2 = {fb_width, fb_height};
 
   float L = draw_data->DisplayPos.x;
   float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
   float T = draw_data->DisplayPos.y;
   float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
-  imgui->camera.projection = glm::ortho(L, R, B, T);
-
-  // Reset the memory pools wher ethe new index data is going to be.
-  auto& imgui_renderer = imgui->imgui_renderer;
-  ResetMemoryPool(&imgui_renderer.mesh.vertices);
-  ResetMemoryPool(&imgui_renderer.mesh.indices);
-
+  imgui_renderer.camera.projection = glm::ortho(L, R, B, T);
 
   // Represents how much in the indices mesh buffer we're in.
   uint64_t index_buffer_offset = 0;
+
+  LinkedList<MeshRenderAction> mesh_actions;
 
   // Create the draw list.
   ImVec2 pos = draw_data->DisplayPos;
@@ -202,24 +206,15 @@ RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
       render_action.mesh = &imgui->imgui_renderer.mesh;
       render_action.textures = &imgui->imgui_renderer.font_texture;
 
-      // We push the vertices.
-      /* PushIntoMemoryPool(&imgui_renderer.mesh.vertices, */
-
-
-
+      PushVertices(&imgui_renderer.mesh, cmd_list->VtxBuffer.Data,
+                                         cmd_list->VtxBuffer.Size);
+      PushIndices(&imgui_renderer.mesh, cmd_list->IdxBuffer.Data,
+                                        cmd_list->IdxBuffer.Size);
 
       IndexRange range = 0;
       range = PushOffset(range, index_buffer_offset);
       range = PushSize(range, draw_cmd->ElemCount);
-
-
-
-
-      // TODO: Add the data into the buffer.
-
-
-
-      // TODO: Stage it into the renderer.
+      render_action.index_range = range;
 
       // We check if we need to apply scissoring.
       Vec4 scissor_rect;
@@ -232,67 +227,30 @@ RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
         render_action.scissor = scissor_rect;
       }
 
-
+      PushIntoListFromMemoryPool(&mesh_actions,
+                                 &imgui_renderer.memory_pool,
+                                 std::move(render_action));
 
       index_buffer_offset += draw_cmd->ElemCount;
     }
 
-
+    // We stage the buffers to the renderer.
+    if (!RendererUploadMeshRange(imgui_renderer.renderer,
+                                 &imgui_renderer.mesh)) {
+      NOT_REACHED("Could not upload data to the renderer.");
+    }
   }
 
-  return {};
+  RenderCommand render_command;
+  render_command.type = RenderCommandType::kMesh;
+  render_command.config.blend_enabled = true;
+  render_command.config.cull_faces = false;
+  render_command.config.depth_test = false;
+  render_command.camera = &imgui_renderer.camera;
+  render_command.actions.mesh_actions = std::move(mesh_actions);
+
+  return render_command;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 }  // namespace imgui
 }  // namespace warhol

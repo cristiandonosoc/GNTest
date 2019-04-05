@@ -42,6 +42,18 @@ struct Mesh {
   bool loaded = false;
 };
 
+template <typename T>
+inline void PushVertices(Mesh* mesh, T* data, size_t count) {
+  ASSERT(mesh->vertex_size == sizeof(T));
+  PushIntoMemoryPool(&mesh->vertices, data, count);
+  mesh->vertex_count += count;
+}
+
+inline void PushIndices(Mesh* mesh, uint32_t* data, size_t count) {
+  PushIntoMemoryPool(&mesh->indices, data, count);
+  mesh->index_count += count;
+}
+
 bool LoadMesh(const std::string_view&, Mesh*);
 void InitMeshPools(Mesh*, size_t vert_size, size_t index_size);
 

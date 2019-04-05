@@ -444,7 +444,7 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
     switch (command.type) {
       case RenderCommandType::kMesh:
         ExecuteMeshActions(opengl, command.shader, &shader_desc,
-                           command.mesh_actions);
+                           &command.actions.mesh_actions);
         break;
       case RenderCommandType::kNoop:
         continue;

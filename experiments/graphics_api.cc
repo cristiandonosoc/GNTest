@@ -213,7 +213,7 @@ int main() {
     command->type = RenderCommandType::kMesh;
     command->camera = &camera;
     command->shader = &shader;
-    command->mesh_actions = &mesh_action_list;
+    command->actions.mesh_actions = std::move(mesh_action_list);
 
     *model = glm::rotate(glm::mat4(1.0f),
                          window.seconds * glm::radians(90.0f),

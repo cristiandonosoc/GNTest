@@ -8,6 +8,10 @@ source_set("render_command") {
     "render_command.h",
   ]
 
+  sources = [
+    "render_command.cc",
+  ]
+
   deps = [
     "//warhol/containers",
     "//warhol/math",

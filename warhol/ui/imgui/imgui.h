@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include "warhol/scene/camera.h"
 #include "warhol/ui/imgui/imgui_renderer.h"
 #include "warhol/utils/macros.h"
 
@@ -28,7 +27,6 @@ struct ImguiContext {
   bool keyboard_captured = false;
   bool mouse_captured = false;
 
-  Camera camera;
   ImguiRenderer imgui_renderer;
 };
 

@@ -43,6 +43,18 @@
   DELETE_COPY_AND_ASSIGN(class_name); \
   DEFAULT_MOVE_AND_ASSIGN(class_name);
 
+#define DEFAULT_ALL_CONSTRUCTORS(class_name) \
+  class_name() = default;                    \
+  ~class_name() = default;                   \
+  DEFAULT_COPY_AND_ASSIGN(class_name);       \
+  DEFAULT_MOVE_AND_ASSIGN(class_name);
+
+#define DECLARE_ALL_CONTRUCTORS(class_name) \
+  class_name();                             \
+  ~class_name();                            \
+  DECLARE_COPY_AND_ASSIGN(class_name);      \
+  DECLARE_MOVE_AND_ASSIGN(class_name);
+
 #define DECLARE_CONSTRUCTOR(class_name) class_name();
 #define DELETE_CONSTRUCTOR(class_name) class_name() = delete;
 #define DEFAULT_CONSTRUCTOR(class_name) class_name() = default;

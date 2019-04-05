@@ -52,7 +52,7 @@ struct MeshRenderAction {
   Mesh* mesh = nullptr;
 
   Vec4 scissor;
-  IndexRange indices;
+  IndexRange index_range;
 
   // The counts of this are defined in the corresponding shader.
   float* vert_uniforms = nullptr;
@@ -79,14 +79,18 @@ struct RenderCommandConfig {
 };
 
 struct RenderCommand {
+  DEFAULT_ALL_CONSTRUCTORS(RenderCommand);
+
   RenderCommandType type = RenderCommandType::kLast;
   RenderCommandConfig config;
 
   Camera* camera;
   Shader* shader;
-  union {
-    LinkedList<MeshRenderAction>* mesh_actions;
-  };
+  union Actions {
+    DECLARE_ALL_CONTRUCTORS(Actions);
+
+    LinkedList<MeshRenderAction> mesh_actions;
+  } actions;
 };
 
 }  // namespace warhol

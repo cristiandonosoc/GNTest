@@ -68,6 +68,13 @@ struct LinkedList {
 };
 
 template <typename T>
+void Reset(LinkedList<T>* list) {
+  list->count = 0;
+  list->head = nullptr;
+  list->tail = nullptr;
+}
+
+template <typename T>
 inline bool Empty(LinkedList<T>* list) {
   return list->count == 0;
 }
