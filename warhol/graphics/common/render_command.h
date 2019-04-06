@@ -81,6 +81,8 @@ struct RenderCommandConfig {
 struct RenderCommand {
   DEFAULT_ALL_CONSTRUCTORS(RenderCommand);
 
+  const char* name = nullptr;   // Useful for debugging purposes.
+
   RenderCommandType type = RenderCommandType::kLast;
   RenderCommandConfig config;
 

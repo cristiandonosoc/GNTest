@@ -9,9 +9,10 @@
 #include <warhol/graphics/common/renderer.h>
 #include <warhol/input/input.h>
 #include <warhol/scene/camera.h>
-#include <warhol/ui/imgui/imgui.h>
+#include <warhol/ui/imgui.h>
 #include <warhol/utils/log.h>
 #include <warhol/window/common/window.h>
+
 
 #include <warhol/memory/memory_pool.h>
 
@@ -210,6 +211,7 @@ int main() {
     LinkedList<RenderCommand> command_list;
     auto* command = PushIntoListFromMemoryPool(&command_list, &memory_pool);
 
+    command->name = "Loop command";
     command->type = RenderCommandType::kMesh;
     command->camera = &camera;
     command->shader = &shader;
@@ -219,11 +221,11 @@ int main() {
                          window.seconds * glm::radians(90.0f),
                          glm::vec3(0, 0, 1));
 
-    /* RenderCommand imgui_command = ImguiGetRenderCommand(&imgui_context); */
-    /* PushIntoListFromMemoryPool(&command_list, &memory_pool, */
-    /*                            std::move(imgui_command)); */
+    ImGui::ShowDemoWindow();
 
-    ImguiEndFrame(&imgui_context);
+    RenderCommand imgui_command = ImguiEndFrame(&imgui_context);
+    PushIntoListFromMemoryPool(&command_list, &memory_pool,
+                               std::move(imgui_command));
 
     RendererStartFrame(&renderer);
     RendererExecuteCommands(&renderer, &command_list);

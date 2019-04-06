@@ -59,6 +59,10 @@ struct OpenGLRendererBackend : public RendererBackend {
   void UnstageMesh(Mesh*) override;
   bool IsMeshStaged(Mesh*) override;
 
+  bool UploadMeshRange(Mesh*,
+                       IndexRange vertex_range = {},
+                       IndexRange index_range = {}) override;
+
   bool StageShader(Shader*) override;
   void UnstageShader(Shader*) override;
   bool IsShaderStaged(Shader*) override;

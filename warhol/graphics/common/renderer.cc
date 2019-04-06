@@ -96,6 +96,13 @@ bool RendererIsMeshStaged(Renderer* renderer, Mesh* mesh) {
   return renderer->backend->IsMeshStaged(mesh);
 }
 
+bool RendererUploadMeshRange(Renderer* renderer, Mesh* mesh,
+                             IndexRange vertex_range,
+                             IndexRange index_range) {
+  ASSERT(Valid(renderer));
+  return renderer->backend->UploadMeshRange(mesh, vertex_range, index_range);
+}
+
 // Shader ----------------------------------------------------------------------
 
 bool RendererStageShader(Renderer* renderer, Shader* shader) {

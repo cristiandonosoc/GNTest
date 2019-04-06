@@ -19,6 +19,8 @@ struct MeshRenderAction;
 
 namespace imgui {
 
+struct ImguiContext;
+
 struct ImguiRenderer {
   RAII_CONSTRUCTORS(ImguiRenderer);
 
@@ -37,7 +39,7 @@ struct ImguiRenderer {
 inline bool Valid(ImguiRenderer* r) { return !!r->renderer && !!r->io; }
 
 // Requires ImGuiRenderer.io to be already set.
-bool InitImguiRenderer(Renderer*, ImguiRenderer*);
+bool InitImguiRenderer(ImguiRenderer*, Renderer*);
 void ShutdownImguiRenderer(ImguiRenderer*);
 
 }  // namespace imgui

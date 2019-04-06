@@ -4,6 +4,7 @@
 #include "warhol/ui/imgui/imgui_renderer.h"
 
 #include "warhol/ui/imgui/def.h"
+#include "warhol/ui/imgui/imgui.h"
 #include "warhol/ui/imgui/imgui_shaders.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
@@ -47,6 +48,13 @@ bool CreateMesh(Renderer* renderer, ImguiRenderer* imgui) {
   // This number can be revisited if imgui uses more vertices.
   Mesh imgui_mesh;
   imgui_mesh.uuid = GetNextMeshUUID();
+  imgui_mesh.attributes = {
+    {2, AttributeType::kFloat},     // Pos.
+    {2, AttributeType::kFloat},     // UV.
+    {4, AttributeType::kUint8},     // Color.
+  };
+
+  imgui_mesh.vertex_size = AttributesSize(&imgui_mesh);
   InitMeshPools(&imgui_mesh, KILOBYTES(512), KILOBYTES(16));
 
   if (!RendererStageMesh(renderer, &imgui_mesh))
@@ -90,34 +98,58 @@ bool CreateFontTexture(Renderer* renderer, ImguiRenderer* imgui) {
 
 }  // namespace
 
-bool InitImguiRenderer(Renderer* renderer, ImguiRenderer* imgui) {
-  ASSERT(!Valid(imgui));
+bool InitImguiRenderer(ImguiRenderer* imgui_renderer, Renderer* renderer) {
+  ASSERT(!Valid(imgui_renderer));
   SCOPE_LOCATION();
 
-  InitMemoryPool(&imgui->memory_pool, KILOBYTES(64));
+  InitMemoryPool(&imgui_renderer->memory_pool, KILOBYTES(64));
 
-  if (!CreateShader(renderer, imgui) ||
-      !CreateMesh(renderer, imgui) ||
-      !CreateFontTexture(renderer, imgui)) {
+  if (!CreateShader(renderer, imgui_renderer) ||
+      !CreateMesh(renderer, imgui_renderer) ||
+      !CreateFontTexture(renderer, imgui_renderer)) {
     return false;
   }
 
-  imgui->renderer = renderer;
+  imgui_renderer->renderer = renderer;
+
   return true;
 }
 
 // Shutdown --------------------------------------------------------------------
 
-ImguiRenderer::~ImguiRenderer() {
-  if (Valid(this))
-    ShutdownImguiRenderer(this);
+namespace {
+
+void UnstageMesh(ImguiRenderer* imgui) {
+  RendererUnstageMesh(imgui->renderer, &imgui->mesh);
+  imgui->mesh = {};
 }
+
+void UnstageShader(ImguiRenderer* imgui) {
+  RendererUnstageShader(imgui->renderer, &imgui->shader);
+  imgui->shader = {};
+}
+
+void UnstageFonts(ImguiRenderer* imgui) {
+  RendererUnstageTexture(imgui->renderer, &imgui->font_texture);
+  UnloadTexture(&imgui->font_texture);
+}
+
+}  // namespace
 
 void ShutdownImguiRenderer(ImguiRenderer* imgui) {
   ASSERT(Valid(imgui));
-  RendererUnstageMesh(imgui->renderer, &imgui->mesh);
-  RendererUnstageShader(imgui->renderer, &imgui->shader);
-  RendererUnstageTexture(imgui->renderer, &imgui->font_texture);
+  UnstageMesh(imgui);
+  UnstageShader(imgui);
+  UnstageFonts(imgui);
+
+  imgui->io = nullptr;
+  imgui->renderer = nullptr;
+  ShutdownMemoryPool(&imgui->memory_pool);
+}
+
+ImguiRenderer::~ImguiRenderer() {
+  if (Valid(this))
+    ShutdownImguiRenderer(this);
 }
 
 }  // namespace imgui

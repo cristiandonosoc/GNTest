@@ -39,13 +39,10 @@ bool InitImgui(Renderer* renderer, ImguiContext*);
 void ShutdownImgui(ImguiContext*);
 
 void ImguiStartFrame(Window*, InputState*, ImguiContext*);
-void ImguiEndFrame(ImguiContext*);
 
 // Gets the command to be passed down to the renderer.
-// IMPORTANT: StartFrame and EndFrame *has* to be called each frame before this.
-//            Otherwise the data won't be ready or an imgui internal assert will
-//            trigger.
-RenderCommand ImguiGetRenderCommand(ImguiContext*);
+// IMPORTANT: StartFrame *has* to be called each frame before this.
+RenderCommand ImguiEndFrame(ImguiContext*);
 
 }  // namespace imgui
 }  // namespace warhol

@@ -65,15 +65,14 @@ bool InitImgui(Renderer* renderer, ImguiContext* imgui) {
   }
 
   IMGUI_CHECKVERSION();
-
-  imgui->imgui_renderer.io = imgui->io;
-  if (!InitImguiRenderer(renderer, &imgui->imgui_renderer))
-    return false;
-
   ImGui::CreateContext();
   imgui->io = &ImGui::GetIO();
   ASSERT(imgui->io);
   MapIO(imgui->io);
+
+  imgui->imgui_renderer.io = imgui->io;
+  if (!InitImguiRenderer(&imgui->imgui_renderer, renderer))
+    return false;
 
   imgui->imgui_renderer.camera.projection = glm::mat4(1.0f);
   imgui->imgui_renderer.camera.view = glm::mat4(1.0f);
@@ -148,14 +147,7 @@ void ImguiStartFrame(Window* window, InputState* input, ImguiContext* imgui) {
 
 // End Frame -------------------------------------------------------------------
 
-void ImguiEndFrame(ImguiContext* imgui) {
-  ASSERT(Valid(imgui));
-  // Will finalize the draw data needed for getting the draw lists for getting
-  // the render command.
-  ImGui::Render();
-}
-
-// Get RenderCommand -----------------------------------------------------------
+namespace {
 
 RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
   ASSERT(Valid(imgui));
@@ -232,6 +224,7 @@ RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
                                  std::move(render_action));
 
       index_buffer_offset += draw_cmd->ElemCount;
+      LOG(DEBUG) << "Imgui index count: " << index_buffer_offset;
     }
 
     // We stage the buffers to the renderer.
@@ -241,15 +234,31 @@ RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
     }
   }
 
+  LOG(DEBUG) << "Got " << mesh_actions.count << " imgui drawing actions.";
+
   RenderCommand render_command;
+  render_command.name = "Imgui";
   render_command.type = RenderCommandType::kMesh;
   render_command.config.blend_enabled = true;
   render_command.config.cull_faces = false;
   render_command.config.depth_test = false;
   render_command.camera = &imgui_renderer.camera;
+  render_command.shader = &imgui_renderer.shader;
   render_command.actions.mesh_actions = std::move(mesh_actions);
 
   return render_command;
+}
+
+}  // namespace
+
+
+RenderCommand ImguiEndFrame(ImguiContext* imgui) {
+  ASSERT(Valid(imgui));
+  // Will finalize the draw data needed for getting the draw lists for getting
+  // the render command.
+  ImGui::Render();
+
+  return ImguiGetRenderCommand(imgui);
 }
 
 }  // namespace imgui

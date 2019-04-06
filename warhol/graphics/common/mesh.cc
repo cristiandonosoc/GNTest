@@ -110,4 +110,14 @@ void InitMeshPools(Mesh* mesh, size_t vert_size, size_t index_size) {
   InitMemoryPool(&mesh->indices, index_size);
 }
 
+uint32_t AttributesSize(Mesh* mesh) {
+  uint32_t total = 0;
+  for (auto & attribute : mesh->attributes) {
+    ASSERT(attribute.type != AttributeType::kLast);
+    total += (uint32_t)attribute.type * attribute.count;
+  }
+
+  return total;
+}
+
 }  // namespace warhol

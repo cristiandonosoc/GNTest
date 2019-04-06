@@ -71,8 +71,8 @@ bool RendererIsMeshStaged(Renderer*, Mesh*);
 // be uploaded. The format is (offset, size).
 // An empty range means upload the whole used memory of each memory pool.
 bool RendererUploadMeshRange(Renderer*, Mesh*,
-                             Pair<int> vertex_range = {},
-                             Pair<int> index_range = {});
+                             IndexRange vertex_range = {},
+                             IndexRange index_range = {});
 
 bool RendererStageShader(Renderer*, Shader*);
 void RendererUnstageShader(Renderer*, Shader*);
