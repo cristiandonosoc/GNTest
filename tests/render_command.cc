@@ -41,10 +41,16 @@ TEST_CASE("IndexRange") {
   SECTION("Both") {
     IndexRange range = 0;
 
-    range = PushOffset(range, 0x12345678);
     range = PushSize(range, 0xdeadbeef);
+    range = PushOffset(range, 0x12345678);
     CHECK(GetOffset(range) == 0x12345678);
     CHECK(GetSize(range) == 0xdeadbeef);
+  }
+
+  SECTION("CreateRange") {
+    IndexRange range = CreateRange(12, 3242);
+    CHECK(GetSize(range) == 12);
+    CHECK(GetOffset(range) == 3242);
   }
 }
 

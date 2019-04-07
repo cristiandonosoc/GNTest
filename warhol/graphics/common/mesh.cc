@@ -19,6 +19,11 @@ std::atomic<uint64_t> kNextMeshUUID = 1;
 
 }  // namespace
 
+Mesh::~Mesh() {
+  if (Staged(this))
+    NOT_REACHED("Mesh has not been unstaged.");
+}
+
 uint64_t GetNextMeshUUID() { return kNextMeshUUID++; }
 
 size_t Hash(const Vertex& vertex) {

@@ -136,6 +136,7 @@ void ImguiStartFrame(Window* window, InputState* input, ImguiContext* imgui) {
   ASSERT(Valid(imgui));
 
   imgui->io->DisplaySize = {(float)window->width, (float)window->height};
+  imgui->io->DisplayFramebufferScale =  { 1.0f, 1.0f };
 
   // TODO(Cristian): Obtain time delta from platform!
   imgui->io->DeltaTime = window->frame_delta;
@@ -149,106 +150,6 @@ void ImguiStartFrame(Window* window, InputState* input, ImguiContext* imgui) {
 
 namespace {
 
-RenderCommand ImguiGetRenderCommand(ImguiContext* imgui) {
-  ASSERT(Valid(imgui));
-
-  // Reset the memory pools wher ethe new index data is going to be.
-  auto& imgui_renderer = imgui->imgui_renderer;
-  ResetMemoryPool(&imgui_renderer.memory_pool);
-  ResetMemoryPool(&imgui_renderer.mesh.vertices);
-  ResetMemoryPool(&imgui_renderer.mesh.indices);
-
-  ImGuiIO* io = imgui->io;
-  ImDrawData* draw_data = ImGui::GetDrawData();
-
-  // Avoid rendering when minimized, scale coordinates for retina displays
-  // (screen coordinates != framebuffer coordinates)
-  int fb_width =
-      (int)(draw_data->DisplaySize.x * io->DisplayFramebufferScale.x);
-  int fb_height =
-      (int)(draw_data->DisplaySize.y * io->DisplayFramebufferScale.y);
-  if (fb_width <= 0 || fb_height <= 0)
-    return {};
-
-  imgui_renderer.camera.viewport_p1 = {0, 0};
-  imgui_renderer.camera.viewport_p2 = {fb_width, fb_height};
-
-  float L = draw_data->DisplayPos.x;
-  float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
-  float T = draw_data->DisplayPos.y;
-  float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
-  imgui_renderer.camera.projection = glm::ortho(L, R, B, T);
-
-  // Represents how much in the indices mesh buffer we're in.
-  uint64_t index_buffer_offset = 0;
-
-  LinkedList<MeshRenderAction> mesh_actions;
-
-  // Create the draw list.
-  ImVec2 pos = draw_data->DisplayPos;
-  for (int i = 0; i < draw_data->CmdListsCount; i++) {
-    ImDrawList* cmd_list = draw_data->CmdLists[i];
-
-    // This will start appending drawing data into the mesh buffer that's
-    // already staged into the renderer.
-    for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++) {
-      const ImDrawCmd* draw_cmd = &cmd_list->CmdBuffer[cmd_i];
-
-      MeshRenderAction render_action;
-      render_action.mesh = &imgui->imgui_renderer.mesh;
-      render_action.textures = &imgui->imgui_renderer.font_texture;
-
-      PushVertices(&imgui_renderer.mesh, cmd_list->VtxBuffer.Data,
-                                         cmd_list->VtxBuffer.Size);
-      PushIndices(&imgui_renderer.mesh, cmd_list->IdxBuffer.Data,
-                                        cmd_list->IdxBuffer.Size);
-
-      IndexRange range = 0;
-      range = PushOffset(range, index_buffer_offset);
-      range = PushSize(range, draw_cmd->ElemCount);
-      render_action.index_range = range;
-
-      // We check if we need to apply scissoring.
-      Vec4 scissor_rect;
-      scissor_rect.x = draw_cmd->ClipRect.x - pos.x;
-      scissor_rect.y = draw_cmd->ClipRect.y - pos.y;
-      scissor_rect.z = draw_cmd->ClipRect.z - pos.x;
-      scissor_rect.w = draw_cmd->ClipRect.w - pos.y;
-      if (scissor_rect.x < fb_width && scissor_rect.y < fb_height &&
-          scissor_rect.z >= 0.0f && scissor_rect.w >= 0.0f) {
-        render_action.scissor = scissor_rect;
-      }
-
-      PushIntoListFromMemoryPool(&mesh_actions,
-                                 &imgui_renderer.memory_pool,
-                                 std::move(render_action));
-
-      index_buffer_offset += draw_cmd->ElemCount;
-      LOG(DEBUG) << "Imgui index count: " << index_buffer_offset;
-    }
-
-    // We stage the buffers to the renderer.
-    if (!RendererUploadMeshRange(imgui_renderer.renderer,
-                                 &imgui_renderer.mesh)) {
-      NOT_REACHED("Could not upload data to the renderer.");
-    }
-  }
-
-  LOG(DEBUG) << "Got " << mesh_actions.count << " imgui drawing actions.";
-
-  RenderCommand render_command;
-  render_command.name = "Imgui";
-  render_command.type = RenderCommandType::kMesh;
-  render_command.config.blend_enabled = true;
-  render_command.config.cull_faces = false;
-  render_command.config.depth_test = false;
-  render_command.camera = &imgui_renderer.camera;
-  render_command.shader = &imgui_renderer.shader;
-  render_command.actions.mesh_actions = std::move(mesh_actions);
-
-  return render_command;
-}
-
 }  // namespace
 
 
@@ -257,8 +158,7 @@ RenderCommand ImguiEndFrame(ImguiContext* imgui) {
   // Will finalize the draw data needed for getting the draw lists for getting
   // the render command.
   ImGui::Render();
-
-  return ImguiGetRenderCommand(imgui);
+  return ImguiGetRenderCommand(&imgui->imgui_renderer);
 }
 
 }  // namespace imgui

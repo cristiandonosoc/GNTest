@@ -8,6 +8,7 @@
 #include "warhol/graphics/common/shader.h"
 #include "warhol/graphics/common/texture.h"
 #include "warhol/graphics/common/renderer.h"
+#include "warhol/utils/debug.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
@@ -137,13 +138,6 @@ void DeleteMeshHandles(MeshHandles* handles) {
   GL_CHECK(glDeleteVertexArrays(1, &handles->vao));
 }
 
-void BindMeshHandles(MeshHandles* handles) {
-  // Always bind the VAO first, so that it doesn't overwrite.
-  GL_CHECK(glBindVertexArray(handles->vao));
-  GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, handles->vbo));
-  GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handles->ebo));
-}
-
 void UnbindMeshHandles() {
   // Always unbind the VAO first, so that it doesn't overwrite.
   GL_CHECK(glBindVertexArray(NULL));
@@ -166,10 +160,11 @@ GLenum AttributeTypeToGL(AttributeType type) {
 }
 
 void BindAttributes(Mesh* mesh) {
+  ASSERT(!mesh->attributes.empty());
   GLsizei stride = 0;
   for (auto& attribute : mesh->attributes) {
     ASSERT(attribute.type != AttributeType::kLast);
-    stride += (GLsizei)attribute.type;
+    stride += (GLsizei)GetSize(&attribute);
   }
 
   // The shader layout must coincide with these attribute orders.
@@ -179,39 +174,32 @@ void BindAttributes(Mesh* mesh) {
     GL_CHECK(glVertexAttribPointer(location,
                                    attribute.count,
                                    AttributeTypeToGL(attribute.type),
-                                   GL_FALSE,
+                                   attribute.normalized ? GL_TRUE : GL_FALSE,
                                    stride,
                                    (GLvoid*)(intptr_t)offset));
-    offset += (GLsizei)attribute.type;
+    GL_CHECK(glEnableVertexAttribArray(location));
+    offset += (GLsizei)GetSize(&attribute);
     location++;
   }
 }
 
-void BufferVertices(Mesh* mesh) {
-  GL_CHECK(glBufferData(GL_ARRAY_BUFFER, VerticesSize(mesh),
-          Data(&mesh->vertices), GL_STATIC_DRAW));
+void BufferVertices(Mesh* mesh, MeshHandles* handles) {
+  GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, handles->vbo));
+  GL_CHECK(glBufferData(GL_ARRAY_BUFFER, mesh->vertices.size,
+                        Data(&mesh->vertices), GL_STATIC_DRAW));
 
-  // Pos.
-  GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0));
-  GL_CHECK(glEnableVertexAttribArray(0));
-  // Color.
-  GL_CHECK(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-          (void*)offsetof(Vertex, color)));
-  GL_CHECK(glEnableVertexAttribArray(1));
-  // UV.
-  GL_CHECK(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-          (void*)offsetof(Vertex, uv)));
-  GL_CHECK(glEnableVertexAttribArray(2));
+  BindAttributes(mesh);
 }
 
-void BufferIndices(Mesh* mesh) {
-  GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, IndicesSize(mesh),
-          Data(&mesh->indices), GL_STATIC_DRAW));
+void BufferIndices(Mesh* mesh, MeshHandles* handles) {
+  GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handles->ebo));
+  GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->indices.size,
+                        Data(&mesh->indices), GL_STATIC_DRAW));
 }
 
 bool OpenGLStageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
   uint64_t uuid = mesh->uuid.value;
-  LOG(DEBUG) << "Staging mesh " << mesh->name << "(" << uuid<< ").";
+  LOG(DEBUG) << "Staging mesh " << mesh->name << " (uuid: " << uuid<< ").";
   auto it = opengl->loaded_meshes.find(uuid);
   if (it != opengl->loaded_meshes.end()) {
     LOG(ERROR) << "Reloading mesh " << mesh->name;
@@ -220,16 +208,21 @@ bool OpenGLStageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
 
   ASSERT(HasData(mesh));
 
-  MeshHandles handles = GenerateMeshHandles();
-  BindMeshHandles(&handles);
+  // Always bind the VAO first, so that it doesn't overwrite.
 
-  BindAttributes(mesh);
-  BufferVertices(mesh);
-  BufferIndices(mesh);
+
+
+  MeshHandles handles = GenerateMeshHandles();
+
+  GL_CHECK(glBindVertexArray(handles.vao));
+
+  BufferVertices(mesh, &handles);
+  BufferIndices(mesh, &handles);
 
   UnbindMeshHandles();
 
   opengl->loaded_meshes[uuid] = std::move(handles);
+  mesh->staged = true;
 
   return true;
 }
@@ -255,34 +248,38 @@ bool OpenGLRendererUploadMeshRange(OpenGLRendererBackend* opengl,
                                    IndexRange index_range) {
   uint64_t uuid = mesh->uuid.value;
   auto it = opengl->loaded_meshes.find(uuid);
-  if (it != opengl->loaded_meshes.end()) {
-    LOG(ERROR) << "Unloaded mesh " << mesh->name;
+  if (it == opengl->loaded_meshes.end()) {
+    LOG(ERROR) << "Uploading range on non-staged mesh " << mesh->name;
     return false;
   }
 
   MeshHandles& handles = it->second;
 
   // Vertices.
-  uint32_t offset = GetOffset(vertex_range);
-  uint32_t size = GetSize(vertex_range);
-  if (size == 0)
-    size = Used(&mesh->vertices);
+  {
+    uint32_t size = GetSize(vertex_range);
+    if (size == 0)
+      size = Used(&mesh->vertices);
+    uint32_t offset = GetOffset(vertex_range);
 
-  GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, handles.vbo));
-  GL_CHECK(glBufferSubData(GL_ARRAY_BUFFER, offset, size,
-                           Data(&mesh->vertices)));
-  GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, NULL));
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, handles.vbo));
+    GL_CHECK(glBufferSubData(GL_ARRAY_BUFFER, offset, size,
+                             Data(&mesh->vertices)));
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, NULL));
+  }
 
   // Indices.
-  offset = GetOffset(index_range);
-  size = GetSize(index_range);
-  if (size == 0)
-    size = Used(&mesh->indices);
+  {
+    uint32_t size = GetSize(index_range);
+    if (size == 0)
+      size = Used(&mesh->indices);
+    uint32_t offset = GetOffset(index_range);
 
-  GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handles.ebo));
-  GL_CHECK(glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, offset, size,
-                           Data(&mesh->indices)));
-  GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, NULL));
+    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handles.ebo));
+    GL_CHECK(glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, offset, size,
+                             Data(&mesh->indices)));
+    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, NULL));
+  }
 
   return true;
 }
@@ -301,12 +298,13 @@ namespace {
 
 void OpenGLUnstageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
   uint64_t uuid = mesh->uuid.value;
-  LOG(DEBUG) << "Unstaging mesh " << mesh->name << "(" << uuid<< ").";
+  LOG(DEBUG) << "Unstaging mesh " << mesh->name << " (uuid: " << uuid<< ").";
   auto it = opengl->loaded_meshes.find(uuid);
   ASSERT(it != opengl->loaded_meshes.end());
 
   DeleteMeshHandles(&it->second);
   opengl->loaded_meshes.erase(it);
+  mesh->staged = false;
 }
 
 }  // namespace
@@ -492,6 +490,29 @@ void SetUniforms(Shader* shader, ShaderHandles* handles,
   GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, NULL));
 }
 
+#define SET_GL_CONFIG(flag, gl_name) \
+  if (flag) {                           \
+    glEnable(gl_name);                  \
+  } else {                              \
+    glDisable(gl_name);                 \
+  }
+
+void SetConfigs(RenderCommandConfig* config) {
+  if (config->blend_enabled) {
+    glEnable(GL_BLEND);
+
+    // TODO(Cristian): Have a way of setting the blend function!!!!!
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  } else {
+    glDisable(GL_BLEND);
+  }
+
+  SET_GL_CONFIG(config->cull_faces, GL_CULL_FACE);
+  SET_GL_CONFIG(config->depth_test, GL_DEPTH_TEST);
+  SET_GL_CONFIG(config->scissor_test, GL_SCISSOR_TEST);
+}
+
 void ExecuteMeshActions(OpenGLRendererBackend* opengl,
                         Shader* shader,
                         ShaderHandles* shader_desc,
@@ -502,20 +523,25 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
 
     SetUniforms(shader, shader_desc, &action);
 
+    size_t size = GetSize(action.index_range);
+    ASSERT(size > 0);
+    size_t offset = GetOffset(action.index_range);
+
     MeshHandles& handles = mesh_it->second;
     GL_CHECK(glBindVertexArray(handles.vao));
-    GL_CHECK(glDrawElements(GL_TRIANGLES, action.mesh->index_count,
-                            GL_UNSIGNED_INT, NULL));
 
     for (int i = 0; i < shader->texture_count; i++) {
       Texture* texture = action.textures + i;
       auto tex_it = opengl->loaded_textures.find(texture->uuid.value);
       ASSERT(tex_it != opengl->loaded_textures.end());
 
-
+      uint32_t tex_handle = tex_it->second.tex_handle;
       GL_CHECK(glActiveTexture(GL_TEXTURE0));
-      GL_CHECK(glBindTexture(GL_TEXTURE_2D, tex_it->second.tex_handle));
+      GL_CHECK(glBindTexture(GL_TEXTURE_2D, tex_handle));
     }
+
+    GL_CHECK(glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT,
+                            (void*)offset));
   }
   GL_CHECK(glBindVertexArray(NULL));
 }
@@ -529,6 +555,7 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
 
     GL_CHECK(glUseProgram(shader_desc.program_handle));
 
+    SetConfigs(&command.config);
     SetCameraMatrices(opengl, command.camera);
 
     switch (command.type) {

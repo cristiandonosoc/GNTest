@@ -14,6 +14,7 @@ struct ImGuiIO;
 
 namespace warhol {
 
+struct RenderCommand;
 struct Renderer;
 struct MeshRenderAction;
 
@@ -41,6 +42,8 @@ inline bool Valid(ImguiRenderer* r) { return !!r->renderer && !!r->io; }
 // Requires ImGuiRenderer.io to be already set.
 bool InitImguiRenderer(ImguiRenderer*, Renderer*);
 void ShutdownImguiRenderer(ImguiRenderer*);
+
+RenderCommand ImguiGetRenderCommand(ImguiRenderer*);
 
 }  // namespace imgui
 }  // namespace warhol

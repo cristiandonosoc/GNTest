@@ -2,18 +2,18 @@
 # This code has a BSD license. See LICENSE.
 
 declare_args() {
-  sdl2_include_path = getenv("SDL2_SDK")
-  sdl2_lib_path = getenv("SDL2_SDK")
+  sdl_include_path = getenv("SDL2_SDK")
+  sdl_lib_path = getenv("SDL2_SDK")
 }
 
 config("sdl2_config") {
   handled = false
-  if ("$sdl2_include_path" != "") {
-    include_dirs = [ "$sdl2_include_path" ]
+  if ("$sdl_include_path" != "") {
+    include_dirs = [ "$sdl_include_path" ]
   }
   if (target_os == "win" && compiler == "msvc") {
-    if ("$sdl2_lib_path" != "") {
-      libs = [ "${sdl2_lib_path}/SDL2/SDL2.lib" ]
+    if ("$sdl_lib_path" != "") {
+      libs = [ "${sdl_lib_path}/SDL2/SDL2.lib" ]
     }
     handled = true
   } else if (target_os == "mac" && compiler == "clang") {
@@ -26,8 +26,8 @@ config("sdl2_config") {
   } else if (target_os == "linux") {
     if (compiler == "clang") {
       libs = [ "-lSDL2" ]
-      if ("$sdl2_lib_path" != "") {
-        ldflags = [ "-L${sdl2_lib_path}" ]
+      if ("$sdl_lib_path" != "") {
+        ldflags = [ "-L${sdl_lib_path}" ]
       }
       handled = true
     }

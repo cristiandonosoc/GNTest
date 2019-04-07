@@ -32,6 +32,6 @@ UNIFORM_BLOCK(VertUniforms) {
 
 void main() {
   gl_Position = camera.proj * camera.view * uniforms.model * vec4(in_pos, 1.0);
-  color = in_pos;
+  color = in_color;
   uv = in_uv;
 }

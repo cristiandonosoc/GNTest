@@ -14,6 +14,7 @@
 #include "warhol/utils/clear_on_move.h"
 #include "warhol/utils/log.h"
 #include "warhol/utils/macros.h"
+#include "warhol/utils/types.h"
 
 namespace warhol {
 
@@ -36,15 +37,23 @@ enum class AttributeType : uint32_t {
 struct Attribute {
   uint32_t count = 0;
   AttributeType type = AttributeType::kLast;
-};
 
+  // Whether the attribute data should be normalized when sent to the GPU.
+  bool normalized = false;
+};
+inline uint32_t GetSize(Attribute* attribute) {
+  return (uint32_t)attribute->type * attribute->count;
+}
 
 size_t Hash(const Vertex&);
 
 struct Mesh {
-  ClearOnMove<uint64_t> uuid = 0;     //  Zero is reserved.
+  RAII_CONSTRUCTORS(Mesh);
 
-  std::string name;
+  ClearOnMove<uint64_t> uuid = 0;     //  Zero is reserved.
+  ClearOnMove<bool> staged = false;
+
+  const char* name;
 
   MemoryPool vertices;
   MemoryPool indices;
@@ -59,18 +68,16 @@ struct Mesh {
   bool loaded = false;
 };
 
+inline bool Staged(Mesh* mesh) { return mesh->staged.value; }
+
 template <typename T>
 inline void PushVertices(Mesh* mesh, T* data, size_t count) {
   ASSERT(mesh->vertex_size == sizeof(T));
-  LOG(DEBUG) << "Adding " << count << " vertices of " << sizeof(T) << " ("
-             << count * sizeof(T) << ").";
   PushIntoMemoryPool(&mesh->vertices, data, count);
   mesh->vertex_count += count;
 }
 
 inline void PushIndices(Mesh* mesh, uint32_t* data, size_t count) {
-  LOG(DEBUG) << "Adding " << count << " vertices of " << sizeof(uint32_t)
-             << " (" << count * sizeof(uint32_t) << ").";
   PushIntoMemoryPool(&mesh->indices, data, count);
   mesh->index_count += count;
 }

@@ -21,36 +21,48 @@ struct Texture;
 // Index Range -----------------------------------------------------------------
 //
 // Packs size and offsets of the range.
-// | size (32 bits) | offset (32 bits |
+// | size (32 bits)  | offset (32 bits) |
+//
+// The easiest way to use this is to call CreateRange(size, offset).
 
 using IndexRange = uint64_t;
 
 constexpr uint64_t kBottom32Mask = 0xffffffffu;
 constexpr uint64_t kTop32Mask = kBottom32Mask << 32;
 
-inline IndexRange PushOffset(IndexRange range, uint64_t offset) {
-  uint64_t tmp = kTop32Mask | offset;
-  return (range & kTop32Mask) | tmp;
-}
-
-inline uint32_t GetOffset(IndexRange range) {
-  return kBottom32Mask & range;
-}
-
 inline IndexRange PushSize(IndexRange range, uint64_t size) {
   uint64_t tmp = (size << 32);
   return (range & kBottom32Mask) | tmp;
+}
+
+inline IndexRange PushOffset(IndexRange range, uint64_t offset) {
+  uint64_t tmp = kBottom32Mask & offset;
+  return (range & kTop32Mask) | tmp;
+}
+
+inline IndexRange CreateRange(uint32_t size, uint32_t offset) {
+  IndexRange range = 0;
+  range = PushSize(range, size);
+  range = PushOffset(range, offset);
+  return range;
 }
 
 inline uint32_t GetSize(IndexRange range) {
   return range >> 32;
 }
 
+inline uint32_t GetOffset(IndexRange range) {
+  return kBottom32Mask & range;
+}
+
+std::string PrintRange(IndexRange);
+
 // RenderCommand ---------------------------------------------------------------
 
 struct MeshRenderAction {
   Mesh* mesh = nullptr;
 
+  // TODO(Cristian): Define an IntVec4 for this.
   Vec4 scissor;
   IndexRange index_range;
 
@@ -73,6 +85,8 @@ struct RenderCommandConfig {
   bool cull_faces = true;
   // Use the depth buffer.
   bool depth_test = true;
+
+  bool scissor_test = false;
 
   // Only draw wireframes.
   bool wireframe_mode = false;

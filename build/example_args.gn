@@ -1,0 +1,8 @@
+# Set build arguments here. See `gn buildargs`.
+
+opengl_enabled = true
+sdl_enabled = true
+sdl_include_path = "/usr/local/include"
+sdl_lib_path = "/usr/local/lib"
+
+extra_libs = [ "-lpthread" ]

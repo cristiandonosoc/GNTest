@@ -116,7 +116,13 @@ int main() {
   LOG(DEBUG) << "Loading meshes.";
 
   Mesh mesh;
+  mesh.name = "Square Mesh";
   mesh.uuid = GetNextMeshUUID();    // Created by hand.
+  mesh.attributes = {
+    {3, AttributeType::kFloat},
+    {3, AttributeType::kFloat},
+    {2, AttributeType::kFloat},
+  };
 
   mesh.vertex_size = sizeof(decltype(vertices)::value_type);
   mesh.vertex_count = vertices.size();
@@ -138,7 +144,7 @@ int main() {
 
   Texture texture;
   TextureType texture_type = TextureType::kOpenGL;
-  const char* texture_name = "awesomeface.png";
+  const char* texture_name = "wall.jpg";
   if (!LoadTexture(GetTexturePath(texture_name), texture_type, &texture)) {
     LOG(ERROR) << "Could not load texture " <<  texture_name;
     return 1;
@@ -201,6 +207,7 @@ int main() {
     auto* mesh_action = PushIntoListFromMemoryPool(&mesh_action_list,
                                                    &memory_pool);
     mesh_action->mesh = &mesh;
+    mesh_action->index_range = CreateRange(mesh.index_count, 0);
     mesh_action->textures = &texture;
 
     auto* model = PushIntoMemoryPool<glm::mat4>(&memory_pool);
@@ -233,6 +240,8 @@ int main() {
 
     WindowSwapBuffers(&window);
   }
+
+  RendererUnstageMesh(&renderer, &mesh);
 
   LOG(DEBUG) << "Adios, amigo!";
 }

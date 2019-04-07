@@ -7,6 +7,7 @@
 #include "warhol/ui/imgui/imgui.h"
 #include "warhol/ui/imgui/imgui_shaders.h"
 #include "warhol/utils/assert.h"
+#include "warhol/utils/glm_impl.h"
 #include "warhol/utils/log.h"
 #include "warhol/graphics/common/mesh.h"
 #include "warhol/graphics/common/renderer.h"
@@ -42,23 +43,24 @@ bool CreateShader(Renderer* renderer, ImguiRenderer* imgui) {
 bool CreateMesh(Renderer* renderer, ImguiRenderer* imgui) {
   SCOPE_LOCATION();
   // Create a Mesh for creating a buffer.
-  // A imgui vertex is 8 floats (32 bytes).
-  // 512 kb of buffer is 16384 vertices, which seems reasonable.
-  // The same amount of indices will use 4k, so we'll give it a bit more.
-  // This number can be revisited if imgui uses more vertices.
   Mesh imgui_mesh;
+  imgui_mesh.name = "Imgui Mesh";
   imgui_mesh.uuid = GetNextMeshUUID();
   imgui_mesh.attributes = {
-    {2, AttributeType::kFloat},     // Pos.
-    {2, AttributeType::kFloat},     // UV.
-    {4, AttributeType::kUint8},     // Color.
+    {2, AttributeType::kFloat, false},  // Pos.
+    {2, AttributeType::kFloat, false},  // UV.
+    {4, AttributeType::kUint8, true},   // Color.
   };
 
+  // A imgui vertex is 20 bytes. An index is 4 bytes.
+  // 512 kb / 20 = 26214 vertices.
+  // 512 kb / 4 = 131072 indices.
   imgui_mesh.vertex_size = AttributesSize(&imgui_mesh);
-  InitMeshPools(&imgui_mesh, KILOBYTES(512), KILOBYTES(16));
+  InitMeshPools(&imgui_mesh, KILOBYTES(512), KILOBYTES(512));
 
   if (!RendererStageMesh(renderer, &imgui_mesh))
     return false;
+
 
   imgui->mesh = std::move(imgui_mesh);
   return true;
@@ -150,6 +152,116 @@ void ShutdownImguiRenderer(ImguiRenderer* imgui) {
 ImguiRenderer::~ImguiRenderer() {
   if (Valid(this))
     ShutdownImguiRenderer(this);
+}
+
+// GetRenderCommand ------------------------------------------------------------
+
+namespace {
+void ResetMesh(Mesh* mesh) {
+  mesh->vertex_count = 0;
+  mesh->index_count = 0;
+  ResetMemoryPool(&mesh->vertices);
+  ResetMemoryPool(&mesh->indices);
+}
+
+};
+
+RenderCommand ImguiGetRenderCommand(ImguiRenderer* imgui_renderer) {
+  /* ASSERT(Valid(imgui)); */
+  /* ASSERT(Valid(&imgui->imgui_renderer)); */
+  ASSERT(Valid(imgui_renderer));
+
+  // Reset the memory pools wher ethe new index data is going to be.
+  ResetMemoryPool(&imgui_renderer->memory_pool);
+  ResetMesh(&imgui_renderer->mesh);
+
+  ImGuiIO* io = imgui_renderer->io;
+  ImDrawData* draw_data = ImGui::GetDrawData();
+
+  // Avoid rendering when minimized, scale coordinates for retina displays
+  // (screen coordinates != framebuffer coordinates)
+  int fb_width =
+      (int)(draw_data->DisplaySize.x * io->DisplayFramebufferScale.x);
+  int fb_height =
+      (int)(draw_data->DisplaySize.y * io->DisplayFramebufferScale.y);
+  if (fb_width <= 0 || fb_height <= 0)
+    return {};
+
+  imgui_renderer->camera.viewport_p1 = {0, 0};
+  imgui_renderer->camera.viewport_p2 = {fb_width, fb_height};
+
+  float L = draw_data->DisplayPos.x;
+  float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
+  float T = draw_data->DisplayPos.y;
+  float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
+  imgui_renderer->camera.projection = glm::ortho(L, R, B, T);
+
+  // Represents how much in the indices mesh buffer we're in.
+  uint64_t index_buffer_offset = 0;
+
+  LinkedList<MeshRenderAction> mesh_actions;
+
+  // Create the draw list.
+  ImVec2 pos = draw_data->DisplayPos;
+  for (int i = 0; i < draw_data->CmdListsCount; i++) {
+    ImDrawList* cmd_list = draw_data->CmdLists[i];
+
+    // This will start appending drawing data into the mesh buffer that's
+    // already staged into the renderer.
+    for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++) {
+      const ImDrawCmd* draw_cmd = &cmd_list->CmdBuffer[cmd_i];
+
+      MeshRenderAction render_action;
+      render_action.mesh = &imgui_renderer->mesh;
+      render_action.textures = &imgui_renderer->font_texture;
+
+      PushVertices(&imgui_renderer->mesh, cmd_list->VtxBuffer.Data,
+                                         cmd_list->VtxBuffer.Size);
+      PushIndices(&imgui_renderer->mesh, cmd_list->IdxBuffer.Data,
+                                        cmd_list->IdxBuffer.Size);
+
+      IndexRange range = 0;
+      range = PushOffset(range, index_buffer_offset);
+      range = PushSize(range, draw_cmd->ElemCount);
+      render_action.index_range = range;
+
+      // We check if we need to apply scissoring.
+      Vec4 scissor_rect;
+      scissor_rect.x = draw_cmd->ClipRect.x - pos.x;
+      scissor_rect.y = draw_cmd->ClipRect.y - pos.y;
+      scissor_rect.z = draw_cmd->ClipRect.z - pos.x;
+      scissor_rect.w = draw_cmd->ClipRect.w - pos.y;
+      if (scissor_rect.x < fb_width && scissor_rect.y < fb_height &&
+          scissor_rect.z >= 0.0f && scissor_rect.w >= 0.0f) {
+        render_action.scissor = scissor_rect;
+      }
+
+      PushIntoListFromMemoryPool(&mesh_actions,
+                                 &imgui_renderer->memory_pool,
+                                 std::move(render_action));
+
+      index_buffer_offset += draw_cmd->ElemCount * sizeof(uint32_t);
+    }
+
+    // We stage the buffers to the renderer.
+    if (!RendererUploadMeshRange(imgui_renderer->renderer,
+                                 &imgui_renderer->mesh)) {
+      NOT_REACHED("Could not upload data to the renderer.");
+    }
+  }
+
+  RenderCommand render_command;
+  render_command.name = "Imgui";
+  render_command.type = RenderCommandType::kMesh;
+  render_command.config.blend_enabled = true;
+  render_command.config.cull_faces = false;
+  render_command.config.depth_test = false;
+  render_command.config.scissor_test = true;
+  render_command.camera = &imgui_renderer->camera;
+  render_command.shader = &imgui_renderer->shader;
+  render_command.actions.mesh_actions = std::move(mesh_actions);
+
+  return render_command;
 }
 
 }  // namespace imgui
