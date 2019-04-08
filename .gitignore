@@ -4,3 +4,4 @@ examples/*
 .DS_Store
 doom_vulkan
 sdl_source
+*.log

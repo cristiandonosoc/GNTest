@@ -6,6 +6,9 @@
 #include <string>
 #include <vector>
 
+#include "warhol/utils/assert.h"
+#include "warhol/utils/clear_on_move.h"
+
 namespace warhol {
 
 // Reads a complete file as binary data into |out|.
@@ -14,5 +17,17 @@ namespace warhol {
 bool ReadWholeFile(const std::string_view& path,
                    std::string* out,
                    bool add_extra_zero = true);
+
+struct FileHandle {
+  RAII_CONSTRUCTORS(FileHandle);
+  ClearOnMove<void*> hndl;
+};
+
+inline bool Valid(FileHandle* file) { return file->hndl.has_value(); }
+
+FileHandle OpenFile(const std::string_view& path, bool append = false);
+void WriteToFile(FileHandle*, void* data, size_t size);
+void CloseFile(FileHandle*);
+
 
 }  // namespace warhol

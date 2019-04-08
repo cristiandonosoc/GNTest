@@ -55,7 +55,7 @@ inline uint32_t GetOffset(IndexRange range) {
   return kBottom32Mask & range;
 }
 
-std::string PrintRange(IndexRange);
+std::string ToString(IndexRange);
 
 // RenderCommand ---------------------------------------------------------------
 
@@ -63,7 +63,7 @@ struct MeshRenderAction {
   Mesh* mesh = nullptr;
 
   // TODO(Cristian): Define an IntVec4 for this.
-  Vec4 scissor;
+  IntVec4 scissor;
   IndexRange index_range;
 
   // The counts of this are defined in the corresponding shader.
@@ -80,15 +80,10 @@ enum class RenderCommandType {
 
 struct RenderCommandConfig {
   // Use a blend equation.
-  bool blend_enabled = true;
-  // Do face culling.
+  bool blend_enabled = false;
   bool cull_faces = true;
-  // Use the depth buffer.
   bool depth_test = true;
-
   bool scissor_test = false;
-
-  // Only draw wireframes.
   bool wireframe_mode = false;
 };
 

@@ -7,6 +7,7 @@
 #include "warhol/ui/imgui/imgui.h"
 #include "warhol/ui/imgui/imgui_shaders.h"
 #include "warhol/utils/assert.h"
+#include "warhol/utils/file.h"
 #include "warhol/utils/glm_impl.h"
 #include "warhol/utils/log.h"
 #include "warhol/graphics/common/mesh.h"
@@ -196,52 +197,82 @@ RenderCommand ImguiGetRenderCommand(ImguiRenderer* imgui_renderer) {
   float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
   imgui_renderer->camera.projection = glm::ortho(L, R, B, T);
 
-  // Represents how much in the indices mesh buffer we're in.
-  uint64_t index_buffer_offset = 0;
-
   LinkedList<MeshRenderAction> mesh_actions;
+
+  // Each Imgui command list is considered "isolated" from the other, starting
+  // they're index base from 0. In our renderer we chain them together so we
+  // need to keep track on where each command starts in our buffers.
+  uint64_t base_index_offset = 0;
+  uint64_t base_vertex_offset = 0;
+  uint64_t total_size = 0;
+
+  std::vector<uint32_t> index_data;
 
   // Create the draw list.
   ImVec2 pos = draw_data->DisplayPos;
   for (int i = 0; i < draw_data->CmdListsCount; i++) {
     ImDrawList* cmd_list = draw_data->CmdLists[i];
 
+    // Represents how much in the indices mesh buffer we're in.
+    uint64_t index_offset = 0;
+
+    // We upload the data of this draw command list.
+    PushVertices(&imgui_renderer->mesh,
+                 cmd_list->VtxBuffer.Data,
+                 cmd_list->VtxBuffer.Size);
+
+    // Because each draw command is isolated, it's necessary to offset each
+    // index by their right place in the vertex buffer.
+    PushIndicesWithOffset(&imgui_renderer->mesh,
+                          cmd_list->IdxBuffer.Data,
+                          cmd_list->IdxBuffer.Size,
+                          base_vertex_offset);
+
+    for (uint32_t index : cmd_list->IdxBuffer) {
+      index_data.push_back(index + base_index_offset / 4);
+    }
+
     // This will start appending drawing data into the mesh buffer that's
     // already staged into the renderer.
     for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++) {
       const ImDrawCmd* draw_cmd = &cmd_list->CmdBuffer[cmd_i];
 
+      // Each Imgui Draw Command is our MeshRenderCommand equivalent.
       MeshRenderAction render_action;
       render_action.mesh = &imgui_renderer->mesh;
       render_action.textures = &imgui_renderer->font_texture;
 
-      PushVertices(&imgui_renderer->mesh, cmd_list->VtxBuffer.Data,
-                                         cmd_list->VtxBuffer.Size);
-      PushIndices(&imgui_renderer->mesh, cmd_list->IdxBuffer.Data,
-                                        cmd_list->IdxBuffer.Size);
-
       IndexRange range = 0;
-      range = PushOffset(range, index_buffer_offset);
+      range = PushOffset(range, base_index_offset + index_offset);
       range = PushSize(range, draw_cmd->ElemCount);
+      total_size += GetSize(range);
       render_action.index_range = range;
 
       // We check if we need to apply scissoring.
-      Vec4 scissor_rect;
-      scissor_rect.x = draw_cmd->ClipRect.x - pos.x;
-      scissor_rect.y = draw_cmd->ClipRect.y - pos.y;
-      scissor_rect.z = draw_cmd->ClipRect.z - pos.x;
-      scissor_rect.w = draw_cmd->ClipRect.w - pos.y;
-      if (scissor_rect.x < fb_width && scissor_rect.y < fb_height &&
-          scissor_rect.z >= 0.0f && scissor_rect.w >= 0.0f) {
-        render_action.scissor = scissor_rect;
+      Vec4 clip_rect;
+      clip_rect.x = draw_cmd->ClipRect.x - pos.x;
+      clip_rect.y = draw_cmd->ClipRect.y - pos.y;
+      clip_rect.z = draw_cmd->ClipRect.z - pos.x;
+      clip_rect.w = draw_cmd->ClipRect.w - pos.y;
+      if (clip_rect.x < fb_width && clip_rect.y < fb_height &&
+          clip_rect.z >= 0.0f && clip_rect.w >= 0.0f) {
+        render_action.scissor.x = (int)clip_rect.x;
+        render_action.scissor.y = (int)(fb_height - clip_rect.w);
+        render_action.scissor.z = (int)(clip_rect.z - clip_rect.x);
+        render_action.scissor.w = (int)(clip_rect.w - clip_rect.y);
       }
 
+      // We push the render action into our pool.
       PushIntoListFromMemoryPool(&mesh_actions,
                                  &imgui_renderer->memory_pool,
                                  std::move(render_action));
 
-      index_buffer_offset += draw_cmd->ElemCount * sizeof(uint32_t);
+      index_offset += draw_cmd->ElemCount * sizeof(uint32_t);
     }
+
+    // We advance the base according to how much data we added to the pool.
+    base_vertex_offset += cmd_list->VtxBuffer.Size;
+    base_index_offset += cmd_list->IdxBuffer.Size * sizeof(uint32_t);
 
     // We stage the buffers to the renderer.
     if (!RendererUploadMeshRange(imgui_renderer->renderer,

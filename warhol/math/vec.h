@@ -253,11 +253,17 @@ inline size_t Hash(const Vec3& vec) {
   return result;
 }
 
-struct Vec4 {
-  float x;
-  float y;
-  float z;
-  float w;
+template<typename T>
+struct Tvec4 {
+  T x, y, z, w;
 };
+
+template <typename T>
+inline float Sum(const Tvec4<T>& v) {
+  return v.x + v.y + v.z + v.w;
+}
+
+using Vec4 = Tvec4<float>;
+using IntVec4 = Tvec4<int>;
 
 }  // namespace warhol

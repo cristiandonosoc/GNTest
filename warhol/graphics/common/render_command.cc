@@ -7,7 +7,7 @@
 
 namespace warhol {
 
-std::string PrintRange(IndexRange range) {
+std::string ToString(IndexRange range) {
   return StringPrintf("Size: %u, Offset: %u", GetSize(range), GetOffset(range));
 }
 

@@ -26,6 +26,8 @@ TEST_CASE("LinkedList") {
       CHECK(element == values[i]);
       i++;
     }
+
+    CHECK(list.count == 5);
   }
 
   SECTION("PushIntoListFromMemoryPool Without Value") {
@@ -46,6 +48,8 @@ TEST_CASE("LinkedList") {
       CHECK(element == values[i]);
       i++;
     }
+
+    CHECK(list.count == 5);
   }
 
   SECTION("PushIntoListFromMemoryPool With Value") {
@@ -65,6 +69,8 @@ TEST_CASE("LinkedList") {
       CHECK(element == values[i]);
       i++;
     }
+
+    CHECK(list.count == 5);
   }
 }
 

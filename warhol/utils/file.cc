@@ -3,7 +3,7 @@
 
 #include "warhol/utils/file.h"
 
-#include <stdlib.h>
+#include <stdio.h>
 
 #include "warhol/utils/log.h"
 
@@ -39,6 +39,35 @@ bool ReadWholeFile(const std::string_view& path,
     out->back() = '\0';
 
   return true;
+}
+
+FileHandle::~FileHandle() {
+  if (hndl.has_value())
+    CloseFile(this);
+}
+
+FileHandle OpenFile(const std::string_view& path, bool append) {
+  FileHandle handle;
+  FILE* file = fopen(path.data(), append ? "a" : "w+");
+  if (file == NULL)
+    return handle;
+
+  handle.hndl = (void*)file;
+  return handle;
+}
+
+void WriteToFile(FileHandle* handle, void* data, size_t size) {
+  ASSERT(Valid(handle));
+
+  size_t res = fwrite(data, sizeof(char), size, (FILE*)handle->hndl.value);
+  ASSERT(res == size);
+}
+
+void CloseFile(FileHandle* handle) {
+  ASSERT(Valid(handle));
+  int res = fclose((FILE*)handle->hndl.value);
+  ASSERT(res == 0);
+  handle->hndl.clear();
 }
 
 }  // namespace warhol

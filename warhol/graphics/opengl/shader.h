@@ -11,6 +11,8 @@ struct Shader;
 
 namespace opengl {
 
+struct OpenGLRendererBackend;
+
 struct ShaderHandles {
   uint32_t program_handle = 0;
 
@@ -25,9 +27,10 @@ struct ShaderHandles {
   int frag_ubo_binding = -1;
 };
 
-// Uploads the shader and queries it's uniform locations.
-bool UploadShader(Shader* shader, ShaderHandles* description);
-void ShutdownShader(ShaderHandles*);
+bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader);
+void OpenGLUnstageShader(OpenGLRendererBackend* opengl, Shader* shader);
+
+void DeleteShaderHandles(ShaderHandles* handles);
 
 }  // namespace opengl
 }  // namespace warhol

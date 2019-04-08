@@ -3,6 +3,15 @@
 
 #pragma once
 
+#define STRINGIFY2(x, y) x##y
+#define STRINGIFY(x, y) STRINGIFY2(x, y)
+
+#define ONCE()                                         \
+  static bool STRINGIFY(__once_test, __LINE__) = true; \
+  if (STRINGIFY(__once_test, __LINE__)) {              \
+    STRINGIFY(__once_test, __LINE__) = false;          \
+  }
+
 // Combine permits to stringify arguments like __LINE__
 #define COMBINE_INTERNAL(x, y) x##y
 #define COMBINE(x, y) COMBINE_INTERNAL(x, y)

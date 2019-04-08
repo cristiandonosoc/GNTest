@@ -81,6 +81,7 @@ inline bool Empty(LinkedList<T>* list) {
 
 template <typename T>
 void PushIntoList(LinkedList<T>* list, LinkNode<T>* node) {
+  node->next = nullptr;
   if (Empty(list)) {
     list->head = node;
     list->tail = node;
@@ -91,6 +92,7 @@ void PushIntoList(LinkedList<T>* list, LinkNode<T>* node) {
   ASSERT(list->tail);
   list->tail->next = node;
   list->tail = node;
+  list->count++;
 }
 
 // Will allocate into the pool first and then create a node into the list.

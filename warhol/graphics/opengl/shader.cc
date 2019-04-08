@@ -139,12 +139,10 @@ bool InternalUploadShader(Shader* shader, ShaderHandles* handles) {
   return true;
 }
 
-}  // namespace
-
 bool UploadShader(Shader* shader, ShaderHandles* shader_desc) {
   bool result = InternalUploadShader(shader, shader_desc);
   if (!result) {
-    ShutdownShader(shader_desc);
+    DeleteShaderHandles(shader_desc);
     return false;
   }
 
@@ -157,7 +155,35 @@ bool UploadShader(Shader* shader, ShaderHandles* shader_desc) {
   return true;
 }
 
-void ShutdownShader(ShaderHandles* handles) {
+}  // namespace
+
+// Shader Handling -------------------------------------------------------------
+
+bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader) {
+  uint64_t uuid = shader->uuid.value;
+  auto it = opengl->loaded_shaders.find(uuid);
+  if (it != opengl->loaded_shaders.end()) {
+    LOG(ERROR) << "Shader " << shader->name << " is already loaded.";
+    return false;
+  }
+
+  ShaderHandles handles;
+  if (!UploadShader(shader, &handles))
+    return false;
+
+  opengl->loaded_shaders[uuid] = std::move(handles);
+  return true;
+}
+
+void OpenGLUnstageShader(OpenGLRendererBackend* opengl, Shader* shader) {
+  auto it = opengl->loaded_shaders.find(shader->uuid.value);
+  ASSERT(it != opengl->loaded_shaders.end());
+
+  DeleteShaderHandles(&it->second);
+  opengl->loaded_shaders.erase(it);
+}
+
+void DeleteShaderHandles(ShaderHandles* handles) {
   if (handles->program_handle > 0)
     GL_CHECK(glDeleteProgram(handles->program_handle));
 
@@ -169,6 +195,8 @@ void ShutdownShader(ShaderHandles* handles) {
 
   *handles = {};    // Clear.
 }
+
+
 
 }  // namespace opengl
 }  // namespace warhol

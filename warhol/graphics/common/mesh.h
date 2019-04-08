@@ -82,6 +82,20 @@ inline void PushIndices(Mesh* mesh, uint32_t* data, size_t count) {
   mesh->index_count += count;
 }
 
+inline void PushIndicesWithOffset(Mesh* mesh, uint32_t* data, size_t count,
+                                  size_t offset) {
+  MemoryPool* pool = &mesh->indices;
+  uint32_t* src = data;
+  uint32_t* dst = (uint32_t*)pool->current;
+  ASSERT((uint8_t*)(dst + count) < pool->data.get() + pool->size);
+  for (size_t i = 0; i < count; i++) {
+    uint32_t val = *src++ + offset;
+    *dst++ = val;
+  }
+  pool->current = (uint8_t*)dst;
+
+  mesh->index_count += count;
+}
 
 bool LoadMesh(const std::string_view&, Mesh*);
 void InitMeshPools(Mesh*, size_t vert_size, size_t index_size);
