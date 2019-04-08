@@ -5,9 +5,11 @@ source_set("imgui") {
   public = [
     "def.h",
     "imgui.h",
+    "helpers.h",
   ]
 
   sources = [
+    "helpers.cc",
     "imgui.cc",
     "imgui_renderer.cc",
     "imgui_renderer.h",

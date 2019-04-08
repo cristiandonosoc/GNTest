@@ -22,7 +22,7 @@ config("default_include_dirs") {
 
 group("default") {
   deps = [
-    "//experiments:graphics_api",
+    "//experiments:new_api",
     #"//experiments:vulkan_test",
     #"//experiments:voxel_renderer",
     #"//experiments:work_queue",

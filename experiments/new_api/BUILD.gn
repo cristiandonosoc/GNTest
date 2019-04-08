@@ -1,0 +1,18 @@
+# Copyright 2019, Cristián Donoso.
+# This code has a BSD license. See LICENSE.
+
+executable("new_api") {
+  sources = [
+    "graphics_api.cc",
+  ]
+
+  deps = [
+    "//warhol/assets",
+    "//warhol/graphics:opengl_renderer",
+    "//warhol/math",
+    "//warhol/memory",
+    "//warhol/ui:imgui",
+    "//warhol/utils",
+    "//warhol/window:sdl_opengl",
+  ]
+}

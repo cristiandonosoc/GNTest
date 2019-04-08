@@ -23,6 +23,16 @@ using namespace warhol::imgui;
 
 namespace {
 
+void CreateImguiUI(Window* window ) {
+  ImGui::Begin("NEW API");
+  ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+              1000.0f * window->frame_delta_average,
+              window->frame_rate);
+  ImGui::LabelText("Seconds", "%.3f", window->seconds);
+
+  ImGui::End();
+}
+
 const std::vector<Vertex> vertices = {
   {{-0.5f, -0.5f,  0.0f},
     {1.0f,  0.0f,  0.0f},
@@ -229,6 +239,7 @@ int main() {
                          glm::vec3(0, 0, 1));
 
     ImGui::ShowDemoWindow();
+    CreateImguiUI(&window);
 
     RenderCommand imgui_command = ImguiEndFrame(&imgui_context);
     PushIntoListFromMemoryPool(&command_list, &memory_pool,
