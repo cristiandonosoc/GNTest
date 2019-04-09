@@ -12,6 +12,7 @@
 #include "warhol/input/input.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
+#include "warhol/platform/timing.h"
 #include "warhol/window/common/window.h"
 
 // Imgui config verification check.
@@ -130,16 +131,16 @@ void RestartKeys(Window* window, InputState* input, ImGuiIO* io) {
 
 }  // namespace
 
-
-void ImguiStartFrame(Window* window, InputState* input, ImguiContext* imgui) {
+void ImguiStartFrame(Window* window, PlatformTime* time, InputState* input,
+                     ImguiContext* imgui) {
   ASSERT(Valid(window));
   ASSERT(Valid(imgui));
 
   imgui->io->DisplaySize = {(float)window->width, (float)window->height};
-  imgui->io->DisplayFramebufferScale =  { 1.0f, 1.0f };
+  imgui->io->DisplayFramebufferScale = {1.0f, 1.0f};
 
   // TODO(Cristian): Obtain time delta from platform!
-  imgui->io->DeltaTime = window->frame_delta;
+  imgui->io->DeltaTime = time->frame_delta;
 
   RestartKeys(window, input, imgui->io);
 

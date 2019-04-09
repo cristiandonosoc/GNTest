@@ -11,6 +11,7 @@ struct ImGuiIO;
 namespace warhol {
 
 struct InputState;
+struct PlatformTime;
 struct Renderer;
 struct RenderCommand;
 struct Window;
@@ -38,7 +39,7 @@ inline bool Valid(ImguiContext* imgui) {
 bool InitImgui(Renderer* renderer, ImguiContext*);
 void ShutdownImgui(ImguiContext*);
 
-void ImguiStartFrame(Window*, InputState*, ImguiContext*);
+void ImguiStartFrame(Window*, PlatformTime*, InputState*, ImguiContext*);
 
 // Gets the command to be passed down to the renderer.
 // IMPORTANT: StartFrame *has* to be called each frame before this.

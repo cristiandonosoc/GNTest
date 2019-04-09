@@ -4,9 +4,15 @@
 source_set("platform") {
   public = [
     "platform.h",
+    "timing.h",
   ]
 
-  sources = []
+  sources = [
+    "timing.cc",
+  ]
+
+  # Platform specific sources --------------------------------------------------
+
   if (is_windows) {
     sources += [ "windows_platform.cc" ]
   } else if (is_linux) {

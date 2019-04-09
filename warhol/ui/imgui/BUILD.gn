@@ -9,7 +9,6 @@ source_set("imgui") {
   ]
 
   sources = [
-    "helpers.cc",
     "imgui.cc",
     "imgui_renderer.cc",
     "imgui_renderer.h",

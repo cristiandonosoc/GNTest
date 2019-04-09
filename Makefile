@@ -2,14 +2,14 @@ WARHOL_BASE=/mnt/c/Programming/projects/warhol
 
 
 make:
-	ninja -C out experiments:graphics_api
+	ninja -C out experiments/new_api
 
 test: FORCE
 	ninja -C out tests
 	out/tests
 
 win: FORCE
-	ninja.exe -C out experiments:graphics_api
+	ninja.exe -C out experiments/new_api
 
 shaders: FORCE
 	glslangValidator -V assets/shaders/vulkan/demo.vert -o out/assets/shaders/vulkan/demo.vert.spv

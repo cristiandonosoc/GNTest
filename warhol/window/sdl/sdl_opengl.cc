@@ -110,37 +110,6 @@ bool SDLOpenGLWindow::Init(Window* window) {
 
 namespace {
 
-// TODO: Move this to platform!!!!
-void CalculateFramerate(Window* window) {
-  static uint64_t initial_time = SDL_GetPerformanceCounter();
-
-  // Get the current time.
-  uint64_t frequency = SDL_GetPerformanceFrequency();
-  uint64_t current_time = SDL_GetPerformanceCounter() - initial_time;
-
-  auto total_time = window->total_time;
-  window->frame_delta =
-      (float)(total_time > 0 ? ((double)(current_time - total_time) / frequency)
-                             : (1.0 / 60.0));
-
-  window->total_time = current_time;
-  window->seconds = (float)((float)window->total_time / (float)frequency);
-
-  // Calculate the rolling average.
-  window->frame_delta_accum +=
-      window->frame_delta - window->frame_times[window->frame_times_index];
-  window->frame_times[window->frame_times_index] = window->frame_delta;
-  window->frame_times_index =
-      (window->frame_times_index + 1) % Window::kFrameTimesCounts;
-  if (window->frame_delta_accum > 0.0) {
-    window->frame_delta_average =
-        window->frame_delta_accum / Window::kFrameTimesCounts;
-  } else {
-    window->frame_delta_average = std::numeric_limits<float>::max();
-  }
-  window->frame_rate = 1.0f / window->frame_delta_average;
-}
-
 void PushEvent(SDLOpenGLWindow* sdl, WindowEvent event) {
   ASSERT(sdl->event_index < ARRAY_SIZE(sdl->events));
   sdl->events[sdl->event_index++] = event;
@@ -172,7 +141,6 @@ SDLOpenGLUpdateWindow(SDLOpenGLWindow* sdl, Window* window, InputState* input) {
   sdl->window->utf8_index = 0;
   ResetMemoryPool(&sdl->memory_pool);
 
-  CalculateFramerate(window);
   InputState::InitFrame(input);  // We do the frame flip.
 
   // Handle events.

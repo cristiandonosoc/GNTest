@@ -5,6 +5,5 @@
 
 // Proxy header to be able to use imgui easily.
 #include "warhol/ui/imgui/def.h"
-#include "warhol/ui/imgui/helpers.h"
 #include "warhol/ui/imgui/imgui.h"
 

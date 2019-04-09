@@ -8,6 +8,7 @@
 #include <warhol/graphics/common/shader.h>
 #include <warhol/graphics/common/renderer.h>
 #include <warhol/input/input.h>
+#include <warhol/platform/timing.h>
 #include <warhol/scene/camera.h>
 #include <warhol/ui/imgui.h>
 #include <warhol/utils/log.h>
@@ -23,12 +24,12 @@ using namespace warhol::imgui;
 
 namespace {
 
-void CreateImguiUI(Window* window ) {
+void CreateImguiUI(PlatformTime* time) {
   ImGui::Begin("NEW API");
   ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-              1000.0f * window->frame_delta_average,
-              window->frame_rate);
-  ImGui::LabelText("Seconds", "%.3f", window->seconds);
+              1000.0f * time->frame_delta_average,
+              time->frame_rate);
+  ImGui::LabelText("Seconds", "%.3f", time->seconds);
 
   ImGui::End();
 }
@@ -76,6 +77,9 @@ const std::vector<uint32_t> indices = {
 };
 
 int main() {
+  PlatformTime time;
+
+
   LOG(DEBUG) << "Initializing window.";
 
   Window window;
@@ -191,6 +195,8 @@ int main() {
   Vec3 delta;
   bool running = true;
   while (running) {
+    PlatformUpdateTiming(&time);
+
     auto events = UpdateWindow(&window, &input);
     for (WindowEvent event : events) {
       if (event == WindowEvent::kQuit) {
@@ -199,16 +205,16 @@ int main() {
       }
     }
 
-    ImguiStartFrame(&window, &input, &imgui_context);
+    ImguiStartFrame(&window, &time, &input, &imgui_context);
     /* if (imgui_context.keyboard_captured || imgui_context.mouse_captured) */
     /*   LOG(DEBUG) << "Captured."; */
 
     if (!running || input.keys_up[GET_KEY(Escape)])
       break;
 
-    delta.x += 0.1f * window.frame_delta;
-    delta.y += 0.2f * window.frame_delta;
-    delta.z += 0.05f * window.frame_delta;
+    delta.x += 0.1f * time.frame_delta;
+    delta.y += 0.2f * time.frame_delta;
+    delta.z += 0.05f * time.frame_delta;
     renderer.clear_color = delta;
 
     ResetMemoryPool(&memory_pool);
@@ -235,11 +241,11 @@ int main() {
     command->actions.mesh_actions = std::move(mesh_action_list);
 
     *model = glm::rotate(glm::mat4(1.0f),
-                         window.seconds * glm::radians(90.0f),
+                         time.seconds * glm::radians(90.0f),
                          glm::vec3(0, 0, 1));
 
     ImGui::ShowDemoWindow();
-    CreateImguiUI(&window);
+    CreateImguiUI(&time);
 
     RenderCommand imgui_command = ImguiEndFrame(&imgui_context);
     PushIntoListFromMemoryPool(&command_list, &memory_pool,

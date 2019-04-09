@@ -37,34 +37,15 @@ void SuscribeWindowBackendFactoryFunction(WindowBackendType,
                                           WindowBackendFactoryFunction);
 
 struct Window {
-  // Amount of frames to keep track of in order to get an average frame time.
-  static constexpr int kFrameTimesCounts = 128;
 
   ~Window();   // "RAII" semantics.
 
   int width = 0;
   int height = 0;
 
-  // TODO(Cristian): All timing shouldn't be within window, but on platform!
-
-  // Total time since the start of the game.
-  uint64_t total_time = 0;
-  float seconds = 0;
-  float frame_delta = 0;
-
-  float frame_delta_accum = 0;  // The accumulated average.
-  float frame_delta_average = 0;
-  float frame_rate = 0;
-
-  // TODO(Cristian): When we're interested, start tracking these times.
-  float frame_times[kFrameTimesCounts];
-  int frame_times_index = 0;
-
-
   static constexpr size_t kMaxUtf8Chars = 255;
   char utf8_chars_inputted[kMaxUtf8Chars + 1];
   int utf8_index = 0;
-
 
   WindowBackendType backend_type = WindowBackendType::kLast;
   std::unique_ptr<WindowBackend> backend;
