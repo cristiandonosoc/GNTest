@@ -14,6 +14,7 @@
 #include "warhol/utils/clear_on_move.h"
 #include "warhol/utils/log.h"
 #include "warhol/utils/macros.h"
+#include "warhol/utils/track_guard.h"
 #include "warhol/utils/types.h"
 
 namespace warhol {
@@ -65,6 +66,7 @@ struct Mesh {
   // Attributes are in order of how they appear in the shader layout.
   std::vector<Attribute> attributes;
 
+  TrackGuard track_guard;
   bool loaded = false;
 };
 

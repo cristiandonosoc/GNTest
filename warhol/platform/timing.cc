@@ -38,6 +38,7 @@ void PlatformUpdateTiming(PlatformTime* time) {
   accum /= total_samples < PlatformTime::kFrameTimesCounts
                ? total_samples
                : PlatformTime::kFrameTimesCounts;
+  time->frame_delta_average = accum;
   time->frame_rate = 1.0f / accum;
 }
 

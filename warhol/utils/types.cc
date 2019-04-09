@@ -9,12 +9,12 @@ namespace warhol {
 
 std::string BytesToString(size_t bytes) {
   if (bytes < KILOBYTES(1))
-    return StringPrintf("%lu bytes", bytes);
+    return StringPrintf("%lu B", bytes);
   if (bytes < MEGABYTES(1))
-    return StringPrintf("%f KBs", (float)bytes / (float)KILOBYTES(1));
+    return StringPrintf("%.3f KiBs", (float)bytes / (float)KILOBYTES(1));
   if (bytes < GIGABYTES(1))
-    return StringPrintf("%f MBs", (float)bytes / (float)MEGABYTES(1));
-  return StringPrintf("%f GBs", (float)bytes / (float)GIGABYTES(1));
+    return StringPrintf("%.3f MiBs", (float)bytes / (float)MEGABYTES(1));
+  return StringPrintf("%.3ff GiBs", (float)bytes / (float)GIGABYTES(1));
 }
 
 }  // namespace warhol

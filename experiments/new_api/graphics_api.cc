@@ -24,12 +24,73 @@ using namespace warhol::imgui;
 
 namespace {
 
+std::vector<MemoryPool*> tracked_pools;
+std::vector<Mesh*> tracked_meshes;
+
+void TrackMemoryPool(MemoryPool* pool) {
+  ASSERT(!Active(&pool->track_guard));
+
+  tracked_pools.push_back(pool);
+  pool->track_guard.active = true;
+}
+
+void TrackMesh(Mesh* mesh) {
+  ASSERT(!Active(&mesh->track_guard));
+
+  tracked_meshes.push_back(mesh);
+  mesh->track_guard.active = true;
+}
+
 void CreateImguiUI(PlatformTime* time) {
   ImGui::Begin("NEW API");
   ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
               1000.0f * time->frame_delta_average,
               time->frame_rate);
   ImGui::LabelText("Seconds", "%.3f", time->seconds);
+
+  ImGui::Separator();
+
+  for (MemoryPool* pool : tracked_pools) {
+    float used_ratio = (float)Used(pool) / (float)pool->size;
+    auto used_str = BytesToString(Used(pool));
+    auto total_str = BytesToString(pool->size);
+    auto bar = StringPrintf("%s/%s", used_str.c_str(), total_str.c_str());
+
+    ImGui::ProgressBar(used_ratio, {0, 0}, bar.c_str());
+    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+    ImGui::Text("%s", pool->name);
+  }
+
+  for (Mesh* mesh : tracked_meshes) {
+    {
+      MemoryPool* pool = &mesh->vertices;
+      float used_ratio = (float)Used(pool) / (float)pool->size;
+      auto used_str = BytesToString(Used(pool));
+      auto total_str = BytesToString(pool->size);
+      auto bar = StringPrintf("%s/%s", used_str.c_str(), total_str.c_str());
+
+      ImGui::ProgressBar(used_ratio, {0, 0}, bar.c_str());
+
+      auto pool_name = StringPrintf("%s.%s", mesh->name, pool->name);
+      ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+      ImGui::Text("%s", pool_name.c_str());
+    }
+
+    {
+      MemoryPool* pool = &mesh->indices;
+      float used_ratio = (float)Used(pool) / (float)pool->size;
+      auto used_str = BytesToString(Used(pool));
+      auto total_str = BytesToString(pool->size);
+      auto bar = StringPrintf("%s/%s", used_str.c_str(), total_str.c_str());
+
+      ImGui::ProgressBar(used_ratio, {0, 0}, bar.c_str());
+
+      auto pool_name = StringPrintf("%s.%s", mesh->name, pool->name);
+      ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+      ImGui::Text("%s", pool_name.c_str());
+    }
+
+  }
 
   ImGui::End();
 }
@@ -130,7 +191,7 @@ int main() {
   LOG(DEBUG) << "Loading meshes.";
 
   Mesh mesh;
-  mesh.name = "Square Mesh";
+  mesh.name = "SquareMesh";
   mesh.uuid = GetNextMeshUUID();    // Created by hand.
   mesh.attributes = {
     {3, AttributeType::kFloat},
@@ -141,11 +202,15 @@ int main() {
   mesh.vertex_size = sizeof(decltype(vertices)::value_type);
   mesh.vertex_count = vertices.size();
   mesh.index_count = indices.size();
-  InitMeshPools(&mesh,
-                mesh.vertex_size * mesh.vertex_count,
-                sizeof(uint32_t) * mesh.index_count);
+  InitMeshPools(&mesh, KILOBYTES(1), KILOBYTES(1));
+  /* // Making it precise to size. */
+  /* InitMeshPools(&mesh, */
+  /*               mesh.vertex_size * mesh.vertex_count, */
+  /*               sizeof(uint32_t) * mesh.index_count); */
   PushIntoMemoryPool(&mesh.vertices, vertices.data(), vertices.size());
   PushIntoMemoryPool(&mesh.indices, indices.data(), indices.size());
+
+  TrackMesh(&mesh);
 
   if (!RendererStageMesh(&renderer, &mesh)) {
     LOG(ERROR) << "Could not load mesh into renderer.";
@@ -177,7 +242,10 @@ int main() {
 
   // Start pushing rendering actions.
   MemoryPool memory_pool;
+  memory_pool.name = "Main";
   InitMemoryPool(&memory_pool, MEGABYTES(1));
+
+  TrackMemoryPool(&memory_pool);
 
   LOG(DEBUG) << "Setting camera.";
 

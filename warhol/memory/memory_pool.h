@@ -9,6 +9,7 @@
 
 #include "warhol/utils/assert.h"
 #include "warhol/utils/macros.h"
+#include "warhol/utils/track_guard.h"
 #include "warhol/utils/types.h"
 
 namespace warhol {
@@ -16,10 +17,12 @@ namespace warhol {
 struct MemoryPool {
   RAII_CONSTRUCTORS(MemoryPool);
 
+  const char* name = nullptr;
   size_t size = 0;                // In bytes.
   uint8_t* current = nullptr;     // Where the next byte will be taken from.
 
   std::unique_ptr<uint8_t[]> data;
+  TrackGuard track_guard;
 };
 
 inline uint8_t* Data(MemoryPool* pool) { return pool->data.get(); }

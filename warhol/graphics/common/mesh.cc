@@ -110,8 +110,10 @@ void InitMeshPools(Mesh* mesh, size_t vert_size, size_t index_size) {
              << ", indices: " << index_size << " (" << BytesToString(index_size)
              << ").";
   ASSERT(!Valid(&mesh->vertices));
+  mesh->vertices.name = "Vertex";
   InitMemoryPool(&mesh->vertices, vert_size);
   ASSERT(!Valid(&mesh->indices));
+  mesh->indices.name = "Indices";
   InitMemoryPool(&mesh->indices, index_size);
 }
 

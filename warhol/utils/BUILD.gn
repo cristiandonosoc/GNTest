@@ -2,10 +2,16 @@
 # This code has a BSD license. See LICENSE.
 
 source_set("utils") {
-  sources = [
-    "align.h",
-    "assert.cc",
+  public = [
     "assert.h",
+    "macros.h",
+    "track_guard.h",
+    "types.h",
+  ]
+
+  sources = [
+    "assert.cc",
+    "align.h",
     "coords.h",
     "debug.cc",
     "debug.h",
@@ -17,7 +23,6 @@ source_set("utils") {
     "location.h",
     "log.cc",
     "log.h",
-    "macros.h",
     "optional.h",
     "path.cc",
     "path.h",
@@ -27,7 +32,6 @@ source_set("utils") {
     "string.cc",
     "string.h",
     "types.cc",
-    "types.h",
   ]
 
   deps = [
