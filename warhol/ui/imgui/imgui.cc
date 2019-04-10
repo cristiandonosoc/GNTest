@@ -10,6 +10,7 @@
 #include "warhol/graphics/common/renderer.h"
 #include "warhol/graphics/common/render_command.h"
 #include "warhol/input/input.h"
+#include "warhol/memory/memory_tracker.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 #include "warhol/platform/timing.h"
@@ -160,6 +161,11 @@ RenderCommand ImguiEndFrame(ImguiContext* imgui) {
   // the render command.
   ImGui::Render();
   return ImguiGetRenderCommand(&imgui->imgui_renderer);
+}
+
+void TrackImguiMemory(MemoryTracker* tracker, ImguiContext* imgui) {
+  Track(tracker, &imgui->imgui_renderer.memory_pool);
+  Track(tracker, &imgui->imgui_renderer.mesh);
 }
 
 }  // namespace imgui

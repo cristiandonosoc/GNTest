@@ -7,9 +7,9 @@
 
 #include <memory>
 
+#include "warhol/memory/memory_tracker.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/macros.h"
-#include "warhol/utils/track_guard.h"
 #include "warhol/utils/types.h"
 
 namespace warhol {
@@ -22,7 +22,7 @@ struct MemoryPool {
   uint8_t* current = nullptr;     // Where the next byte will be taken from.
 
   std::unique_ptr<uint8_t[]> data;
-  TrackGuard track_guard;
+  MemoryTrackToken<MemoryPool> track_token;
 };
 
 inline uint8_t* Data(MemoryPool* pool) { return pool->data.get(); }

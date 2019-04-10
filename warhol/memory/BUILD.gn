@@ -3,11 +3,13 @@
 
 source_set("memory") {
   public = [
-    "memory_pool.h"
+    "memory_pool.h",
+    "memory_tracker.h",
   ]
 
   sources = [
     "memory_pool.cc",
+    "memory_tracker.cc",
   ]
 
   deps = [

@@ -11,6 +11,7 @@ struct ImGuiIO;
 namespace warhol {
 
 struct InputState;
+struct MemoryTracker;
 struct PlatformTime;
 struct Renderer;
 struct RenderCommand;
@@ -44,6 +45,8 @@ void ImguiStartFrame(Window*, PlatformTime*, InputState*, ImguiContext*);
 // Gets the command to be passed down to the renderer.
 // IMPORTANT: StartFrame *has* to be called each frame before this.
 RenderCommand ImguiEndFrame(ImguiContext*);
+
+void TrackImguiMemory(MemoryTracker*, ImguiContext*);
 
 }  // namespace imgui
 }  // namespace warhol

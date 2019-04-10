@@ -8,6 +8,7 @@
 #include <warhol/graphics/common/shader.h>
 #include <warhol/graphics/common/renderer.h>
 #include <warhol/input/input.h>
+#include <warhol/memory/memory_tracker.h>
 #include <warhol/platform/timing.h>
 #include <warhol/scene/camera.h>
 #include <warhol/ui/imgui.h>
@@ -24,24 +25,8 @@ using namespace warhol::imgui;
 
 namespace {
 
-std::vector<MemoryPool*> tracked_pools;
-std::vector<Mesh*> tracked_meshes;
 
-void TrackMemoryPool(MemoryPool* pool) {
-  ASSERT(!Active(&pool->track_guard));
-
-  tracked_pools.push_back(pool);
-  pool->track_guard.active = true;
-}
-
-void TrackMesh(Mesh* mesh) {
-  ASSERT(!Active(&mesh->track_guard));
-
-  tracked_meshes.push_back(mesh);
-  mesh->track_guard.active = true;
-}
-
-void CreateImguiUI(PlatformTime* time) {
+void CreateImguiUI(PlatformTime* time, MemoryTracker* tracker) {
   ImGui::Begin("NEW API");
   ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
               1000.0f * time->frame_delta_average,
@@ -50,7 +35,7 @@ void CreateImguiUI(PlatformTime* time) {
 
   ImGui::Separator();
 
-  for (MemoryPool* pool : tracked_pools) {
+  for (MemoryPool* pool : tracker->tracked_pools) {
     float used_ratio = (float)Used(pool) / (float)pool->size;
     auto used_str = BytesToString(Used(pool));
     auto total_str = BytesToString(pool->size);
@@ -61,7 +46,7 @@ void CreateImguiUI(PlatformTime* time) {
     ImGui::Text("%s", pool->name);
   }
 
-  for (Mesh* mesh : tracked_meshes) {
+  for (Mesh* mesh : tracker->tracked_meshes) {
     {
       MemoryPool* pool = &mesh->vertices;
       float used_ratio = (float)Used(pool) / (float)pool->size;
@@ -89,7 +74,6 @@ void CreateImguiUI(PlatformTime* time) {
       ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
       ImGui::Text("%s", pool_name.c_str());
     }
-
   }
 
   ImGui::End();
@@ -138,8 +122,8 @@ const std::vector<uint32_t> indices = {
 };
 
 int main() {
+  MemoryTracker memory_tracker;
   PlatformTime time;
-
 
   LOG(DEBUG) << "Initializing window.";
 
@@ -164,6 +148,7 @@ int main() {
     LOG(ERROR) << "Could not start imgui.";
     return 1;
   }
+  TrackImguiMemory(&memory_tracker, &imgui_context);
 
   LOG(DEBUG) << "Loading shaders.";
 
@@ -210,7 +195,7 @@ int main() {
   PushIntoMemoryPool(&mesh.vertices, vertices.data(), vertices.size());
   PushIntoMemoryPool(&mesh.indices, indices.data(), indices.size());
 
-  TrackMesh(&mesh);
+  Track(&memory_tracker, &mesh);
 
   if (!RendererStageMesh(&renderer, &mesh)) {
     LOG(ERROR) << "Could not load mesh into renderer.";
@@ -245,7 +230,7 @@ int main() {
   memory_pool.name = "Main";
   InitMemoryPool(&memory_pool, MEGABYTES(1));
 
-  TrackMemoryPool(&memory_pool);
+  Track(&memory_tracker, &memory_pool);
 
   LOG(DEBUG) << "Setting camera.";
 
@@ -313,7 +298,7 @@ int main() {
                          glm::vec3(0, 0, 1));
 
     ImGui::ShowDemoWindow();
-    CreateImguiUI(&time);
+    CreateImguiUI(&time, &memory_tracker);
 
     RenderCommand imgui_command = ImguiEndFrame(&imgui_context);
     PushIntoListFromMemoryPool(&command_list, &memory_pool,

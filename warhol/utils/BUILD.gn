@@ -5,7 +5,6 @@ source_set("utils") {
   public = [
     "assert.h",
     "macros.h",
-    "track_guard.h",
     "types.h",
   ]
 
