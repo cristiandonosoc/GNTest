@@ -25,13 +25,16 @@ using namespace warhol::imgui;
 
 namespace {
 
-
-void CreateImguiUI(PlatformTime* time, MemoryTracker* tracker) {
+void CreateImguiUI(InputState* input, PlatformTime* time,
+                   MemoryTracker* tracker) {
   ImGui::Begin("NEW API");
   ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
               1000.0f * time->frame_delta_average,
               time->frame_rate);
-  ImGui::LabelText("Seconds", "%.3f", time->seconds);
+
+  ImGui::Separator();
+
+  ImGui::InputInt2("Mouse Whell", (int*)&input->mouse.wheel);
 
   ImGui::Separator();
 
@@ -298,7 +301,7 @@ int main() {
                          glm::vec3(0, 0, 1));
 
     ImGui::ShowDemoWindow();
-    CreateImguiUI(&time, &memory_tracker);
+    CreateImguiUI(&input, &time, &memory_tracker);
 
     RenderCommand imgui_command = ImguiEndFrame(&imgui_context);
     PushIntoListFromMemoryPool(&command_list, &memory_pool,

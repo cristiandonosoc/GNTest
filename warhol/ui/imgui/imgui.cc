@@ -126,6 +126,8 @@ void RestartKeys(Window* window, InputState* input, ImGuiIO* io) {
   io->MouseDown[0] = input->mouse.left;
   io->MouseDown[1] = input->mouse.right;
   io->MouseDown[2] = input->mouse.middle;
+  io->MouseWheelH += input->mouse.wheel.x;
+  io->MouseWheel += input->mouse.wheel.y;
 
   // TODO(Cristian): Update cursors.
 }
