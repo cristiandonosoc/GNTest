@@ -8,9 +8,11 @@
 namespace warhol {
 
 struct PlatformTime {
-  // Total time since the start of the game.
-  uint64_t total_time = 0;
+
+  // Represents the time since the beginning of the program.
+  uint64_t total_time = 0;    // In nanoseconds.
   float seconds = 0;
+
   float frame_delta = 0;
 
   float frame_delta_average = 0;

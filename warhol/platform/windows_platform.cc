@@ -65,9 +65,11 @@ thread_local uint64_t last_counter = GetHighPerformaceCounter();
 uint64_t GetNanoseconds() {
   uint64_t now = GetHighPerformaceCounter();
   uint64_t diff = now - last_counter;
-  last_counter = now;
 
-  return diff / GetHighPerformaceFrequency();
+  // ddiff is in seconds.
+  double ddiff = (double)diff / (double)GetHighPerformaceFrequency();
+  ddiff *= 1000000000;
+  return (uint64_t)ddiff;
 }
 
 }  // namespace warhol

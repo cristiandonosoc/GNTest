@@ -102,8 +102,8 @@ bool SDLOpenGLInit(SDLOpenGLWindow* sdl, Window* window) {
 
 }  // namespace
 
-bool SDLOpenGLWindow::Init(Window* window) {
-  return SDLOpenGLInit(this, window);
+bool SDLOpenGLWindow::Init(Window* w) {
+  return SDLOpenGLInit(this, w);
 }
 
 // UpdateWindow ----------------------------------------------------------------
@@ -178,8 +178,8 @@ SDLOpenGLUpdateWindow(SDLOpenGLWindow* sdl, Window* window, InputState* input) {
 }  // namespace
 
 LinkedList<WindowEvent>
-SDLOpenGLWindow::UpdateWindow(Window* window, InputState* input) {
-  return SDLOpenGLUpdateWindow(this, window, input);
+SDLOpenGLWindow::UpdateWindow(Window* w, InputState* input) {
+  return SDLOpenGLUpdateWindow(this, w, input);
 }
 
 // SwapBuffers -----------------------------------------------------------------
