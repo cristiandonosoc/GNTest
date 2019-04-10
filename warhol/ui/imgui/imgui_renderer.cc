@@ -89,7 +89,8 @@ bool CreateFontTexture(Renderer* renderer, ImguiRenderer* imgui) {
   texture.channels = 4;
   texture.data = pixels;
 
-  if (!RendererStageTexture(renderer, &texture))
+  StageTextureConfig config = {};   // Defaults are sensible.
+  if (!RendererStageTexture(renderer, &texture, &config))
     return false;
 
   // Imgui wants a way of tracking the font texture id to relay it back to use
@@ -105,7 +106,8 @@ bool InitImguiRenderer(ImguiRenderer* imgui_renderer, Renderer* renderer) {
   ASSERT(!Valid(imgui_renderer));
   SCOPE_LOCATION();
 
-  InitMemoryPool(&imgui_renderer->memory_pool, KILOBYTES(64));
+  imgui_renderer->memory_pool.name = "Imgui";
+  InitMemoryPool(&imgui_renderer->memory_pool, KILOBYTES(32));
 
   if (!CreateShader(renderer, imgui_renderer) ||
       !CreateMesh(renderer, imgui_renderer) ||

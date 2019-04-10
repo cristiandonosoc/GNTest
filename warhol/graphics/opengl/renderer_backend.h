@@ -67,7 +67,7 @@ struct OpenGLRendererBackend : public RendererBackend {
   void UnstageShader(Shader*) override;
   bool IsShaderStaged(Shader*) override;
 
-  bool StageTexture(Texture*) override;
+  bool StageTexture(Texture*, StageTextureConfig*) override;
   void UnstageTexture(Texture*) override;
   bool IsTextureStaged(Texture*) override;
 

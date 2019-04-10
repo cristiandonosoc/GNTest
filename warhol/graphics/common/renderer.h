@@ -78,9 +78,32 @@ bool RendererStageShader(Renderer*, Shader*);
 void RendererUnstageShader(Renderer*, Shader*);
 bool RendererIsShaderStaged(Renderer*, Shader*);
 
-// TODO(Cristian): Add config for configuring mipmaps, formats, etc.
-//                 Right now is straight up direct tex2D.
-bool RendererStageTexture(Renderer*, Texture*);
+struct StageTextureConfig {
+  enum class Wrap {
+    kClampToEdge,
+    kMirroredRepeat,
+    kRepeat,
+  };
+
+  enum class Filter {
+    kNearest,
+    kLinear,
+    kNearestMipmapNearest,
+    kNearestMipmapLinear,
+    kLinearMipmapNearest,
+    kLinearMipampLinear,
+  };
+
+  bool generate_mipmaps = true;
+
+  Wrap wrap_u = Wrap::kRepeat;
+  Wrap wrap_v = Wrap::kRepeat;
+
+  Filter min_filter = Filter::kLinear;
+  Filter max_filter = Filter::kLinear;
+};
+
+bool RendererStageTexture(Renderer*, Texture*, StageTextureConfig*);
 void RendererUnstageTexture(Renderer*, Texture*);
 bool RendererIsTextureStaged(Renderer*, Texture*);
 

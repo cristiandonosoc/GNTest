@@ -12,6 +12,7 @@ namespace warhol {
 struct Mesh;
 struct Renderer;
 struct Shader;
+struct StageTextureConfig;
 struct Texture;
 struct Window;
 
@@ -37,7 +38,7 @@ struct RendererBackend {
   virtual void UnstageShader(Shader*) = 0;
   virtual bool IsShaderStaged(Shader*) = 0;
 
-  virtual bool StageTexture(Texture*) = 0;
+  virtual bool StageTexture(Texture*, StageTextureConfig*) = 0;
   virtual void UnstageTexture(Texture*) = 0;
   virtual bool IsTextureStaged(Texture*) = 0;
 

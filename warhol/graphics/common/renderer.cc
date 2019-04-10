@@ -125,12 +125,13 @@ bool RendererIsShaderStaged(Renderer* renderer, Shader* shader) {
 
 // Texture ---------------------------------------------------------------------
 
-bool RendererStageTexture(Renderer* renderer, Texture* texture) {
+bool RendererStageTexture(Renderer* renderer, Texture* texture,
+                          StageTextureConfig* config) {
   ASSERT(Valid(renderer));
   ASSERT(Valid(texture));
   ASSERT(Loaded(texture));
 
-  return renderer->backend->StageTexture(texture);
+  return renderer->backend->StageTexture(texture, config);
 }
 
 void RendererUnstageTexture(Renderer* renderer, Texture* texture) {

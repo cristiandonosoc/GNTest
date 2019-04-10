@@ -217,7 +217,8 @@ int main() {
     return 1;
   }
 
-  if (!RendererStageTexture(&renderer, &texture)) {
+  StageTextureConfig config = {};
+  if (!RendererStageTexture(&renderer, &texture, &config)) {
     LOG(ERROR) << "Could not load texture " << texture_name
                << " into renderer.";
     return 1;

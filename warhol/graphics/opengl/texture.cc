@@ -3,13 +3,48 @@
 
 #include "warhol/graphics/opengl/texture.h"
 
+#include "warhol/graphics/common/renderer.h"
 #include "warhol/graphics/common/texture.h"
 #include "warhol/graphics/opengl/renderer_backend.h"
 
 namespace warhol {
 namespace opengl {
 
-bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
+namespace {
+
+GLenum WrapToGL(StageTextureConfig::Wrap wrap) {
+  switch (wrap) {
+    case StageTextureConfig::Wrap::kClampToEdge: return GL_CLAMP_TO_EDGE;
+    case StageTextureConfig::Wrap::kMirroredRepeat: return GL_MIRRORED_REPEAT;
+    case StageTextureConfig::Wrap::kRepeat: return GL_REPEAT;
+  }
+
+  NOT_REACHED("Unknown wrap");
+  return 0;
+}
+
+GLenum FilterToGL(StageTextureConfig::Filter filter) {
+  switch (filter) {
+    case StageTextureConfig::Filter::kNearest: return GL_NEAREST;
+    case StageTextureConfig::Filter::kLinear: return GL_LINEAR;
+    case StageTextureConfig::Filter::kNearestMipmapNearest:
+      return GL_NEAREST_MIPMAP_NEAREST;
+    case StageTextureConfig::Filter::kNearestMipmapLinear:
+      return GL_NEAREST_MIPMAP_LINEAR;
+    case StageTextureConfig::Filter::kLinearMipmapNearest:
+      return GL_LINEAR_MIPMAP_NEAREST;
+    case StageTextureConfig::Filter::kLinearMipampLinear:
+      return GL_LINEAR_MIPMAP_LINEAR;
+  }
+
+  NOT_REACHED("Unknown filter");
+  return 0;
+}
+
+}  // namespace
+
+bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture,
+                        StageTextureConfig* config) {
   uint64_t uuid = texture->uuid.value;
   auto it = opengl->loaded_textures.find(uuid);
   if (it != opengl->loaded_textures.end()) {
@@ -22,15 +57,16 @@ bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
   GL_CHECK(glBindTexture(GL_TEXTURE_2D, handle));
 
   // Setup wrapping/filtering options.
-  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
-  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT));
-  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
+                           WrapToGL(config->wrap_u)));
+  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
+                           WrapToGL(config->wrap_v)));
+  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                           FilterToGL(config->min_filter)));
+  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+                           FilterToGL(config->max_filter)));
 
   // Send the bits over.
-  // TODO(Cristian): Check for errors.
-  // TODO(Cristian): When multi-threading is done, use this async.
-  //                 Think what to do about in memory buffer.
   GL_CHECK(glTexImage2D(GL_TEXTURE_2D,          // target
                         0,                      // level
                         GL_RGBA,                // internalformat
@@ -40,11 +76,15 @@ bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
                         GL_RGBA,                // format
                         GL_UNSIGNED_BYTE,       // type,
                         texture->data.value));
-  GL_CHECK(glGenerateMipmap(GL_TEXTURE_2D));
+
+  if (config->generate_mipmaps)
+    GL_CHECK(glGenerateMipmap(GL_TEXTURE_2D));
 
   TextureHandles handles;
   handles.tex_handle = handle;
   opengl->loaded_textures[uuid] = std::move(handles);
+
+  GL_CHECK(glBindTexture(GL_TEXTURE_2D, NULL));
   return true;
 }
 

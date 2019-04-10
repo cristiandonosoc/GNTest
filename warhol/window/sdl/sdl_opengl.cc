@@ -121,6 +121,13 @@ void PushUtf8Char(SDLOpenGLWindow* sdl, char c) {
   window->utf8_chars_inputted[window->utf8_index++] = c;
 }
 
+void ResetUtf8(Window* window) {
+  for (int i = 0; i < ARRAY_SIZE(window->utf8_chars_inputted); i++) {
+    window->utf8_chars_inputted[i] = 0;
+  }
+  window->utf8_index = 0;
+}
+
 void HandleWindowEvent(const SDL_WindowEvent& window_event,
                        SDLOpenGLWindow* sdl,
                        Window* window) {
@@ -138,7 +145,7 @@ SDLOpenGLUpdateWindow(SDLOpenGLWindow* sdl, Window* window, InputState* input) {
 
   // Restart the state.
   sdl->event_index = 0;
-  sdl->window->utf8_index = 0;
+  ResetUtf8(sdl->window);
   ResetMemoryPool(&sdl->memory_pool);
 
   InputState::InitFrame(input);  // We do the frame flip.

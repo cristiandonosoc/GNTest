@@ -5,13 +5,14 @@
 
 namespace warhol {
 
+struct StageTextureConfig;
 struct Texture;
 
 namespace opengl {
 
 struct OpenGLRendererBackend;
 
-bool OpenGLStageTexture(OpenGLRendererBackend*, Texture*);
+bool OpenGLStageTexture(OpenGLRendererBackend*, Texture*, StageTextureConfig*);
 
 void OpenGLUnstageTexture(OpenGLRendererBackend*, Texture*);
 

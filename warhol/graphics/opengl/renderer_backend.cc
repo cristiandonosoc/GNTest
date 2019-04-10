@@ -154,8 +154,9 @@ void OpenGLRendererBackend::UnstageShader(Shader* shader) {
 
 // Texture Handling ------------------------------------------------------------
 
-bool OpenGLRendererBackend::StageTexture(Texture* texture) {
-  return OpenGLStageTexture(this, texture);
+bool OpenGLRendererBackend::StageTexture(Texture* texture,
+                                         StageTextureConfig* config) {
+  return OpenGLStageTexture(this, texture, config);
 }
 
 bool OpenGLRendererBackend::IsTextureStaged(Texture* texture) {
