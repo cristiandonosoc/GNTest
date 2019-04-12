@@ -159,16 +159,6 @@ ImguiRenderer::~ImguiRenderer() {
 
 // GetRenderCommand ------------------------------------------------------------
 
-namespace {
-void ResetMesh(Mesh* mesh) {
-  mesh->vertex_count = 0;
-  mesh->index_count = 0;
-  ResetMemoryPool(&mesh->vertices);
-  ResetMemoryPool(&mesh->indices);
-}
-
-};
-
 RenderCommand ImguiGetRenderCommand(ImguiRenderer* imgui_renderer) {
   /* ASSERT(Valid(imgui)); */
   /* ASSERT(Valid(&imgui->imgui_renderer)); */

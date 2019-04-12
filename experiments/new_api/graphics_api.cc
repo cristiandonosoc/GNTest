@@ -15,6 +15,8 @@
 #include <warhol/utils/log.h>
 #include <warhol/window/window.h>
 
+#include "experiments/new_api/drawer.h"
+
 using namespace warhol;
 using namespace warhol::imgui;
 
@@ -127,8 +129,7 @@ int main() {
 
   Window window;
   InitWindowConfig window_config;
-  /* window_config.maximized = true; */
-  window_config.resizable = true;
+  window_config.maximized = true;
   if (!InitWindow(&window, WindowBackendType::kSDLOpenGL, &window_config)) {
     LOG(ERROR) << "Could not start SDL.";
     return 1;
@@ -242,6 +243,11 @@ int main() {
       glm::perspective(glm::radians(45.0f),
                        (float)window.width / (float)window.height,
                        0.1f, 100.f);
+
+  LOG(DEBUG) << "Setting drawer.";
+
+  Drawer drawer;
+  InitDrawer(&drawer, &window);
 
   LOG(DEBUG) << "Staring game loop.";
 

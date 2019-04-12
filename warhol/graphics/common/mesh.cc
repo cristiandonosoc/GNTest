@@ -127,4 +127,11 @@ uint32_t AttributesSize(Mesh* mesh) {
   return total;
 }
 
+void ResetMesh(Mesh* mesh) {
+  mesh->vertex_count = 0;
+  mesh->index_count = 0;
+  ResetMemoryPool(&mesh->vertices);
+  ResetMemoryPool(&mesh->indices);
+}
+
 }  // namespace warhol
