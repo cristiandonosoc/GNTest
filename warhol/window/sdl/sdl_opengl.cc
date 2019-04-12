@@ -64,7 +64,8 @@ void SDLOpenGLWindow::Shutdown() {
 
 namespace {
 
-bool SDLOpenGLInit(SDLOpenGLWindow* sdl, Window* window) {
+bool SDLOpenGLInit(SDLOpenGLWindow* sdl, Window* window,
+                   InitWindowConfig* config) {
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
     LOG(ERROR) << "Error loading SDL: " << SDL_GetError();
     return false;
@@ -72,11 +73,29 @@ bool SDLOpenGLInit(SDLOpenGLWindow* sdl, Window* window) {
 
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+
+  // Setup SDL flags.
+  uint32_t window_flags = SDL_WINDOW_OPENGL;
+  if (config->borderless)
+    window_flags |= SDL_WINDOW_BORDERLESS;
+  if (config->fullscreen)
+    window_flags |= SDL_WINDOW_FULLSCREEN;
+  if (config->hidden)
+    window_flags |= SDL_WINDOW_HIDDEN;
+  if (config->resizable)
+    window_flags |= SDL_WINDOW_RESIZABLE;
+  if (config->minimized)
+    window_flags |= SDL_WINDOW_MINIMIZED;
+  if (config->maximized) {
+    window_flags &= ~SDL_WINDOW_MINIMIZED;    // Remove minimized.
+    window_flags |= SDL_WINDOW_MAXIMIZED;
+  }
+
   sdl->sdl_window = SDL_CreateWindow("Warhol",
                                      SDL_WINDOWPOS_CENTERED,
                                      SDL_WINDOWPOS_CENTERED,
                                      1280, 720,
-                                     SDL_WINDOW_OPENGL);
+                                     window_flags);
   if (!sdl->sdl_window.has_value()) {
     LOG(ERROR) << "Error creating window: " << SDL_GetError();
     SDLOpenGLShutdown(sdl);
@@ -102,8 +121,8 @@ bool SDLOpenGLInit(SDLOpenGLWindow* sdl, Window* window) {
 
 }  // namespace
 
-bool SDLOpenGLWindow::Init(Window* w) {
-  return SDLOpenGLInit(this, w);
+bool SDLOpenGLWindow::Init(Window* w, InitWindowConfig* config) {
+  return SDLOpenGLInit(this, w, config);
 }
 
 // UpdateWindow ----------------------------------------------------------------

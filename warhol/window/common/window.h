@@ -56,7 +56,17 @@ struct Window {
 inline bool Valid(Window* wm) { return !!wm->backend; }
 
 // TODO(Cristian): Pass in WindowInitOptions!
-bool InitWindow(Window*, WindowBackendType);
+struct InitWindowConfig {
+  bool borderless = false;
+  bool fullscreen = false;
+  bool hidden = false;
+  bool resizable = false;
+
+  // Mutual exclusive, maximized wins.
+  bool minimized = false;
+  bool maximized = false;
+};
+bool InitWindow(Window*, WindowBackendType, InitWindowConfig*);
 
 // Will be called on destructor if window manager is valid.
 void ShutdownWindow(Window*);

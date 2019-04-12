@@ -58,11 +58,12 @@ void Reset(Window* window) {
 
 }  // namespace
 
-bool InitWindow(Window* window, WindowBackendType type) {
+bool InitWindow(Window* window, WindowBackendType type,
+                InitWindowConfig* config) {
   ASSERT(type != WindowBackendType::kLast);
 
   window->backend = CreateWindowBackend(type);
-  bool success = window->backend->Init(window);
+  bool success = window->backend->Init(window, config);
   if (!success)
     Reset(window);
   return success;

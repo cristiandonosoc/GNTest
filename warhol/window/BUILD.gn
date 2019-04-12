@@ -3,22 +3,16 @@
 
 # See the buildconfig file (set in .gn) for then *_enabled variables.
 
-config("common_config") {
-  defines = []
-  if (sdl_enabled) {
-    defines += [ "WARHOL_SDL_ENABLED" ]
-  }
-}
-
 if (sdl_enabled) {
   if (opengl_enabled) {
     source_set("sdl_opengl") {
 
       public_configs = [
-        ":common_config",
+        ":window_macros",
       ]
 
       public_deps = [
+        ":window_common",
         "//warhol/window/sdl:sdl_opengl",
       ]
     }
@@ -28,12 +22,26 @@ if (sdl_enabled) {
     source_set("sdl_vulkan") {
 
       public_configs = [
-        ":common_config",
+        ":window_macros",
       ]
 
       public_deps = [
+        ":window_common",
         "//warhol/window/sdl:sdl_vulkan",
       ]
     }
+  }
+}
+
+source_set("window_common") {
+  public = [
+    "window.h",
+  ]
+}
+
+config("window_macros") {
+  defines = []
+  if (sdl_enabled) {
+    defines += [ "WARHOL_SDL_ENABLED" ]
   }
 }

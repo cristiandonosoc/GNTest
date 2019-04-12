@@ -4,21 +4,16 @@
 #include <thread>
 
 #include <warhol/assets/asset_paths.h>
-#include <warhol/graphics/common/mesh.h>
-#include <warhol/graphics/common/shader.h>
-#include <warhol/graphics/common/renderer.h>
+#include <warhol/graphics/graphics.h>
 #include <warhol/input/input.h>
+#include <warhol/memory/memory_pool.h>
 #include <warhol/memory/memory_tracker.h>
 #include <warhol/platform/timing.h>
 #include <warhol/scene/camera.h>
 #include <warhol/ui/imgui.h>
-#include <warhol/utils/log.h>
-#include <warhol/window/common/window.h>
-
-
-#include <warhol/memory/memory_pool.h>
-
 #include <warhol/utils/glm_impl.h>
+#include <warhol/utils/log.h>
+#include <warhol/window/window.h>
 
 using namespace warhol;
 using namespace warhol::imgui;
@@ -131,7 +126,10 @@ int main() {
   LOG(DEBUG) << "Initializing window.";
 
   Window window;
-  if (!InitWindow(&window, WindowBackendType::kSDLOpenGL)) {
+  InitWindowConfig window_config;
+  /* window_config.maximized = true; */
+  window_config.resizable = true;
+  if (!InitWindow(&window, WindowBackendType::kSDLOpenGL, &window_config)) {
     LOG(ERROR) << "Could not start SDL.";
     return 1;
   }

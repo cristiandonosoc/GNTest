@@ -6,10 +6,11 @@
 if (opengl_enabled) {
   group("opengl_renderer") {
     public_configs = [
-      ":renderer_macros",
+      ":graphics_macros",
     ]
 
     deps = [
+      ":graphics_common",
       "//warhol/graphics/opengl",
     ]
   }
@@ -19,17 +20,23 @@ if (vulkan_enabled) {
   group("vulkan_renderer") {
 
     public_configs = [
-      ":renderer_macros",
+      ":graphics_macros",
     ]
 
     deps = [
+      ":graphics_common",
       "//warhol/graphics/vulkan",
     ]
   }
 }
 
-# Adds common config to key out functionality
-config("renderer_macros") {
+source_set("graphics_common") {
+  public = [
+    "graphics.h",
+  ]
+}
+
+config("graphics_macros") {
   defines = []
 
   if (opengl_enabled) {
@@ -40,3 +47,5 @@ config("renderer_macros") {
     defines += [ "WARHOL_VULKAN_ENABLED" ]
   }
 }
+
+

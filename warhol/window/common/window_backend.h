@@ -15,6 +15,7 @@ namespace warhol {
 enum class WindowEvent : uint32_t;
 
 struct InputState;
+struct InitWindowConfig;
 struct Window;
 
 struct WindowBackend {
@@ -22,7 +23,7 @@ struct WindowBackend {
 
   // Interface -----------------------------------------------------------------
 
-  virtual bool Init(Window*) = 0;
+  virtual bool Init(Window*, InitWindowConfig*) = 0;
   virtual void Shutdown() = 0;
   virtual LinkedList<WindowEvent> UpdateWindow(Window*, InputState*) = 0;
 
