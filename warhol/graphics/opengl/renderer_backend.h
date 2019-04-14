@@ -72,7 +72,7 @@ struct OpenGLRendererBackend : public RendererBackend {
   bool IsTextureStaged(Texture*) override;
 
   void StartFrame(Renderer*) override;
-  void ExecuteCommands(Renderer*, LinkedList<RenderCommand>*) override;
+  void ExecuteCommands(Renderer*, List<RenderCommand>*) override;
   void EndFrame(Renderer*) override;
 };
 

@@ -108,7 +108,7 @@ void RendererUnstageTexture(Renderer*, Texture*);
 bool RendererIsTextureStaged(Renderer*, Texture*);
 
 void RendererStartFrame(Renderer*);
-void RendererExecuteCommands(Renderer*, LinkedList<RenderCommand>* commands);
+void RendererExecuteCommands(Renderer*, List<RenderCommand>* commands);
 void RendererEndFrame(Renderer*);
 
 }  // namespace

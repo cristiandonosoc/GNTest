@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "warhol/containers/linked_list.h"
+#include "warhol/containers/list.h"
 #include "warhol/graphics/common/shader.h"
 #include "warhol/graphics/common/texture.h"
 #include "warhol/graphics/common/mesh.h"

@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "warhol/math/vec.h"
-#include "warhol/containers/linked_list.h"
+#include "warhol/containers/list.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
@@ -100,7 +100,7 @@ struct RenderCommand {
   union Actions {
     DECLARE_ALL_CONTRUCTORS(Actions);
 
-    LinkedList<MeshRenderAction> mesh_actions;
+    List<MeshRenderAction> mesh_actions;
   } actions;
 };
 

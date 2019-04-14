@@ -280,9 +280,8 @@ int main() {
 
     ResetMemoryPool(&memory_pool);
 
-    LinkedList<MeshRenderAction> mesh_action_list;
-    auto* mesh_action = PushIntoListFromMemoryPool(&mesh_action_list,
-                                                   &memory_pool);
+    auto mesh_action_list = CreateList<MeshRenderAction>(&memory_pool);
+    auto* mesh_action = Push(&mesh_action_list);
     mesh_action->mesh = &mesh;
     mesh_action->index_range = CreateRange(mesh.index_count, 0);
     mesh_action->textures = &texture;
@@ -292,8 +291,8 @@ int main() {
 
     mesh_action->vert_uniforms = (float*)model;
 
-    LinkedList<RenderCommand> command_list;
-    auto* command = PushIntoListFromMemoryPool(&command_list, &memory_pool);
+    auto command_list = CreateList<RenderCommand>(&memory_pool);
+    auto* command = Push(&command_list);
 
     command->name = "Loop command";
     command->type = RenderCommandType::kMesh;
@@ -309,8 +308,7 @@ int main() {
     CreateImguiUI(&input, &time, &memory_tracker);
 
     RenderCommand imgui_command = ImguiEndFrame(&imgui_context);
-    PushIntoListFromMemoryPool(&command_list, &memory_pool,
-                               std::move(imgui_command));
+    Push(&command_list, std::move(imgui_command));
 
     RendererStartFrame(&renderer);
     RendererExecuteCommands(&renderer, &command_list);

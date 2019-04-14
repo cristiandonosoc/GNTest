@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "warhol/containers/linked_list.h"
+#include "warhol/containers/list.h"
 #include "warhol/memory/memory_pool.h"
 #include "warhol/utils/clear_on_move.h"
 #include "warhol/utils/macros.h"
@@ -33,7 +33,7 @@ struct SDLOpenGLWindow : public WindowBackend {
 
   bool Init(Window*, InitWindowConfig*) override;
   void Shutdown() override;
-  LinkedList<WindowEvent> UpdateWindow(Window*, InputState*) override;
+  List<WindowEvent> UpdateWindow(Window*, InputState*) override;
   void SwapBuffers() override;
 };
 

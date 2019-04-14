@@ -2,6 +2,10 @@
 # This code has a BSD license. See LICENSE.
 
 source_set("containers") {
+  public = [
+    "list.h",
+  ]
+
   sources = [
     "sort.h",
   ]

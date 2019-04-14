@@ -79,7 +79,7 @@ void ShutdownWindow(Window* window) {
 
 // UpdateWindow ----------------------------------------------------------------
 
-LinkedList<WindowEvent>
+List<WindowEvent>
 UpdateWindow(Window* window, InputState* input) {
   ASSERT(Valid(window));
   return window->backend->UpdateWindow(window, input);

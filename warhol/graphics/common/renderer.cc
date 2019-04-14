@@ -152,7 +152,7 @@ void RendererStartFrame(Renderer* renderer) {
 }
 
 void RendererExecuteCommands(Renderer* renderer,
-                             LinkedList<RenderCommand>* commands) {
+                             List<RenderCommand>* commands) {
   ASSERT(Valid(renderer));
   renderer->backend->ExecuteCommands(renderer, commands);
 }

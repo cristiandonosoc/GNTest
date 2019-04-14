@@ -287,7 +287,7 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
 }
 
 void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
-                           LinkedList<RenderCommand>* commands) {
+                           List<RenderCommand>* commands) {
   for (auto& command : *commands) {
     auto shader_it = opengl->loaded_shaders.find(command.shader->uuid.value);
     ASSERT(shader_it != opengl->loaded_shaders.end());
@@ -314,8 +314,8 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
 
 }  // namespace
 
-void OpenGLRendererBackend::ExecuteCommands(
-    Renderer*, LinkedList<RenderCommand>* commands) {
+void OpenGLRendererBackend::ExecuteCommands(Renderer*,
+                                            List<RenderCommand>* commands) {
   OpenGLExecuteCommands(this, commands);
 }
 

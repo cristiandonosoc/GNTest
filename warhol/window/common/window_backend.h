@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "warhol/containers/linked_list.h"
+#include "warhol/containers/list.h"
 
 namespace warhol {
 
@@ -25,7 +25,7 @@ struct WindowBackend {
 
   virtual bool Init(Window*, InitWindowConfig*) = 0;
   virtual void Shutdown() = 0;
-  virtual LinkedList<WindowEvent> UpdateWindow(Window*, InputState*) = 0;
+  virtual List<WindowEvent> UpdateWindow(Window*, InputState*) = 0;
 
   // No-op if the window manager doesn't require it.
   virtual void SwapBuffers() {};

@@ -189,8 +189,6 @@ RenderCommand ImguiGetRenderCommand(ImguiRenderer* imgui_renderer) {
   float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
   imgui_renderer->camera.projection = glm::ortho(L, R, B, T);
 
-  LinkedList<MeshRenderAction> mesh_actions;
-
   // Each Imgui command list is considered "isolated" from the other, starting
   // they're index base from 0. In our renderer we chain them together so we
   // need to keep track on where each command starts in our buffers.
@@ -199,6 +197,9 @@ RenderCommand ImguiGetRenderCommand(ImguiRenderer* imgui_renderer) {
   uint64_t total_size = 0;
 
   std::vector<uint32_t> index_data;
+
+  auto mesh_actions =
+      CreateList<MeshRenderAction>(&imgui_renderer->memory_pool);
 
   // Create the draw list.
   ImVec2 pos = draw_data->DisplayPos;
@@ -255,9 +256,7 @@ RenderCommand ImguiGetRenderCommand(ImguiRenderer* imgui_renderer) {
       }
 
       // We push the render action into our pool.
-      PushIntoListFromMemoryPool(&mesh_actions,
-                                 &imgui_renderer->memory_pool,
-                                 std::move(render_action));
+      Push(&mesh_actions, std::move(render_action));
 
       index_offset += draw_cmd->ElemCount * sizeof(uint32_t);
     }

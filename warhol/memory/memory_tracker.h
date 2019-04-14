@@ -25,7 +25,6 @@ void Track(MemoryTracker*, T*);
 template <typename T>
 void Untrack(MemoryTracker*, T*);
 
-
 // Each object being tracked will have an active token.
 // When active, this object cannot *move* (but can be moved to).
 // On destruction, the token will untrack itself if active.

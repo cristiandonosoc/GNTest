@@ -43,7 +43,7 @@ struct RendererBackend {
   virtual bool IsTextureStaged(Texture*) = 0;
 
   virtual void StartFrame(Renderer*) = 0;
-  virtual void ExecuteCommands(Renderer*, LinkedList<RenderCommand>*) = 0;
+  virtual void ExecuteCommands(Renderer*, List<RenderCommand>*) = 0;
   virtual void EndFrame(Renderer*) = 0;
 };
 

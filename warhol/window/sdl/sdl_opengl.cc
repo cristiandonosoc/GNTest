@@ -158,7 +158,7 @@ void HandleWindowEvent(const SDL_WindowEvent& window_event,
   }
 }
 
-LinkedList<WindowEvent>
+List<WindowEvent>
 SDLOpenGLUpdateWindow(SDLOpenGLWindow* sdl, Window* window, InputState* input) {
   ASSERT(Valid(sdl));
 
@@ -193,17 +193,16 @@ SDLOpenGLUpdateWindow(SDLOpenGLWindow* sdl, Window* window, InputState* input) {
   HandleMouse(input);
 
   // Chain the events into a linked list.
-  LinkedList<WindowEvent> event_list;
+  auto event_list = CreateList<WindowEvent>(&sdl->memory_pool);
   for (int i = 0; i < sdl->event_index; i++) {
-    WindowEvent* e = PushIntoListFromMemoryPool(&event_list, &sdl->memory_pool);
-    *e = sdl->events[i];
+    Push(&event_list, sdl->events[i]);
   }
   return event_list;
 }
 
 }  // namespace
 
-LinkedList<WindowEvent>
+List<WindowEvent>
 SDLOpenGLWindow::UpdateWindow(Window* w, InputState* input) {
   return SDLOpenGLUpdateWindow(this, w, input);
 }
