@@ -1,86 +1,134 @@
 // Copyright 2019, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include "experiments/new_api/drawer.h"
+#include "drawer.h"
 
-#include <warhol/utils/assert.h>
+#include <warhol/assets/asset_paths.h>
+#include <warhol/utils/glm_impl.h>
 #include <warhol/window/window.h>
 
+struct DrawerVertex {
+  Vec2 pos;
+  Vec3 color;
+};
 
-using namespace warhol;
+bool InitDrawer(Drawer* drawer, Renderer* renderer, Window* window) {
+  if (!LoadShader("square", renderer, &drawer->shader)) {
+    LOG(ERROR) << "Could not load shader!";
+    return false;
+  }
 
+  drawer->mesh.name = "DrawerMesh";
 
-void InitDrawer(Drawer* drawer, Window* window, Renderer* renderer) {
-  ASSERT(!Valid(drawer));
-  ASSERT(Valid(window));
+  // Create a Mesh for creating a buffer.
+  drawer->mesh.name = "Imgui Mesh";
+  drawer->mesh.uuid = GetNextMeshUUID();
+  drawer->mesh.vertex_size = sizeof(DrawerVertex);
+  drawer->mesh.attributes = {
+    {2, AttributeType::kFloat, false},    // Pos.
+    {3, AttributeType::kFloat, false},    // Color.
+  };
 
-  InitMemoryPool(&drawer->pool, KILOBYTES(64));
-  InitMeshPools(&drawer->mesh, MEGABYTES(1), MEGABYTES(1));
-  drawer->mesh.vertex_size = sizeof(DrawVertex);
-  RendererStageMesh(renderer, &drawer->mesh);
+  InitMeshPools(&drawer->mesh, MEGABYTES(16), MEGABYTES(16));
 
+  if (!RendererStageMesh(renderer, &drawer->mesh))
+    return false;
+
+  drawer->renderer = renderer;
   drawer->window = window;
+
+  InitMemoryPool(&drawer->pool, KILOBYTES(1));
+
+  drawer->camera.projection = glm::mat4(1.0f);
+  drawer->camera.view = glm::mat4(1.0f);
+
+  return true;
 }
 
-void DrawerStartFrame(Drawer* drawer) {
+Drawer::~Drawer() {
+  if (Valid(this))
+    ShutdownDrawer(this);
+}
+
+void ShutdownDrawer(Drawer* drawer) {
+  ASSERT(Valid(drawer));
+  RendererUnstageMesh(drawer->renderer, &drawer->mesh);
+  drawer->mesh = {};
+  RendererUnstageShader(drawer->renderer, &drawer->shader);
+  drawer->shader = {};
+}
+
+bool Valid(Drawer* drawer) {
+  return drawer->renderer && drawer->window;
+}
+
+void DrawerNewFrame(Drawer* drawer) {
+  ResetMemoryPool(&drawer->pool);
   ResetMesh(&drawer->mesh);
-  drawer->square_count = 0;
-
 }
 
-static inline void SetColor(uint8_t* src, uint8_t* dst) {
-  *src++ = *dst++;
-  *src++ = *dst++;
-  *src++ = *dst++;
-  *src++ = *dst++;
-}
+void DrawSquare(Drawer* drawer, Pair<int> bl, Pair<int> tr, Vec3 color) {
+  SCOPE_LOCATION();
 
-void PushSquare(Drawer* drawer, Square square) {
-  uint32_t v_base = drawer->mesh.vertex_count;
+  DrawerVertex vertices[4];
+  vertices[0].pos = {(float)bl.x, (float)bl.y};
+  vertices[0].color = color;
 
-  DrawVertex v[4];
-  v[0].pos[0] = square.bottom_left.x;
-  v[0].pos[1] = square.bottom_left.y;
-  SetColor(v[0].color, square.color);
-  v[1].pos[0] = square.top_right.x;
-  v[1].pos[1] = square.bottom_left.y;
-  SetColor(v[1].color, square.color);
-  v[2].pos[0] = square.top_right.x;
-  v[2].pos[1] = square.top_right.y;
-  SetColor(v[2].color, square.color);
-  v[3].pos[0] = square.bottom_left.x;
-  v[3].pos[1] = square.top_right.y;
-  SetColor(v[3].color, square.color);
-  PushVertices(&drawer->mesh, v, 4);
+  vertices[1].pos = {(float)tr.x, (float)bl.y};
+  vertices[1].color = color;
 
+  vertices[2].pos = {(float)tr.x, (float)tr.y};
+  vertices[2].color = color;
+
+  vertices[3].pos = {(float)bl.x, (float)tr.y};
+  vertices[3].color = color;
+
+  uint32_t vert_count = drawer->mesh.vertex_count;
   uint32_t indices[6];
-  indices[0] = v_base;
-  indices[1] = v_base + 1;
-  indices[2] = v_base + 2;
-  indices[3] = v_base + 2;
-  indices[4] = v_base + 3;
-  indices[5] = v_base;
+  indices[0] = vert_count + 0;
+  indices[1] = vert_count + 1;
+  indices[2] = vert_count + 2;
+  indices[3] = vert_count + 2;
+  indices[4] = vert_count + 3;
+  indices[5] = vert_count + 0;
+
+  PushVertices(&drawer->mesh, vertices, ARRAY_SIZE(vertices));
   PushIndices(&drawer->mesh, indices, 6);
-
-  drawer->square_count++;
-}
-
+};
 
 RenderCommand DrawerEndFrame(Drawer* drawer) {
-  LinkedList<MeshRenderAction> actions;
+  SCOPE_LOCATION();
+
+  drawer->camera.viewport_p1 = {0, 0};
+  drawer->camera.viewport_p2 = {drawer->window->width, drawer->window->height};
+
+  float L = drawer->camera.viewport_p1.x;
+  float R = drawer->camera.viewport_p2.x;
+  float T = drawer->camera.viewport_p1.y;
+  float B = drawer->camera.viewport_p2.y;
+  drawer->camera.projection = glm::ortho(L, R, B, T);
+
+  // Send the frame over.
+  if (!RendererUploadMeshRange(drawer->renderer, &drawer->mesh))
+    NOT_REACHED("ERROR");
 
   MeshRenderAction action;
   action.mesh = &drawer->mesh;
-  action.index_range = CreateRange(drawer->square_count * 2, 0);
+  action.index_range = CreateRange(drawer->mesh.index_count, 0);
 
-  PushIntoListFromMemoryPool(&actions, &drawer->pool, std::move(action));
+  auto actions = CreateList<MeshRenderAction>(&drawer->pool);
+  Push(&actions, std::move(action));
 
-  RenderCommand command;
-  command.name = "Squares";
-  command.type = RenderCommandType::kMesh;
-  command.camera = &drawer->camera;
-  command.shader = &drawer->shader;
-  command.actions.mesh_actions = std::move(actions);
+  RenderCommand render_command;
+  render_command.name = "Imgui";
+  render_command.type = RenderCommandType::kMesh;
+  render_command.config.blend_enabled = false;
+  render_command.config.cull_faces = false;
+  render_command.config.depth_test = false;
+  render_command.config.scissor_test = false;
+  render_command.camera = &drawer->camera;
+  render_command.shader = &drawer->shader;
+  render_command.actions.mesh_actions = std::move(actions);
 
-  return command;
+  return render_command;
 }

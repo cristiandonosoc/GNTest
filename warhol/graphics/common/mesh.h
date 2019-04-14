@@ -46,8 +46,6 @@ inline uint32_t GetSize(Attribute* attribute) {
   return (uint32_t)attribute->type * attribute->count;
 }
 
-size_t Hash(const Vertex&);
-
 struct Mesh {
   RAII_CONSTRUCTORS(Mesh);
 
@@ -72,19 +70,10 @@ struct Mesh {
 
 inline bool Staged(Mesh* mesh) { return mesh->staged.value; }
 
-
 bool LoadMesh(const std::string_view&, Mesh*);
 void InitMeshPools(Mesh*, size_t vert_size, size_t index_size);
 
-
-// Needs a valid mesh. Will clear all pools and counters to 0.
-// Won't free any data.
-void ResetMesh(Mesh*);
-
 inline bool Valid(Mesh* mesh) { return mesh->uuid.value != 0; }
-inline bool HasData(Mesh* mesh) {
-  return Valid(&mesh->vertices) && Valid(&mesh->indices);
-}
 
 inline size_t VerticesSize(Mesh* mesh) {
   return mesh->vertex_count * mesh->vertex_size;
@@ -94,20 +83,17 @@ inline size_t IndicesSize(Mesh* mesh) {
   return mesh->index_count * sizeof(uint32_t);
 }
 
-uint32_t AttributesSize(Mesh* mesh);
-
-// Thread safe. Will advance the UUID.
-uint64_t GetNextMeshUUID();
+void ResetMesh(Mesh*);
 
 template <typename T>
 inline void PushVertices(Mesh* mesh, T* data, size_t count) {
   ASSERT(mesh->vertex_size == sizeof(T));
-  PushIntoMemoryPool(&mesh->vertices, data, count);
+  Push(&mesh->vertices, data, count);
   mesh->vertex_count += count;
 }
 
 inline void PushIndices(Mesh* mesh, uint32_t* data, size_t count) {
-  PushIntoMemoryPool(&mesh->indices, data, count);
+  Push(&mesh->indices, data, count);
   mesh->index_count += count;
 }
 
@@ -125,5 +111,10 @@ inline void PushIndicesWithOffset(Mesh* mesh, uint32_t* data, size_t count,
 
   mesh->index_count += count;
 }
+
+uint32_t AttributesSize(Mesh* mesh);
+
+// Thread safe. Will advance the UUID.
+uint64_t GetNextMeshUUID();
 
 }  // namespace warhol

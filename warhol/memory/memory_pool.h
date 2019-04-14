@@ -46,15 +46,15 @@ void ResetMemoryPool(MemoryPool*);
 void ShutdownMemoryPool(MemoryPool*);
 
 // Pushes arbitraty data into the memory pool.
-uint8_t* PushIntoMemoryPool(MemoryPool*, uint8_t* data, size_t size);
+uint8_t* Push(MemoryPool*, uint8_t* data, size_t size);
 
 template <typename T>
-T* PushIntoMemoryPool(MemoryPool* pool, T* data, size_t count) {
-  return (T*)PushIntoMemoryPool(pool, (uint8_t*)data, sizeof(T) * count);
+T* Push(MemoryPool* pool, T* data, size_t count) {
+  return (T*)Push(pool, (uint8_t*)data, sizeof(T) * count);
 }
 
 template <typename T>
-T* PushIntoMemoryPool(MemoryPool* pool) {
+T* Push(MemoryPool* pool) {
   ASSERT(Valid(pool));
   ASSERT(pool->current + sizeof(T) < pool->data.get() + pool->size);
 
@@ -64,8 +64,8 @@ T* PushIntoMemoryPool(MemoryPool* pool) {
 }
 
 template <typename T>
-T* PushIntoMemoryPool(MemoryPool* pool, T t) {
-  T* val = PushIntoMemoryPool<T>(pool);
+T* Push(MemoryPool* pool, T t) {
+  T* val = Push<T>(pool);
   *val = std::move(t);
   return val;
 }

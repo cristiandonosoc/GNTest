@@ -31,7 +31,7 @@ void ShutdownMemoryPool(MemoryPool* pool) {
   pool->data.reset();
 }
 
-uint8_t* PushIntoMemoryPool(MemoryPool* pool, uint8_t* data, size_t size) {
+uint8_t* Push(MemoryPool* pool, uint8_t* data, size_t size) {
   ASSERT(Valid(pool));
 #ifndef NDEBUG
   if (pool->current + size > pool->data.get() + pool->size) {

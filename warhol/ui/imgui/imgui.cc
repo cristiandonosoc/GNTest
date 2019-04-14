@@ -75,10 +75,6 @@ bool InitImgui(Renderer* renderer, ImguiContext* imgui) {
   imgui->imgui_renderer.io = imgui->io;
   if (!InitImguiRenderer(&imgui->imgui_renderer, renderer))
     return false;
-
-  imgui->imgui_renderer.camera.projection = glm::mat4(1.0f);
-  imgui->imgui_renderer.camera.view = glm::mat4(1.0f);
-
   return true;
 }
 

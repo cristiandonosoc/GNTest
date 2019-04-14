@@ -3,6 +3,8 @@
 
 executable("new_api") {
   sources = [
+    "drawer.cc",
+    "game.cc",
     "graphics_api.cc",
   ]
 

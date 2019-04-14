@@ -17,6 +17,11 @@ namespace {
 
 std::atomic<uint64_t> kNextMeshUUID = 1;
 
+size_t Hash(const Vertex& vertex) {
+  return ((Hash(vertex.pos) ^ (Hash(vertex.color) << 1)) >> 1) ^
+         (Hash(vertex.uv) << 1);
+}
+
 }  // namespace
 
 Mesh::~Mesh() {
@@ -26,10 +31,6 @@ Mesh::~Mesh() {
 
 uint64_t GetNextMeshUUID() { return kNextMeshUUID++; }
 
-size_t Hash(const Vertex& vertex) {
-  return ((Hash(vertex.pos) ^ (Hash(vertex.color) << 1)) >> 1) ^
-         (Hash(vertex.uv) << 1);
-}
 
 bool LoadMesh(const std::string_view& model_path, Mesh* mesh) {
   tinyobj::attrib_t attrib;
@@ -75,10 +76,10 @@ bool LoadMesh(const std::string_view& model_path, Mesh* mesh) {
       // We see if we need to emplace it.
       auto [it, ok] = vertex_ht.insert({vertex_hash, Used(&vert_pool)});
       if (ok) {
-        PushIntoMemoryPool(&vert_pool, std::move(vertex));
+        Push(&vert_pool, std::move(vertex));
         vert_count++;
       }
-      PushIntoMemoryPool(&index_pool, (uint32_t)it->second);
+      Push(&index_pool, (uint32_t)it->second);
       index_count++;
     }
   }

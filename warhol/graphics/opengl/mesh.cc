@@ -102,8 +102,6 @@ bool OpenGLStageMesh(OpenGLRendererBackend* opengl, Mesh* mesh) {
     return false;
   }
 
-  ASSERT(HasData(mesh));
-
   // Always bind the VAO first, so that it doesn't overwrite.
   MeshHandles handles = GenerateMeshHandles();
 

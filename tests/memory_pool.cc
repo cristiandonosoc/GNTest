@@ -16,7 +16,7 @@ TEST_CASE("MemoryPool") {
     std::vector<int> values;
     std::vector<int*> pointers;
     for (int i = 0; i < 10; i++) {
-      pointers.push_back(PushIntoMemoryPool<int>(&pool));
+      pointers.push_back(Push<int>(&pool));
       values.push_back(i * i);
       *pointers.back() = values.back();
     }
@@ -38,7 +38,7 @@ TEST_CASE("MemoryPool") {
     }
 
     {
-      int* ptr = PushIntoMemoryPool(&pool, values.data(), values.size());
+      int* ptr = Push(&pool, values.data(), values.size());
       REQUIRE(Used(&pool) == sizeof(int) * values.size());
       for (int value : values) {
         CHECK(*ptr++ == value);
@@ -48,7 +48,7 @@ TEST_CASE("MemoryPool") {
     ResetMemoryPool(&pool);
 
     {
-      uint8_t* ptr = PushIntoMemoryPool(&pool, (uint8_t*)values.data(),
+      uint8_t* ptr = Push(&pool, (uint8_t*)values.data(),
                                         sizeof(int) * values.size());
       REQUIRE(Used(&pool) == sizeof(int) * values.size());
       int* int_ptr = (int*)ptr;

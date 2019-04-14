@@ -36,7 +36,7 @@ bool CreateShader(Renderer* renderer, ImguiRenderer* imgui) {
   if (!Loaded(&shader) || !RendererStageShader(renderer, &shader))
     return false;
 
-  UnloadShader(&shader);
+  RemoveSources(&shader);
   imgui->shader = std::move(shader);
   return true;
 }
@@ -109,6 +109,9 @@ bool InitImguiRenderer(ImguiRenderer* imgui_renderer, Renderer* renderer) {
   imgui_renderer->memory_pool.name = "Imgui";
   InitMemoryPool(&imgui_renderer->memory_pool, KILOBYTES(32));
 
+  imgui_renderer->camera.projection = glm::mat4(1.0f);
+  imgui_renderer->camera.view = glm::mat4(1.0f);
+
   if (!CreateShader(renderer, imgui_renderer) ||
       !CreateMesh(renderer, imgui_renderer) ||
       !CreateFontTexture(renderer, imgui_renderer)) {
@@ -160,8 +163,6 @@ ImguiRenderer::~ImguiRenderer() {
 // GetRenderCommand ------------------------------------------------------------
 
 RenderCommand ImguiGetRenderCommand(ImguiRenderer* imgui_renderer) {
-  /* ASSERT(Valid(imgui)); */
-  /* ASSERT(Valid(&imgui->imgui_renderer)); */
   ASSERT(Valid(imgui_renderer));
 
   // Reset the memory pools wher ethe new index data is going to be.

@@ -67,7 +67,7 @@ void PushNode(List<T>* list, typename List<T>::Node* node);
 template <typename T>
 T* Push(List<T>* list) {
   ASSERT(list->pool);
-  auto* node = PushIntoMemoryPool<typename List<T>::Node>(list->pool);
+  auto* node = Push<typename List<T>::Node>(list->pool);
   PushNode(list, node);
   return &node->value;
 }
@@ -75,7 +75,7 @@ T* Push(List<T>* list) {
 template <typename T>
 T* Push(List<T>* list, T t) {
   ASSERT(list->pool);
-  auto* node = PushIntoMemoryPool<typename List<T>::Node>(list->pool);
+  auto* node = Push<typename List<T>::Node>(list->pool);
   PushNode(list, node);
   node->value = std::move(t);
   return &node->value;

@@ -3,52 +3,44 @@
 
 #pragma once
 
-#include <warhol/memory/memory_pool.h>
+#include <stdint.h>
+
 #include <warhol/graphics/graphics.h>
 #include <warhol/scene/camera.h>
 
-#include <warhol/math/vec.h>
+using namespace warhol;
 
-namespace warhol {
-
-struct Window;
-
-}  // namespace warhol
-
-
-struct DrawVertex {
-  float pos[2];
-  uint8_t color[4];
-};
-
-struct Square {
-  ::warhol::Pair<int> bottom_left;
-  ::warhol::Pair<int> top_right;
-
-  uint8_t color[4];
+struct Colors {
+  static constexpr uint32_t kBlack=   0xff'00'00'00;
+  static constexpr uint32_t kBlue=    0xff'ff'00'00;
+  static constexpr uint32_t kGreen =  0xff'00'ff'00;
+  static constexpr uint32_t kRed =    0xff'00'00'ff;
+  static constexpr uint32_t kWhite =  0xff'ff'ff'ff;
 };
 
 struct Drawer {
-  ::warhol::MemoryPool pool;
+  RAII_CONSTRUCTORS(Drawer);
 
-  ::warhol::Camera camera;
-  ::warhol::Mesh mesh;
-  ::warhol::Shader shader;
+  Camera camera;
+  Mesh mesh;
+  Shader shader;
 
-  ::warhol::Window* window = nullptr;   // Not-owning.
+  MemoryPool pool;
 
-  uint32_t square_count = 0;
-
-  bool valid_ = false;
+  // Must outlive.
+  Renderer* renderer = nullptr;
+  Window* window = nullptr;
 };
 
-inline bool Valid(Drawer* drawer) { return drawer->valid_; }
+bool Valid(Drawer*);
 
-void InitDrawer(Drawer*, ::warhol::Window*);
+bool InitDrawer(Drawer*, Renderer*, Window*);
 
-void PushSquare(Drawer*, Square);
+void ShutdownDrawer(Drawer*);
 
-void DrawerStartFrame(Drawer*);
+void DrawerNewFrame(Drawer*);
+
+void DrawSquare(Drawer*, Pair<int> bl, Pair<int> tr, Vec3 color);
 
 ::warhol::RenderCommand DrawerEndFrame(Drawer*);
 

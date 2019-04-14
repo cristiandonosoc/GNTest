@@ -5,17 +5,12 @@
 
 #include <string>
 
+#include "warhol/graphics/common/renderer.h"
+
 namespace warhol {
 
-std::string GetTexturePath(const std::string& texture_name);
+std::string GetTexturePath(const std::string_view& texture_name);
 
-enum class ShaderPathType {
-  kOpenGL,
-  kVulkan,
-  kLast,
-};
-const char* ToString(ShaderPathType);
-
-std::string GetShaderPath(const std::string& shader_name, ShaderPathType);
+std::string GetShaderPath(const std::string_view& shader_name, RendererType);
 
 }  // namespace warhol

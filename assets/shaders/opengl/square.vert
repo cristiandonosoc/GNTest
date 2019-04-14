@@ -1,16 +1,15 @@
 #version 330 core
 #extension GL_ARB_separate_shader_objects : enable
 
+// TODO(Cristian): Continue with the compilation eventually.
 #define UNIFORM_BLOCK(block_name) layout(std140) uniform block_name
 
 // Attributes ------------------------------------------------------------------
 
-layout (location = 0) in vec3 in_pos;
+layout (location = 0) in vec2 in_pos;
 layout (location = 1) in vec3 in_color;
-layout (location = 2) in vec2 in_uv;
 
-out vec3 color;
-out vec2 uv;
+out vec4 color;
 
 // Uniforms --------------------------------------------------------------------
 
@@ -19,14 +18,9 @@ layout (std140) uniform Camera {
   mat4 view;
 } camera;
 
-UNIFORM_BLOCK(VertUniforms) {
-  mat4 model;
-} uniforms;
-
 // Code ------------------------------------------------------------------------
 
 void main() {
-  gl_Position = camera.proj * camera.view * uniforms.model * vec4(in_pos, 1.0);
-  color = in_color;
-  uv = in_uv;
+  gl_Position = camera.proj * camera.view * vec4(in_pos.xy, 0, 1.0);
+  color = vec4(in_color, 1.0f);
 }

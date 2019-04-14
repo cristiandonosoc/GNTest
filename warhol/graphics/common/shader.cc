@@ -5,6 +5,8 @@
 
 #include <atomic>
 
+#include "warhol/assets/asset_paths.h"
+#include "warhol/graphics/common/renderer.h"
 #include "warhol/utils/assert.h"
 #include "warhol/utils/file.h"
 #include "warhol/utils/log.h"
@@ -77,12 +79,14 @@ uint32_t GetUniformsSize(const std::vector<Uniform>& uniforms) {
 
 uint64_t GetNextShaderUUID() { return kNextShaderUUID++; }
 
+namespace {
+
 bool LoadShader(const std::string_view& name,
                 const std::string_view& base_path,
-                ShaderType shader_type,
+                RendererType shader_type,
                 Shader* shader) {
 
-  if (shader_type == ShaderType::kVulkan) {
+  if (shader_type == RendererType::kVulkan) {
     LOG(ERROR) << "Vulkan shader type not supported yet.";
     return false;
   }
@@ -113,11 +117,27 @@ bool LoadShader(const std::string_view& name,
   return true;
 }
 
-void UnloadShader(Shader* shader) {
+}  // namespace
+
+
+bool LoadShader(const std::string_view& name, Renderer* renderer, Shader* shader) {
+  if (!LoadShader(name, GetShaderPath(name, renderer->type),
+                  renderer->type, shader)) {
+    LOG(ERROR) << "Could not load shader " << name;
+    return false;
+  }
+
+  if (!RendererStageShader(renderer, shader)) {
+    LOG(ERROR) << "Could not load shader " << name;
+    return false;
+  }
+
+  return true;
+}
+
+void RemoveSources(Shader* shader) {
   shader->vert_source.clear();
   shader->frag_source.clear();
-  shader->vert_ubo_size = -1;
-  shader->frag_ubo_size = -1;
 }
 
 std::string ShaderSourceAsString(const std::vector<uint8_t>& src) {

@@ -9,37 +9,26 @@
 
 namespace warhol {
 
-std::string GetTexturePath(const std::string& texture_name) {
+std::string GetTexturePath(const std::string_view& texture_name) {
   return PathJoin({GetBasePath(), "assets", "textures", texture_name});
 }
 
-std::string GetShaderPath(const std::string& shader_name,
-                          ShaderPathType path_type) {
+std::string GetShaderPath(const std::string_view& shader_name,
+                          RendererType path_type) {
   const char* shader_dir = nullptr;
   switch (path_type) {
-    case ShaderPathType::kOpenGL:
+    case RendererType::kOpenGL:
       shader_dir = "opengl";
       break;
-    case ShaderPathType::kVulkan:
+    case RendererType::kVulkan:
       shader_dir = "vulkan";
       break;
-    case ShaderPathType::kLast:
+    case RendererType::kLast:
       NOT_REACHED("Invalid shader path type.");
   }
 
   return PathJoin({GetBasePath(), "assets", "shaders", shader_dir,
                    std::move(shader_name)});
-}
-
-const char* ToString(ShaderPathType type) {
-  switch (type) {
-    case ShaderPathType::kOpenGL: return "OpenGL";
-    case ShaderPathType::kVulkan: return "Vulkan";
-    case ShaderPathType::kLast: return "Last";
-  }
-
-  NOT_REACHED("Unknown shader path type.");
-  return nullptr;
 }
 
 }  // namespace warhol

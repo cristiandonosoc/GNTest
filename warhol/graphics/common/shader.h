@@ -11,10 +11,7 @@
 
 namespace warhol {
 
-enum class ShaderType {
-  kOpenGL,
-  kVulkan,
-};
+struct Renderer;
 
 struct Uniform {
   std::string name;
@@ -48,17 +45,11 @@ inline bool Loaded(Shader* shader) {
   return !shader->vert_source.empty() && !shader->frag_source.empty();
 }
 
-// Will load the source, won't actually compile it.
-// That happens on RendererUploadShader.
-bool LoadShader(const std::string_view& name,
-                const std::string_view& path,
-                ShaderType shader_type,
-                Shader*);
+bool LoadShader(const std::string_view& name, Renderer*, Shader*);
+
+void RemoveSources(Shader*);
 
 std::string ShaderSourceAsString(const std::vector<uint8_t>& src);
-
-// Will only remove the data.
-void UnloadShader(Shader*);
 
 // Thread safe. Will advance the UUID.
 uint64_t GetNextShaderUUID();

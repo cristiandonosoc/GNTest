@@ -62,7 +62,6 @@ std::string ToString(IndexRange);
 struct MeshRenderAction {
   Mesh* mesh = nullptr;
 
-  // TODO(Cristian): Define an IntVec4 for this.
   IntVec4 scissor;
   IndexRange index_range;
 
