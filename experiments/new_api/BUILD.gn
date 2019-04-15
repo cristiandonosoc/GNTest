@@ -18,3 +18,24 @@ executable("new_api") {
     "//warhol/window:sdl_opengl",
   ]
 }
+
+executable("tetris") {
+  sources = [
+    "drawer.cc",
+    "game.cc",
+    "tetris.cc",
+    "tetris_main.cc",
+  ]
+
+  deps = [
+    "//warhol/assets",
+    "//warhol/graphics:opengl_renderer",
+    "//warhol/math",
+    "//warhol/memory",
+    "//warhol/ui:imgui",
+    "//warhol/utils",
+    "//warhol/window:sdl_opengl",
+  ]
+}
+
+

@@ -67,8 +67,9 @@
 #  }
 #}
 
-group("new_api") {
+group("examples") {
   deps = [
-    "//experiments/new_api",
+    "//experiments/new_api:new_api",
+    "//experiments/new_api:tetris",
   ]
 }

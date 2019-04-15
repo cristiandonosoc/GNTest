@@ -34,4 +34,5 @@ void CreateImguiUI(Game*);
 
 void EndFrame(Game*, List<RenderCommand>);
 
+void UpdateTetris(Game*);
 

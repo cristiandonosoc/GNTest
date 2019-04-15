@@ -251,14 +251,16 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
                         RenderCommand* command,
                         ShaderHandles* shader_handles) {
   for (MeshRenderAction& action : command->actions.mesh_actions) {
+    size_t size = GetSize(action.index_range);
+    size_t offset = GetOffset(action.index_range);
+    if (size == 0)
+      continue;
+
     auto mesh_it = opengl->loaded_meshes.find(action.mesh->uuid.value);
     ASSERT(mesh_it != opengl->loaded_meshes.end());
 
     SetUniforms(command->shader, shader_handles, &action);
 
-    size_t size = GetSize(action.index_range);
-    ASSERT(size > 0);
-    size_t offset = GetOffset(action.index_range);
 
     MeshHandles& handles = mesh_it->second;
     GL_CHECK(glBindVertexArray(handles.vao));
