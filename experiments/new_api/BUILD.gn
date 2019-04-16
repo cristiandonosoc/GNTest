@@ -1,14 +1,13 @@
 # Copyright 2019, Cristián Donoso.
 # This code has a BSD license. See LICENSE.
 
-executable("new_api") {
+source_set("base") {
   sources = [
     "drawer.cc",
     "game.cc",
-    "graphics_api.cc",
   ]
 
-  deps = [
+  public_deps = [
     "//warhol/assets",
     "//warhol/graphics:opengl_renderer",
     "//warhol/math",
@@ -19,22 +18,24 @@ executable("new_api") {
   ]
 }
 
+executable("new_api") {
+  sources = [
+    "graphics_api.cc",
+  ]
+
+  deps = [
+    ":base",
+  ]
+}
+
 executable("tetris") {
   sources = [
-    "drawer.cc",
-    "game.cc",
     "tetris.cc",
     "tetris_main.cc",
   ]
 
   deps = [
-    "//warhol/assets",
-    "//warhol/graphics:opengl_renderer",
-    "//warhol/math",
-    "//warhol/memory",
-    "//warhol/ui:imgui",
-    "//warhol/utils",
-    "//warhol/window:sdl_opengl",
+    ":base",
   ]
 }
 

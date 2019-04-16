@@ -7,6 +7,8 @@
 
 #include <warhol/math/vec.h>
 
+#include "drawer.h"
+
 struct Game;
 
 namespace warhol {
@@ -48,6 +50,8 @@ struct Tetris {
   float last_shape_time = 0.0f;
 
   TetrisShape current_shape = {};
+
+  Drawer drawer;
 };
 
 // Define Shapes
@@ -57,7 +61,7 @@ struct Shapes {
   static Shape kSquare;
 };
 
-bool InitTetris(Tetris*);
+bool InitTetris(Game*, Tetris*);
 
 void UpdateTetris(Game*, Tetris*);
 

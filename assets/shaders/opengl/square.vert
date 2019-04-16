@@ -7,7 +7,7 @@
 // Attributes ------------------------------------------------------------------
 
 layout (location = 0) in vec2 in_pos;
-layout (location = 1) in vec3 in_color;
+layout (location = 1) in vec4 in_color;
 
 out vec4 color;
 
@@ -22,5 +22,5 @@ layout (std140) uniform Camera {
 
 void main() {
   gl_Position = camera.proj * camera.view * vec4(in_pos.xy, 0, 1.0);
-  color = vec4(in_color, 1.0f);
+  color = in_color;
 }

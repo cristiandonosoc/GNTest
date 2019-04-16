@@ -9,8 +9,8 @@
 
 namespace tetris {
 
-bool InitTetris(Tetris*) {
-  return true;
+bool InitTetris(Game* game, Tetris* tetris) {
+  return InitDrawer(&tetris->drawer, &game->renderer, &game->window);
 }
 
 // Update ----------------------------------------------------------------------
@@ -116,6 +116,23 @@ void UpdateTetris(Game* game, Tetris* tetris) {
   }
 
   UpdateBoard(tetris);
+
+  DrawerNewFrame(&tetris->drawer);
+}
+
+RenderCommand TetrisEndFrame(Game* game, Tetris* tetris) {
+  // Generate the board.
+  int side = game->window.height / 20;
+
+  int width = side * Tetris::kWidth;
+  int left_pad = (game->window.width - width) / 2;
+
+  DrawSquare(&tetris->drawer,
+             {left_pad, 0},
+             {left_pad + width, game->window.height},
+             Colors::kTeal);
+
+  return {};
 }
 
 }  // namespace tetris

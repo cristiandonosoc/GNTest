@@ -9,7 +9,7 @@
 
 struct DrawerVertex {
   Vec2 pos;
-  Vec3 color;
+  uint32_t color;
 };
 
 bool InitDrawer(Drawer* drawer, Renderer* renderer, Window* window) {
@@ -25,8 +25,8 @@ bool InitDrawer(Drawer* drawer, Renderer* renderer, Window* window) {
   drawer->mesh.uuid = GetNextMeshUUID();
   drawer->mesh.vertex_size = sizeof(DrawerVertex);
   drawer->mesh.attributes = {
-    {2, AttributeType::kFloat, false},    // Pos.
-    {3, AttributeType::kFloat, false},    // Color.
+    {2, AttributeType::kFloat, false},  // Pos.
+    {4, AttributeType::kUint8, true},   // Color.
   };
 
   InitMeshPools(&drawer->mesh, MEGABYTES(16), MEGABYTES(16));
@@ -67,7 +67,7 @@ void DrawerNewFrame(Drawer* drawer) {
   ResetMesh(&drawer->mesh);
 }
 
-void DrawSquare(Drawer* drawer, Pair<int> bl, Pair<int> tr, Vec3 color) {
+void DrawSquare(Drawer* drawer, Pair<int> bl, Pair<int> tr, uint32_t color) {
   SCOPE_LOCATION();
 
   DrawerVertex vertices[4];
@@ -126,6 +126,7 @@ RenderCommand DrawerEndFrame(Drawer* drawer) {
   render_command.config.cull_faces = false;
   render_command.config.depth_test = false;
   render_command.config.scissor_test = false;
+  render_command.config.wireframe_mode = true;
   render_command.camera = &drawer->camera;
   render_command.shader = &drawer->shader;
   render_command.actions.mesh_actions = std::move(actions);

@@ -15,7 +15,8 @@ struct Colors {
   static constexpr uint32_t kBlue=    0xff'ff'00'00;
   static constexpr uint32_t kGreen =  0xff'00'ff'00;
   static constexpr uint32_t kRed =    0xff'00'00'ff;
-  static constexpr uint32_t kWhite =  0xff'ff'ff'ff;
+  static constexpr uint32_t kWhite = 0xff'ff'ff'ff;
+  static constexpr uint32_t kTeal = 0xff'f9'f0'ea;
 };
 
 struct Drawer {
@@ -40,7 +41,7 @@ void ShutdownDrawer(Drawer*);
 
 void DrawerNewFrame(Drawer*);
 
-void DrawSquare(Drawer*, Pair<int> bl, Pair<int> tr, Vec3 color);
+void DrawSquare(Drawer*, Pair<int> bl, Pair<int> tr, uint32_t color);
 
 ::warhol::RenderCommand DrawerEndFrame(Drawer*);
 

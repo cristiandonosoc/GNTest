@@ -45,11 +45,6 @@ int main() {
                        (float)game.window.width / (float)game.window.height,
                        0.1f, 100.f);
 
-  LOG(DEBUG) << "Setting drawer.";
-
-  Drawer drawer;
-  InitDrawer(&drawer, &window);
-
   LOG(DEBUG) << "Staring game loop.";
 
   Vec3 delta;
@@ -86,13 +81,22 @@ int main() {
         Vec3 color = {};
 
         float r = 0.5f + 0.5f* sin(sqrt(u*u + v*v) * 25 * game.time.seconds);
+        float max = -1.0f;
         color.x = r * sin(delta.x);
+        if (color.x > max) max = color.x;
         color.y = r * sin(delta.y);
+        if (color.y > max) max = color.y;
         color.z = r * sin(delta.z);
+        if (color.z > max) max = color.z;
 
+        IntVec3 ic;
+        ic.x = (uint8_t)(256 * std::clamp(color.x, 0.0f, 1.0f));
+        ic.y = (uint8_t)(256 * std::clamp(color.y, 0.0f, 1.0f));
+        ic.z = (uint8_t)(256 * std::clamp(color.z, 0.0f, 1.0f));
+
+        uint32_t final_color = 0xff000000 | ic.z << 16 | ic.y << 8 | ic.x;
         DrawSquare(&game.drawer, {x + b, y + b}, {x + sq - b, y + sq - b},
-                   color);
-
+                   final_color);
 
         x += sq;
       }

@@ -28,7 +28,7 @@ int main() {
   InitMemoryPool(&memory_pool, MEGABYTES(1));
 
   Tetris tetris;
-  if (!InitTetris(&tetris)) {
+  if (!InitTetris(&game, &tetris)) {
     LOG(ERROR) << "Could not initialize tetris.";
     return 1;
   }
@@ -54,10 +54,8 @@ int main() {
 
     UpdateTetris(&game, &tetris);
 
-
-
     auto command_list = CreateList<RenderCommand>(&memory_pool);
-    /* Push(&command_list, TetrisEndFrame(&game, &tetris)); */
+    Push(&command_list, TetrisEndFrame(&game, &tetris));
     Push(&command_list, ImguiEndFrame(&game.imgui));
 
     EndFrame(&game, std::move(command_list));

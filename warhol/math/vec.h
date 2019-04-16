@@ -253,6 +253,14 @@ inline size_t Hash(const Vec3& vec) {
   return result;
 }
 
+template <typename T>
+struct Tvec3 {
+  T x, y, z;
+};
+
+using IntVec3 = Tvec3<int>;
+
+
 template<typename T>
 struct Tvec4 {
   T x, y, z, w;
