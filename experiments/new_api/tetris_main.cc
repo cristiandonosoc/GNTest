@@ -1,13 +1,13 @@
 // Copyright 2019, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include <thread>
-
 #include <warhol/graphics/graphics.h>
 #include <warhol/memory/memory_pool.h>
 #include <warhol/ui/imgui.h>
 #include <warhol/utils/log.h>
 #include <warhol/window/window.h>
+
+#include <thread>
 
 #include "game.h"
 #include "tetris.h"

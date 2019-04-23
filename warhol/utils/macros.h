@@ -3,9 +3,42 @@
 
 #pragma once
 
+// Join two macros into one string. Typical usage if for using __LINE__:
+//
+// const char* STRINGIFY(some_string_, __LINE__) = "bla";
+//
+// turns into:
+//
+// const char* some_string_22 = "bla";
 #define STRINGIFY2(x, y) x##y
 #define STRINGIFY(x, y) STRINGIFY2(x, y)
 
+// DEBUG_MODE: Whether the binary is a debug build (-g in clang).
+#ifndef DEBUG_MODE
+#ifndef NDEBUG
+#define DEBUG_MODE 1
+#else
+#define DEBUG_MODE 0
+#endif
+#endif
+
+// Should only be used in array types. This won't work with a vector.
+#define ARRAY_SIZE(array) (int)(sizeof((array)) / sizeof((array)[0]))
+
+#define SWAP(a, b) \
+  {                \
+    auto tmp = a;  \
+    a = b;         \
+    b = tmp;       \
+  }
+
+// This macro is meant to to create a scope that will only run once:
+//
+// ONCE() {
+//   ...
+//   <LOGIC THAT WILL ONLY RUN ONCE>
+//   ...
+// }
 #define ONCE()                                         \
   static bool STRINGIFY(__once_test, __LINE__) = true; \
   if (STRINGIFY(__once_test, __LINE__)) {              \
@@ -43,6 +76,11 @@
 #if defined(_MSC_VER)
   #define __PRETTY_FUNCTION__ __FUNCTION__
 #endif
+
+// Constructors ----------------------------------------------------------------
+//
+// This macros are ways of shorthanding the annoying C++ constructos syntax into
+// something quicker to write and (hopefully) easier to understand.
 
 // Most resource holder objects within warhol have this constructor format,
 // so a macro here make sense.
@@ -95,11 +133,4 @@
   class_name(class_name&&) = delete;       \
   class_name& operator=(class_name&&) = delete;
 
-#define ARRAY_SIZE(array) (int)(sizeof((array)) / sizeof((array)[0]))
 
-#define SWAP(a, b) \
-  {                \
-    auto tmp = a;  \
-    a = b;         \
-    b = tmp;       \
-  }

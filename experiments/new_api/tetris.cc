@@ -10,6 +10,7 @@
 namespace tetris {
 
 bool InitTetris(Game* game, Tetris* tetris) {
+  *tetris = {};
   return InitDrawer(&tetris->drawer, &game->renderer, &game->window);
 }
 
@@ -25,26 +26,10 @@ bool HasCurrentShape(Tetris* tetris) {
   return tetris->current_shape.shape;
 }
 
-void UpdateNewShape(Game* game, Tetris* tetris) {
-  if (tetris->last_shape_time + tetris->next_shape_tick < game->time.seconds)
-    return;
 
-  // Create a new shape.
-  tetris->current_shape.pos.x = rand() % Tetris::kWidth;
-  tetris->current_shape.pos.y = Tetris::kHeight;
-}
-
-void UpdateCurrentShape(Game* game, Tetris* tetris) {
-  if (tetris->last_move_time + tetris->move_tick > game->time.seconds) {
-    tetris->last_move_time = game->time.seconds;
-    tetris->current_shape.pos.y--;
-  }
-}
-
-/* constexpr uint8_t kDeadBlock = 1;   // A block that is already stationed. */
-constexpr uint8_t kLiveBlock = 2;   // A block of a current shape.
-
-int CoordToPos(int x, int y) {
+int CoordToPos(size_t x, size_t y) {
+  ASSERT(x < Tetris::kWidth);
+  ASSERT(y < Tetris::kHeight);
   return y * Tetris::kWidth + x;
 }
 
@@ -57,6 +42,7 @@ void ClearLiveShape(Tetris* tetris) {
   for (int y = 0; y < Tetris::kHeight; y++) {
     for (int x = 0; x < Tetris::kWidth; x++) {
       int index = CoordToPos(x, y);
+      ASSERT(index < ARRAY_SIZE(tetris->board));
       if (tetris->board[index] == kLiveBlock)
         tetris->board[index] = 0;
     }
@@ -100,9 +86,29 @@ void PlaceCurrentShape(Tetris* tetris) {
 
 void UpdateBoard(Tetris* tetris) {
   ClearLiveShape(tetris);
-
-  // We need to check for collision.
   PlaceCurrentShape(tetris);
+}
+
+void UpdateNewShape(Game* game, Tetris* tetris) {
+  if (tetris->last_shape_time + tetris->next_shape_tick > game->time.seconds)
+    return;
+
+
+  // Create a new shape.
+  tetris->current_shape.shape = &Shapes::kSquare;
+  tetris->current_shape.pos.x = rand() % Tetris::kWidth;
+  tetris->current_shape.pos.y = Tetris::kHeight - 1;
+  tetris->last_shape_time = game->time.seconds;
+  LOG(DEBUG) << "Creating new shape: " << tetris->current_shape.pos.ToString();
+}
+
+void UpdateCurrentShape(Game* game, Tetris* tetris) {
+  if (tetris->last_move_time + tetris->move_tick > game->time.seconds) {
+    return;
+  }
+
+  tetris->last_move_time = game->time.seconds;
+  tetris->current_shape.pos.y--;
 }
 
 }  // namespace
@@ -120,19 +126,76 @@ void UpdateTetris(Game* game, Tetris* tetris) {
   DrawerNewFrame(&tetris->drawer);
 }
 
-RenderCommand TetrisEndFrame(Game* game, Tetris* tetris) {
+// End Frame -------------------------------------------------------------------
+
+namespace {
+
+void DrawBorderBox(Game* game, Tetris* tetris) {
   // Generate the board.
   int side = game->window.height / 20;
-
   int width = side * Tetris::kWidth;
   int left_pad = (game->window.width - width) / 2;
 
+  int border = 3;
   DrawSquare(&tetris->drawer,
-             {left_pad, 0},
-             {left_pad + width, game->window.height},
+             {left_pad - border, 0},
+             {left_pad, game->window.height},
              Colors::kTeal);
 
-  return {};
+  DrawSquare(&tetris->drawer,
+             {left_pad + width, 0},
+             {left_pad + width + border, game->window.height},
+             Colors::kTeal);
+}
+
+int BlockTypeToColor(uint8_t type) {
+  (void)type;
+  return Colors::kBlue;
+}
+
+void DrawBlock(Game* game, Tetris* tetris, uint8_t type, int x, int y) {
+  // Generate the board.
+  int side = game->window.height / 20;
+  int width = side * Tetris::kWidth;
+  int left_pad = (game->window.width - width) / 2;
+
+  int color = BlockTypeToColor(type);
+
+  int ax = left_pad + x * side;
+  int ay = game->window.height - y * side;
+  DrawSquare(&tetris->drawer, {ax, ay}, {ax + side, ay + side}, color);
+}
+
+void DrawBoard(Game* game, Tetris* tetris) {
+  for (int y = 0; y < Tetris::kHeight; y++) {
+    for (int x = 0; x < Tetris::kWidth; x++) {
+      uint8_t square = GetSquare(tetris, x, y);
+
+      switch (square) {
+        case kLiveBlock:
+          DrawBlock(game, tetris, square, x, y);
+        case 0:
+          continue;
+        default:
+          NOT_REACHED("Invalid square type");
+      }
+    }
+  }
+}
+
+}  // namespace
+
+uint8_t GetSquare(Tetris* tetris, size_t x, size_t y) {
+  ASSERT(x < Tetris::kWidth);
+  ASSERT(y < Tetris::kHeight);
+  return tetris->board[CoordToPos(x, y)];
+}
+
+RenderCommand TetrisEndFrame(Game* game, Tetris* tetris) {
+  DrawBorderBox(game, tetris);
+  DrawBoard(game, tetris);
+
+  return DrawerEndFrame(&tetris->drawer);
 }
 
 }  // namespace tetris

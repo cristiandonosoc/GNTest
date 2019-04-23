@@ -17,6 +17,10 @@ struct RenderCommand;
 
 namespace tetris {
 
+
+/* constexpr uint8_t kDeadBlock = 1;   // A block that is already stationed. */
+constexpr uint8_t kLiveBlock = 2;   // A block of a current shape.
+
 enum class Move {
   kUp,
   kDown,
@@ -53,6 +57,8 @@ struct Tetris {
 
   Drawer drawer;
 };
+
+uint8_t GetSquare(Tetris*, size_t x, size_t y);
 
 // Define Shapes
 

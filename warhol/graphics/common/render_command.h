@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "warhol/math/vec.h"
 #include "warhol/containers/list.h"
+#include "warhol/math/vec.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {

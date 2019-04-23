@@ -3,16 +3,17 @@
 
 #include "warhol/graphics/opengl/renderer_backend.h"
 
-#include "warhol/scene/camera.h"
 #include "warhol/graphics/common/mesh.h"
+#include "warhol/graphics/common/renderer.h"
 #include "warhol/graphics/common/shader.h"
 #include "warhol/graphics/common/texture.h"
-#include "warhol/graphics/common/renderer.h"
 #include "warhol/graphics/opengl/mesh.h"
 #include "warhol/graphics/opengl/shader.h"
 #include "warhol/graphics/opengl/texture.h"
+#include "warhol/scene/camera.h"
 #include "warhol/utils/debug.h"
 #include "warhol/utils/log.h"
+#include "warhol/utils/macros.h"
 
 namespace warhol {
 namespace opengl {
@@ -288,8 +289,23 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
   GL_CHECK(glBindVertexArray(NULL));
 }
 
+void ValidateRenderCommands(List<RenderCommand>* commands) {
+  for (auto& command : *commands) {
+    ASSERT(command.camera);
+    ASSERT(command.shader);
+    ASSERT(command.type == RenderCommandType::kMesh);
+    for (auto& action : command.actions.mesh_actions) {
+      ASSERT(action.mesh);
+    }
+  }
+}
+
 void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
                            List<RenderCommand>* commands) {
+#if DEBUG_MODE
+  ValidateRenderCommands(commands);
+#endif
+
   for (auto& command : *commands) {
     auto shader_it = opengl->loaded_shaders.find(command.shader->uuid.value);
     ASSERT(shader_it != opengl->loaded_shaders.end());
