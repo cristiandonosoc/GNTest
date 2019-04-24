@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "warhol/math/vec.h"
+#include "warhol/utils/assert.h"
 
 namespace warhol {
 
@@ -19,15 +20,17 @@ enum class Keys {
   kPageUp, kPageDown, kHome, kEnd, kInsert, kDelete,
   kBackspace, kSpace, kEnter, kEscape,
   kTab, kCtrl, kAlt, kShift, kSuper /* windows key */,
-  kLAST,  // Not a key, used to verify the input buffer size.
+  kLast,  // Not a key, used to verify the input buffer size.
 };
 
 struct InputState {
   static constexpr uint8_t kInputSize = 128;
+  static_assert((uint8_t)Keys::kLast < InputState::kInputSize);
+
   bool keys_down[kInputSize];
   bool keys_up[kInputSize];
 
-  // Actual control state.
+  // These are equal to keys_down[<ARROW KEY>] == true.
   bool up = false;
   bool down = false;
   bool left = false;
@@ -55,6 +58,16 @@ struct InputState {
   static void InitFrame(InputState*);
 };
 
-static_assert((uint8_t)Keys::kLAST < InputState::kInputSize);
+inline bool IsDown(InputState* input, Keys key) {
+  int val = (int)key;
+  ASSERT(val < (int)Keys::kLast);
+  return input->keys_down[val];
+}
+
+inline bool WasUp(InputState* input, Keys key) {
+  int val = (int)key;
+  ASSERT(val < (int)Keys::kLast);
+  return input->keys_up[val];
+}
 
 }  // warhol

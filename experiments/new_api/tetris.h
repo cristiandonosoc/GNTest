@@ -47,8 +47,11 @@ struct Tetris {
   static constexpr int kHeight = 20;
 
   uint8_t board[kWidth * kHeight] = {};
-  float move_tick = 1.0f;   // In seconds.
+  float move_tick = 0.7f;   // In seconds.
   float last_move_time = 0.0f;
+
+  float side_move_tick = 0.2f;
+  float last_side_move = 0.0f;
 
   float next_shape_tick = 1.0f;
   float last_shape_time = 0.0f;

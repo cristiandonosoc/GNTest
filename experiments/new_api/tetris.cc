@@ -65,12 +65,17 @@ Pair<int> MoveCoord(Pair<int> coord, Move move) {
   return {};
 }
 
+bool InBounds(Tetris* tetris, size_t x, size_t y) {
+  return x < tetris->kWidth && y < tetris->kHeight;
+}
+
 void PlaceCurrentShape(Tetris* tetris) {
   if (!HasCurrentShape(tetris))
     return;
 
   Pair<int> coord;
 
+  tetris->board[CoordToPos(tetris->current_shape.pos)] = kLiveBlock;
   for (int i = -1; i < ARRAY_SIZE(tetris->current_shape.shape->moves); i++) {
     if (i == -1) {
       coord = tetris->current_shape.pos;
@@ -79,10 +84,18 @@ void PlaceCurrentShape(Tetris* tetris) {
                         tetris->current_shape.shape->moves[i]);
     }
 
+    if (InBounds(tetris, coord.x, coord.y))
+      tetris->board[CoordToPos(coord)] = kLiveBlock;
   }
-
-  tetris->board[CoordToPos(tetris->current_shape.pos)] = kLiveBlock;
 }
+
+#define PASSED_LIMIT(last, tick, limit) (last + tick < limit)
+
+}  // namespace
+
+// Update ----------------------------------------------------------------------
+
+namespace {
 
 void UpdateBoard(Tetris* tetris) {
   ClearLiveShape(tetris);
@@ -92,17 +105,36 @@ void UpdateBoard(Tetris* tetris) {
 void UpdateNewShape(Game* game, Tetris* tetris) {
   if (tetris->last_shape_time + tetris->next_shape_tick > game->time.seconds)
     return;
-
+  tetris->last_shape_time = game->time.seconds;
 
   // Create a new shape.
   tetris->current_shape.shape = &Shapes::kSquare;
   tetris->current_shape.pos.x = rand() % Tetris::kWidth;
   tetris->current_shape.pos.y = Tetris::kHeight - 1;
-  tetris->last_shape_time = game->time.seconds;
   LOG(DEBUG) << "Creating new shape: " << tetris->current_shape.pos.ToString();
 }
 
+void UpdateSideMove(Game* game, Tetris* tetris) {
+  if (tetris->last_side_move + tetris->side_move_tick > game->time.seconds)
+    return;
+  tetris->last_side_move = game->time.seconds;
+
+  // Left trumps right (down with capitalism!).
+  auto& pos = tetris->current_shape.pos;
+  if (game->input.left) {
+    pos.x--;
+  } else {
+    pos.x++;
+  }
+
+  pos.x = std::clamp(pos.x, 0, tetris->kWidth - 1);
+}
+
 void UpdateCurrentShape(Game* game, Tetris* tetris) {
+  if (game->input.left || game->input.right)
+    UpdateSideMove(game, tetris);
+
+  // Move the shape down anyway.
   if (tetris->last_move_time + tetris->move_tick > game->time.seconds) {
     return;
   }
@@ -130,22 +162,33 @@ void UpdateTetris(Game* game, Tetris* tetris) {
 
 namespace {
 
-void DrawBorderBox(Game* game, Tetris* tetris) {
+void DrawBackground(Game* game, Tetris* tetris) {
   // Generate the board.
   int side = game->window.height / 20;
   int width = side * Tetris::kWidth;
-  int left_pad = (game->window.width - width) / 2;
+  int left = (game->window.width - width) / 2;
+  int right = left + width;
 
   int border = 3;
-  DrawSquare(&tetris->drawer,
-             {left_pad - border, 0},
-             {left_pad, game->window.height},
+  // Draw border.
+  DrawSquare(&tetris->drawer, {left - border, 0}, {left, game->window.height},
              Colors::kTeal);
 
-  DrawSquare(&tetris->drawer,
-             {left_pad + width, 0},
-             {left_pad + width + border, game->window.height},
+  DrawSquare(&tetris->drawer, {right, 0}, {right + border, game->window.height},
              Colors::kTeal);
+
+  // Draw the grid.
+  for (int y = 1; y < tetris->kHeight; y++) {
+    DrawSquare(&tetris->drawer, {left, y * side}, {right, y * side - 1},
+               Colors::kGray);
+  }
+
+  for (int x = 1; x < tetris->kWidth; x++) {
+    DrawSquare(&tetris->drawer,
+               {left + x * side, 0},
+               {left + x * side - 1, game->window.height},
+               Colors::kGray);
+  }
 }
 
 int BlockTypeToColor(uint8_t type) {
@@ -163,7 +206,7 @@ void DrawBlock(Game* game, Tetris* tetris, uint8_t type, int x, int y) {
 
   int ax = left_pad + x * side;
   int ay = game->window.height - y * side;
-  DrawSquare(&tetris->drawer, {ax, ay}, {ax + side, ay + side}, color);
+  DrawSquare(&tetris->drawer, {ax, ay}, {ax + side - 1, ay + side - 1}, color);
 }
 
 void DrawBoard(Game* game, Tetris* tetris) {
@@ -192,13 +235,11 @@ uint8_t GetSquare(Tetris* tetris, size_t x, size_t y) {
 }
 
 RenderCommand TetrisEndFrame(Game* game, Tetris* tetris) {
-  DrawBorderBox(game, tetris);
+  DrawBackground(game, tetris);
   DrawBoard(game, tetris);
 
   return DrawerEndFrame(&tetris->drawer);
 }
 
 }  // namespace tetris
-
-
 

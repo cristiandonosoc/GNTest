@@ -17,6 +17,7 @@ struct Colors {
   static constexpr uint32_t kRed =    0xff'00'00'ff;
   static constexpr uint32_t kWhite = 0xff'ff'ff'ff;
   static constexpr uint32_t kTeal = 0xff'f9'f0'ea;
+  static constexpr uint32_t kGray = 0xff'99'99'99;
 };
 
 struct Drawer {
