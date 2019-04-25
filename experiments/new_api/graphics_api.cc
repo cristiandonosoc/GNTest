@@ -89,10 +89,11 @@ int main() {
         color.z = r * sin(delta.z);
         if (color.z > max) max = color.z;
 
+
         IntVec3 ic;
-        ic.x = (uint8_t)(256 * std::clamp(color.x, 0.0f, 1.0f));
-        ic.y = (uint8_t)(256 * std::clamp(color.y, 0.0f, 1.0f));
-        ic.z = (uint8_t)(256 * std::clamp(color.z, 0.0f, 1.0f));
+        ic.x = (uint8_t)(256 * Clamp(color.x, 0.0f, 1.0f));
+        ic.y = (uint8_t)(256 * Clamp(color.y, 0.0f, 1.0f));
+        ic.z = (uint8_t)(256 * Clamp(color.z, 0.0f, 1.0f));
 
         uint32_t final_color = 0xff000000 | ic.z << 16 | ic.y << 8 | ic.x;
         DrawSquare(&game.drawer, {x + b, y + b}, {x + sq - b, y + sq - b},

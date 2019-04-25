@@ -20,7 +20,7 @@ if (compiler == "msvc") {
 
   config("compiler") {
     cflags_cc = [
-      "/std:c++17",
+      "/std:c++latest",
       "/EHsc",
       "/GR-",
     ]

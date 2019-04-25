@@ -4,6 +4,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdlib.h>
 
 // For some reason math.h doesn't give us the symbols in some OS (eg. osx).
 #include <cmath>

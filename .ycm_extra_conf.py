@@ -39,7 +39,7 @@ flags = [
 '-Wextra',
 'Wmissing-prototypes',
 '-x', 'c++',
-'-std=c++1z',
+'-std=c++17',
 '-isystem', '/usr/local/google/home/donosoc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include/c++/v1',
 '-I', os.path.join(os.getcwd()),
 '-I', os.path.join(os.getcwd(), 'src'),
@@ -49,17 +49,17 @@ flags = [
 '-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui', 'examples'),
 '-isystem', os.path.join(os.getcwd(), 'third_party', 'catch2'),
 # Fake headers so that YCM doesn't explode win windows
-'-isystem', '/mnt/c/Programming/external/fake-windows-headers-for-ycm',
-'-isystem', '/mnt/c/Programming/include',
-'-isystem', '/mnt/c/Programming/vulkan/Include',
+'-isystem', '/mnt/c/Code/external/fake-windows-headers-for-ycm',
+'-isystem', '/mnt/c/Code/include',
+'-isystem', '/mnt/c/Code/vulkan/Include',
 
 '-D', 'WARHOL_SDL_ENABLED',
 '-D', 'WARHOL_VULKAN_ENABLED',
 '-D', 'WARHOL_OPENGL_ENABLED',
 
 # Linux
-'-I', os.path.join('usr', 'include'),
-'-I', os.path.join('usr', 'local', 'include'),
+'-I', os.path.join('/usr', 'include'),
+'-I', os.path.join('/usr', 'local', 'include'),
 '-I', os.path.expanduser('~/Local/include'),
 ]
 

@@ -127,7 +127,7 @@ void UpdateSideMove(Game* game, Tetris* tetris) {
     pos.x++;
   }
 
-  pos.x = std::clamp(pos.x, 0, tetris->kWidth - 1);
+  pos.x = Clamp(pos.x, 0, tetris->kWidth - 1);
 }
 
 void UpdateCurrentShape(Game* game, Tetris* tetris) {
