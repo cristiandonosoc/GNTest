@@ -9,6 +9,6 @@
 namespace warhol {
 
 // Returns a concatenate of path parts joined together (normally by '/').
-std::string PathJoin(std::vector<std::string_view> paths);
+std::string PathJoin(std::vector<std::string> paths);
 
 }  // namespace warhol

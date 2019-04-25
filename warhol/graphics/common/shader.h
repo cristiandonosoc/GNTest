@@ -45,7 +45,7 @@ inline bool Loaded(Shader* shader) {
   return !shader->vert_source.empty() && !shader->frag_source.empty();
 }
 
-bool LoadShader(const std::string_view& name, Renderer*, Shader*);
+bool LoadShader(const std::string& name, Renderer*, Shader*);
 
 void RemoveSources(Shader*);
 

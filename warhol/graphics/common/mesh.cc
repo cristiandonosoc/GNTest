@@ -32,7 +32,7 @@ Mesh::~Mesh() {
 uint64_t GetNextMeshUUID() { return kNextMeshUUID++; }
 
 
-bool LoadMesh(const std::string_view& model_path, Mesh* mesh) {
+bool LoadMesh(const std::string& model_path, Mesh* mesh) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;

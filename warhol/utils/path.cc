@@ -8,7 +8,7 @@
 namespace warhol {
 
 // TODO(Cristian): Use std::filesystem (C++17) for this eventually.
-std::string PathJoin(std::vector<std::string_view> paths) {
+std::string PathJoin(std::vector<std::string> paths) {
   std::vector<std::string> pieces;
   pieces.reserve(2 * paths.size() - 1);
   for (size_t i = 0; i < paths.size(); i++) {

@@ -9,7 +9,7 @@
 
 namespace warhol {
 
-bool ReadWholeFile(const std::string_view& path,
+bool ReadWholeFile(const std::string& path,
                    std::string* out,
                    bool add_extra_zero) {
   FILE* file;
@@ -28,7 +28,7 @@ bool ReadWholeFile(const std::string_view& path,
   out->clear();
   int pad = add_extra_zero ? 1 : 0;
   out->resize(file_size + pad);
-  auto result = fread(out->data(), 1, file_size, file);
+  auto result = fread((void*)out->data(), 1, file_size, file);
   if (result != file_size) {
     LOG(ERROR) << "Could not read file: " << path.data();
     return false;
@@ -46,7 +46,7 @@ FileHandle::~FileHandle() {
     CloseFile(this);
 }
 
-FileHandle OpenFile(const std::string_view& path, bool append) {
+FileHandle OpenFile(const std::string& path, bool append) {
   FileHandle handle;
   FILE* file = fopen(path.data(), append ? "a" : "w+");
   if (file == NULL)

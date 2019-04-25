@@ -44,7 +44,7 @@ std::vector<uint8_t> StringToSource(const std::string& str) {
   return src;
 }
 
-bool ParseShader(const std::string_view& base_path, SubShaderType shader_type,
+bool ParseShader(const std::string& base_path, SubShaderType shader_type,
                  ShaderParseResult* out) {
   std::string shader_path;
   if (shader_type == SubShaderType::kVertex) {
@@ -81,8 +81,8 @@ uint64_t GetNextShaderUUID() { return kNextShaderUUID++; }
 
 namespace {
 
-bool LoadShader(const std::string_view& name,
-                const std::string_view& base_path,
+bool LoadShader(const std::string& name,
+                const std::string& base_path,
                 RendererType shader_type,
                 Shader* shader) {
 
@@ -120,7 +120,7 @@ bool LoadShader(const std::string_view& name,
 }  // namespace
 
 
-bool LoadShader(const std::string_view& name, Renderer* renderer, Shader* shader) {
+bool LoadShader(const std::string& name, Renderer* renderer, Shader* shader) {
   if (!LoadShader(name, GetShaderPath(name, renderer->type),
                   renderer->type, shader)) {
     LOG(ERROR) << "Could not load shader " << name;
