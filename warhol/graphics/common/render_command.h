@@ -62,7 +62,7 @@ std::string ToString(IndexRange);
 struct MeshRenderAction {
   Mesh* mesh = nullptr;
 
-  IntVec4 scissor;
+  Int4 scissor;
   IndexRange index_range;
 
   // The counts of this are defined in the corresponding shader.

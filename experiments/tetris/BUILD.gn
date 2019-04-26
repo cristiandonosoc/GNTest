@@ -3,8 +3,13 @@
 
 source_set("base") {
   sources = [
+    "drawer.h",
     "drawer.cc",
+    "game.h",
     "game.cc",
+    "shape.h",
+    "tetris.h",
+    "tetris.cc",
   ]
 
   public_deps = [
@@ -18,9 +23,9 @@ source_set("base") {
   ]
 }
 
-executable("new_api") {
+executable("tetris") {
   sources = [
-    "graphics_api.cc",
+    "main.cc",
   ]
 
   deps = [

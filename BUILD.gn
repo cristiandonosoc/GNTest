@@ -31,6 +31,12 @@ group("default") {
   ]
 }
 
+group("tetris") {
+  deps = [
+    "//experiments/tetris",
+  ]
+}
+
 #group("imgui_example") {
 #  deps = [
 #    "//third_party/imgui/examples:imgui_example",

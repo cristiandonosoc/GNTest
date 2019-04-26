@@ -1,80 +1,71 @@
-# This file is NOT licensed under the GPLv3, which is the license for the rest
-# of YouCompleteMe.
-#
-# Here's the license text for this file:
-#
-# This is free and unencumbered software released into the public domain.
-#
-# Anyone is free to copy, modify, publish, use, compile, sell, or
-# distribute this software, either in source code form or as a compiled
-# binary, for any purpose, commercial or non-commercial, and by any
-# means.
-#
-# In jurisdictions that recognize copyright laws, the author or authors
-# of this software dedicate any and all copyright interest in the
-# software to the public domain. We make this dedication for the benefit
-# of the public at large and to the detriment of our heirs and
-# successors. We intend this dedication to be an overt act of
-# relinquishment in perpetuity of all present and future rights to this
-# software under copyright law.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-# OTHER DEALINGS IN THE SOFTWARE.
-#
-# For more information, please refer to <http://unlicense.org/>
-
 import os
+import sys
 import ycm_core
 
-# These are the compilation flags that will be used in case there's no
-# compilation database set (by default, one is not set).
-# CHANGE THIS LIST OF FLAGS. YES, THIS IS THE DROID YOU HAVE BEEN LOOKING FOR.
+# Attemp to load the local file that will have the correct path for this machine.
+local_flags = []
+try:
+    sys.path.append(os.getcwd())
+    import ycm_extra_conf_local
+    local_flags = ycm_extra_conf_local.GetYCMLocalFlags()
+except Exception as err:
+    print(err)
+
 flags = [
 '-Wall',
 '-Wextra',
 'Wmissing-prototypes',
 '-x', 'c++',
 '-std=c++17',
-# '-isystem', '/mnt/c/Code/include/c++/v1',
-# '-isystem', '/usr/local/google/home/donosoc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include/c++/v1',
+
 '-I', os.path.join(os.getcwd()),
-'-I', os.path.join(os.getcwd(), 'src'),
-'-isystem', os.path.join(os.getcwd(), 'third_party'),
-'-isystem', os.path.join(os.getcwd(), 'third_party', 'include'),
-'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui'),
-'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui', 'examples'),
-'-isystem', os.path.join(os.getcwd(), 'third_party', 'catch2'),
-# Fake headers so that YCM doesn't explode win windows
-'-isystem', '/mnt/c/Code/external/fake-windows-headers-for-ycm',
-'-isystem', '/mnt/c/Code/include',
-'-isystem', '/mnt/c/Code/vulkan/Include',
 
 '-D', 'WARHOL_SDL_ENABLED',
 '-D', 'WARHOL_VULKAN_ENABLED',
 '-D', 'WARHOL_OPENGL_ENABLED',
 
-# Linux
-'-isystem', '/home/cdc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include/c++/v1',
-'-isystem', '/usr/local/include',
-'-isystem', '/home/cdc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include',
-'-isystem', '/usr/include/x86_64-linux-gnu',
-'-isystem', '/usr/include',
-'-I', os.path.join('/usr', 'local', 'include'),
-'-I', os.path.join('/usr', 'include'),
-'-I', os.path.expanduser('~/Local/include'),
+'-isystem', os.path.join(os.getcwd(), 'third_party'),
+'-isystem', os.path.join(os.getcwd(), 'third_party', 'include'),
+'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui'),
+'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui', 'examples'),
+'-isystem', os.path.join(os.getcwd(), 'third_party', 'catch2'),
+
+
+#'-isystem', os.path.join(os.getcwd(), 'third_party'),
+#'-isystem', os.path.join(os.getcwd(), 'third_party', 'include'),
+#'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui'),
+#'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui', 'examples'),
+#'-isystem', os.path.join(os.getcwd(), 'third_party', 'catch2'),
+#'-isystem', '/mnt/c/Code/include/c++/v1',
+#'-isystem', '/usr/local/google/home/donosoc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include/c++/v1',
+#'-I', os.path.join(os.getcwd()),
+#'-I', os.path.join(os.getcwd(), 'src'),
+## Fake headers so that YCM doesn't explode win windows
+#'-isystem', '/mnt/c/Code/external/fake-windows-headers-for-ycm',
+#'-isystem', '/mnt/c/Code/include',
+#'-isystem', '/mnt/c/Code/vulkan/Include',
+#
+#'-D', 'WARHOL_SDL_ENABLED',
+#'-D', 'WARHOL_VULKAN_ENABLED',
+#'-D', 'WARHOL_OPENGL_ENABLED',
+#
+## Linux
+#'-isystem', '/home/cdc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include/c++/v1',
+#'-isystem', '/usr/local/include',
+#'-isystem', '/home/cdc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include',
+#'-isystem', '/usr/include/x86_64-linux-gnu',
+#'-isystem', '/usr/include',
+#'-I', os.path.join('/usr', 'local', 'include'),
+#'-I', os.path.join('/usr', 'include'),
+#'-I', os.path.expanduser('~/Local/include'),
 ]
 
-if 'VULKAN_SDK' in os.environ:
-  flags += [
-    '-isystem', os.path.join(os.environ['VULKAN_SDK'], 'include'),
-  ]
+flags += local_flags
 
 
+################################################################################
+# YCM Classic Implementation
+################################################################################
 
 # Set this to the absolute path to the folder (NOT the file!) containing the
 # compile_commands.json file to use that instead of 'flags'. See here for

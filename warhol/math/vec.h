@@ -10,6 +10,46 @@
 
 namespace warhol {
 
+// New Implementation ----------------------------------------------------------
+
+template <typename T>
+struct _v2 {
+  T x, y;
+
+  _v2 operator+(const _v2& o) const { return {x + o.x, y + o.y}; }
+  void operator+=(const _v2& o) { x += o.x; y += o.y; }
+};
+
+using Int2 = _v2<int>;
+
+template <typename T>
+inline std::string ToString(const _v2<T>& v) {
+  return StringPrintf("X: %f, Y: %f", (float)v.x, (float)v.y);
+}
+
+template <typename T>
+struct _v3 {
+  T x, y, z;
+};
+
+using Int3 = _v3<int>;
+
+template<typename T>
+struct _v4 {
+  T x, y, z, w;
+};
+
+template <typename T>
+inline float Sum(const _v4<T>& v) {
+  return v.x + v.y + v.z + v.w;
+}
+
+using Vec4 = _v4<float>;
+using Int4 = _v4<int>;
+
+// Old implementation ----------------------------------------------------------
+
+
 // Normally vectors are also used as pairs, but Vec2 and Vec3 are very much
 // geared towards floats and didn't want to templatized them.
 // Because std::pair has this annoying interface, I provide a pair alternative.
@@ -252,26 +292,5 @@ inline size_t Hash(const Vec3& vec) {
   result = Math::CombineHash(result, Math::Hash(vec.z));
   return result;
 }
-
-template <typename T>
-struct Tvec3 {
-  T x, y, z;
-};
-
-using IntVec3 = Tvec3<int>;
-
-
-template<typename T>
-struct Tvec4 {
-  T x, y, z, w;
-};
-
-template <typename T>
-inline float Sum(const Tvec4<T>& v) {
-  return v.x + v.y + v.z + v.w;
-}
-
-using Vec4 = Tvec4<float>;
-using IntVec4 = Tvec4<int>;
 
 }  // namespace warhol

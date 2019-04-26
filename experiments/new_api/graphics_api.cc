@@ -90,7 +90,7 @@ int main() {
         if (color.z > max) max = color.z;
 
 
-        IntVec3 ic;
+        Int3 ic;
         ic.x = (uint8_t)(256 * Clamp(color.x, 0.0f, 1.0f));
         ic.y = (uint8_t)(256 * Clamp(color.y, 0.0f, 1.0f));
         ic.z = (uint8_t)(256 * Clamp(color.z, 0.0f, 1.0f));

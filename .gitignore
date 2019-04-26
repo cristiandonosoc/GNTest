@@ -5,3 +5,5 @@ examples/*
 doom_vulkan
 sdl_source
 *.log
+
+ycm_extra_conf_local.py
