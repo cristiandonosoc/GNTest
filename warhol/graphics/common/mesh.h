@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include <string>
+#include <optional>
 #include <vector>
 
 #include "warhol/math/vec.h"
@@ -69,7 +70,7 @@ struct Mesh {
 
 inline bool Staged(Mesh* mesh) { return mesh->staged.value; }
 
-bool LoadMesh(const std::string&, Mesh*);
+bool LoadMesh(const std::string_view&, Mesh*);
 void InitMeshPools(Mesh*, size_t vert_size, size_t index_size);
 
 inline bool Valid(Mesh* mesh) { return mesh->uuid.value != 0; }

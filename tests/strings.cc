@@ -9,7 +9,7 @@ namespace warhol {
 namespace test {
 
 TEST_CASE("Trim") {
-  std::string result;
+  std::string_view result;
 
   result = Trim("");
   CHECK(result.empty());

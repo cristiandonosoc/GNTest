@@ -16,17 +16,17 @@ std::string StringPrintfV(const char* fmt, va_list);
 
 std::string Concatenate(std::vector<std::string> strings);
 
-std::string Trim(const std::string& input,
-                      const std::string& chars_to_trim = "\t\r ");
+std::string_view Trim(const std::string_view& input,
+                      const std::string_view& chars_to_trim = "\t\r ");
 
-std::vector<std::string>
-SplitToLines(const std::string& input,
-             const std::string& delimites = "\n",
-             const std::string& chars_to_trim = "\t\r ");
+std::vector<std::string_view>
+SplitToLines(const std::string_view& input,
+             const std::string_view& delimites = "\n",
+             const std::string_view& chars_to_trim = "\t\r ");
 
 template <typename StringContainer>
 std::string Join(const StringContainer& lines,
-                 const std::string& separator = "") {
+                 const std::string_view& separator = "") {
   // Add the size of the lines.
   size_t length = 0;
   for (auto& line : lines) {
