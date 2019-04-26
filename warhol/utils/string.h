@@ -21,7 +21,7 @@ std::string_view Trim(const std::string_view& input,
 
 std::vector<std::string_view>
 SplitToLines(const std::string_view& input,
-             const std::string_view& delimites = "\n",
+             const std::string_view& delimiters = "\n",
              const std::string_view& chars_to_trim = "\t\r ");
 
 template <typename StringContainer>
