@@ -34,12 +34,16 @@ struct Location {
 // TODO: Add a context const char* so that the stack trace can have better
 //       contextual info.
 
-#ifndef NDEBUG
+#ifdef DEBUG_MODE
+
 #define SCOPE_LOCATION()                             \
   ::warhol::LocationBlock scope_location_##__LINE__( \
       {__FILE__, __LINE__, __PRETTY_FUNCTION__})
+
 #else
+
 #define SCOPE_LOCATION()
+
 #endif
 
 struct LocationStack {

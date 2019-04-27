@@ -8,6 +8,7 @@ source_set("base") {
     "game.h",
     "game.cc",
     "shape.h",
+    "shape.cc",
     "tetris.h",
     "tetris.cc",
   ]

@@ -12,10 +12,6 @@
 
 struct Game;
 
-namespace warhol {
-struct RenderCommand;
-}  // namespace warhol
-
 namespace tetris {
 
 enum class ShapeType {
@@ -44,8 +40,6 @@ struct Tetris {
 
   Drawer drawer;
 };
-
-uint8_t GetSquare(Tetris*, size_t x, size_t y);
 
 // Define Shapes
 

@@ -2,7 +2,7 @@ WARHOL_BASE=/mnt/c/Programming/projects/warhol
 
 
 make: test FORCE
-	ninja -C out experiments/new_api
+	ninja -C out
 
 test: FORCE
 	ninja -C out tests

@@ -6,10 +6,12 @@
 #include <sstream>
 
 #include "warhol/utils/location.h"
+#include "warhol/utils/macros.h"
 
 namespace warhol {
 
-#ifndef NDEBUG
+#ifdef DEBUG_MODE
+
 #define ASSERT(condition)                               \
   do {                                                  \
     if (!(condition)) {                                 \
@@ -32,6 +34,7 @@ namespace warhol {
 #define ASSERT(condition) do {} while (false)
 #define NOT_IMPLEMENTED() do {} while (false)
 #define NOT_REACHED() do {} while (false)
+
 #endif
 
 void AssertionFailed(Location loc, const char* condition,

@@ -22,7 +22,8 @@ config("default_include_dirs") {
 
 group("default") {
   deps = [
-    "//experiments:examples",
+    ":tetris",
+    #"//experiments:examples",
     #"//experiments:vulkan_test",
     #"//experiments:voxel_renderer",
     #"//experiments:work_queue",

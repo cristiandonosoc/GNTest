@@ -6,10 +6,15 @@
 #include <vector>
 
 #include <warhol/math/vec.h>
+#include <warhol/utils/assert.h>
 
 using namespace warhol;
 
 namespace tetris {
+
+constexpr uint8_t kDeadBlock = 1;   // A block that is already stationed.
+constexpr uint8_t kLiveBlock = 2;   // A block of a current shape.
+constexpr uint8_t kNone = UINT8_MAX;
 
 // The offsets define the places where this shape has a square offseted from its
 // position.
@@ -19,16 +24,35 @@ struct Shape {
 
 inline bool Valid(Shape* shape) { return !shape->offsets.empty(); }
 
-/* constexpr uint8_t kDeadBlock = 1;   // A block that is already stationed. */
-constexpr uint8_t kLiveBlock = 2;   // A block of a current shape.
-
 struct Board {
-  uint32_t width = 0;
-  uint32_t height = 0;
+  int width = 0;
+  int height = 0;
 
   std::vector<uint8_t> slots;
 };
 
 inline bool Valid(Board* board) { return !board->slots.empty(); }
+
+enum class CollisionType {
+  kNone,
+  kBorder,
+  kBottom,
+  kShape,     // Hit another shape square.
+};
+const char* CollisionTypeToString(CollisionType);
+
+// Checks if where a shape would move creates some kind of collision.
+CollisionType CheckShapeCollision(Board*, Shape*, Int2 pos, Int2 offset);
+
+// Utils -----------------------------------------------------------------------
+
+uint8_t GetSquare(Board*, Int2 coord);
+uint8_t GetSquare(Board*, int x, int y);
+
+int CoordToIndex(Board*, Int2 coord);
+int CoordToIndex(Board*, int x, int y);
+
+bool WithinBounds(Board*, Int2 coord);
+bool WithinBounds(Board*, int x, int y);
 
 }  // namespace tetris

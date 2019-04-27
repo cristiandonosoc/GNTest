@@ -14,10 +14,16 @@ namespace warhol {
 
 template <typename T>
 struct _v2 {
-  T x, y;
+  T x = 0;
+  T y = 0;
+
+  static _v2 Zero() { return {}; }
 
   _v2 operator+(const _v2& o) const { return {x + o.x, y + o.y}; }
   void operator+=(const _v2& o) { x += o.x; y += o.y; }
+
+  bool operator==(const _v2& o) const { return x == o.x && y == o.y; }
+  bool operator!=(const _v2& o) const { return x != o.x || y != o.y; }
 };
 
 using Int2 = _v2<int>;
