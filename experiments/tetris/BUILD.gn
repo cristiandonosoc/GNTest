@@ -11,6 +11,8 @@ source_set("base") {
     "shape.cc",
     "tetris.h",
     "tetris.cc",
+    "tetris_renderer.h",
+    "tetris_renderer.cc",
   ]
 
   public_deps = [

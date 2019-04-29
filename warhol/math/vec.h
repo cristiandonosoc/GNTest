@@ -26,6 +26,9 @@ struct _v2 {
   bool operator!=(const _v2& o) const { return x != o.x || y != o.y; }
 };
 
+template <typename T>
+inline bool IsZero(const _v2<T>& v) { return v.x == 0 && v.y == 0; }
+
 using Int2 = _v2<int>;
 
 template <typename T>

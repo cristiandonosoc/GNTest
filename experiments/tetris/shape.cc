@@ -64,9 +64,18 @@ uint8_t GetSquare(Board* board, Int2 pos) {
 
 uint8_t GetSquare(Board* board, int x, int y) {
   int index = CoordToIndex(board, x, y);
-  if (index < 0)
-    return kNone;
-  return board->slots[CoordToIndex(board, x, y)];
+  ASSERT(index >= 0);
+  return board->_slots[index];
+}
+
+void SetSquare(Board* board, uint8_t val, int x, int y) {
+  int index = CoordToIndex(board, x, y);
+  ASSERT(index >= 0);
+  board->_slots[index] = val;
+}
+
+void SetSquare(Board* board, uint8_t val, Int2 coord) {
+  return SetSquare(board, val, coord.x, coord.y);
 }
 
 bool WithinBounds(Board* board, Int2 pos) {

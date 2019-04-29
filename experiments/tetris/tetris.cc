@@ -5,20 +5,27 @@
 
 #include <stdlib.h>
 
-#include <map>
-
+#include "tetris_renderer.h"
 #include "game.h"
 
 namespace tetris {
+
+bool HasTickTimerTriggered(Game* game, TickTimer* timer) {
+  if (timer->last_tick + timer->length > game->time.seconds)
+    return false;
+
+  timer->last_tick = game->time.seconds;
+  return true;
+}
 
 bool InitTetris(Game* game, Tetris* tetris) {
   Board board = {};
   board.width = 10;
   board.height = 20;
   uint32_t slot_count = board.width * board.height;
-  board.slots.resize(slot_count);
+  board._slots.resize(slot_count);
   for (size_t i = 0; i < slot_count; i++) {
-    board.slots[i] = 0;
+    board._slots[i] = 0;
   }
 
   *tetris = {};
@@ -62,8 +69,8 @@ void ClearLiveShape(Tetris* tetris) {
       int index = CoordToIndex(board, x, y);
       if (index < 0)
         continue;
-      if (board->slots[index] == kLiveBlock)
-        board->slots[index] = 0;
+      if (GetSquare(board, x, y) == kLiveBlock)
+          SetSquare(board, 0, x, y);
     }
   }
 }
@@ -74,11 +81,11 @@ void PlaceCurrentShape(Tetris* tetris) {
 
   Int2 pos = tetris->current_shape.pos;
   Board* board = &tetris->board;
-  board->slots[CoordToIndex(board, tetris->current_shape.pos)] = kLiveBlock;
+  SetSquare(board, kLiveBlock, tetris->current_shape.pos);
   for (auto& offset : tetris->current_shape.shape.offsets) {
     auto new_pos = pos + offset;
     if (WithinBounds(board, new_pos))
-      board->slots[CoordToIndex(board, new_pos)] = kLiveBlock;
+    SetSquare(board, kLiveBlock, new_pos);
   }
 }
 
@@ -94,9 +101,8 @@ void UpdateBoard(Tetris* tetris) {
 }
 
 void UpdateNewShape(Game* game, Tetris* tetris) {
-  if (tetris->last_shape_time + tetris->next_shape_tick > game->time.seconds)
+  if (!HasTickTimerTriggered(game, &tetris->next_shape_tick))
     return;
-  tetris->last_shape_time = game->time.seconds;
 
   // Create a new shape.
   Board* board = &tetris->board;
@@ -111,9 +117,11 @@ void UpdateNewShape(Game* game, Tetris* tetris) {
 
 // Returns an offset of where the shape should move.
 Int2 UpdateSideMove(Game* game, Tetris* tetris) {
-  if (tetris->last_side_move + tetris->side_move_tick > game->time.seconds)
+  if (!game->input.left && !game->input.right)
     return {};
-  tetris->last_side_move = game->time.seconds;
+
+  if (!HasTickTimerTriggered(game, &tetris->side_move_tick))
+    return {};
 
   // Left trumps right (down with capitalism!).
   if (game->input.left)
@@ -125,11 +133,20 @@ Int2 UpdateSideMove(Game* game, Tetris* tetris) {
 }
 
 Int2 UpdateDownMovement(Game* game, Tetris* tetris) {
-  // Move the shape down anyway.
-  if (tetris->last_move_time + tetris->move_tick > game->time.seconds)
+  if (!game->input.down)
     return {};
 
-  tetris->last_move_time = game->time.seconds;
+  if (!HasTickTimerTriggered(game, &tetris->down_move_tick))
+    return {};
+
+  // Because we move down explicitly, we reset the auto move down timer.
+  tetris->auto_down_tick.last_tick = game->time.seconds;
+  return {0, -1};
+}
+
+Int2 UpdateAutoDownMovement(Game* game, Tetris* tetris) {
+  if (!HasTickTimerTriggered(game, &tetris->auto_down_tick))
+    return {};
   return {0, -1};
 }
 
@@ -137,7 +154,7 @@ void DoShapeCollision(Tetris* tetris, Int2 offset) {
   // We cristalize the shape.
   for (Int2& sqr_offset : tetris->current_shape.shape.offsets) {
     Int2 sqr_pos = tetris->current_shape.pos + sqr_offset + offset;
-    tetris->board.slots[CoordToIndex(&tetris->board, sqr_pos)] = kDeadBlock;
+    SetSquare(&tetris->board, kDeadBlock, sqr_pos);
   }
 
   tetris->current_shape = {};
@@ -145,13 +162,19 @@ void DoShapeCollision(Tetris* tetris, Int2 offset) {
 
 void UpdateCurrentShape(Game* game, Tetris* tetris) {
   SCOPE_LOCATION();
-  Int2 side_offset = {};
-  if (game->input.left || game->input.right)
-    side_offset = UpdateSideMove(game, tetris);
-  Int2 down_offset = UpdateDownMovement(game, tetris);
 
-  Int2 offset = side_offset + down_offset;
-  if (offset == Int2::Zero())
+  Int2 offset = {};
+  if (game->input.down) {
+    offset = UpdateDownMovement(game, tetris);
+  } else {
+    offset = UpdateAutoDownMovement(game, tetris);
+  }
+
+  if (!game->input.down) {
+    offset += UpdateSideMove(game, tetris);
+  }
+
+  if (IsZero(offset))
     return;
 
   LOG(DEBUG) << "Pos: " << ToString(tetris->current_shape.pos)
@@ -175,7 +198,7 @@ void UpdateCurrentShape(Game* game, Tetris* tetris) {
       /* tetris->current_shape.pos += down_offset; */
       return;
     case CollisionType::kBottom:
-      DoShapeCollision(tetris, down_offset);
+      DoShapeCollision(tetris, offset);
       return;
     case CollisionType::kShape:
       /* DoShapeCollision(tetris, offset); */
@@ -200,110 +223,8 @@ void UpdateTetris(Game* game, Tetris* tetris) {
 
 // End Frame -------------------------------------------------------------------
 
-namespace {
-
-void DrawBackground(Game* game, Tetris* tetris) {
-  // Generate the board.
-  Board* board = &tetris->board;
-  int side = game->window.height / 20;
-  int width = side * tetris->board.width;
-  int left = (game->window.width - width) / 2;
-  int right = left + width;
-
-  int border = 3;
-  // Draw border.
-  DrawSquare(&tetris->drawer, {left - border, 0}, {left, game->window.height},
-             Colors::kTeal);
-
-  DrawSquare(&tetris->drawer, {right, 0}, {right + border, game->window.height},
-             Colors::kTeal);
-
-  // Draw the grid.
-  for (int y = 1; y < (int)board->height; y++) {
-    DrawSquare(&tetris->drawer, {left, y * side}, {right, y * side - 1},
-               Colors::kGray);
-  }
-
-  for (int x = 1; x < (int)board->width; x++) {
-    DrawSquare(&tetris->drawer,
-               {left + x * side, 0},
-               {left + x * side - 1, game->window.height},
-               Colors::kGray);
-  }
-}
-
-
-int BlockTypeToColor(uint8_t type) {
-  static std::map<uint8_t, int> kColorMap = {
-    {kLiveBlock, Colors::kBlue},
-    {kDeadBlock, Colors::kRed},
-  };
-
-  auto it = kColorMap.find(type);
-  if (it == kColorMap.end())
-    return 0;
-  return it->second;
-}
-
-void DrawBlock(Game* game, Tetris* tetris, int color, int x, int y) {
-  // Generate the board.
-  int side = game->window.height / 20;
-  int width = side * tetris->board.width;
-  int left_pad = (game->window.width - width) / 2;
-
-  int ax = left_pad + x * side;
-  int ay = game->window.height - y * side - side;
-  DrawSquare(&tetris->drawer, {ax, ay}, {ax + side - 1, ay + side - 1}, color);
-}
-
-void DrawBoard(Game* game, Tetris* tetris) {
-  Board* board = &tetris->board;
-  for (int y = 0; y < (int)board->height; y++) {
-    for (int x = 0; x < (int)board->width; x++) {
-      uint8_t block_type = GetSquare(&tetris->board, x, y);
-      int color = BlockTypeToColor(block_type);
-      switch (block_type) {
-        case 0:
-        case kNone:
-          continue;
-        case kLiveBlock:
-          DrawBlock(game, tetris, color, x, y);
-          continue;
-        case kDeadBlock:
-          DrawBlock(game, tetris, color, x, y);
-          continue;
-        default:
-          NOT_REACHED("Invalid square type");
-      }
-    }
-  }
-}
-
-static inline int CreateColor(uint8_t i) {
-  return 0xff000000 | i << 16 | i << 8 | i;
-}
-
-void DrawDebugSquares(Game* game, Tetris* tetris) {
-  Board* board = &tetris->board;
-  for (int i = 0; i < board->height; i++) {
-    DrawBlock(game, tetris, CreateColor(i * 10), 0, i);
-  }
-}
-
-}  // namespace
-
 RenderCommand TetrisEndFrame(Game* game, Tetris* tetris) {
-  DrawBackground(game, tetris);
-  DrawBoard(game, tetris);
-
-  DrawDebugSquares(game, tetris);
-
-  return DrawerEndFrame(&tetris->drawer);
+  return GetTetrisRenderCommand(game, tetris);
 }
-
-// Utils -----------------------------------------------------------------------
-
 
 }  // namespace tetris
-
-

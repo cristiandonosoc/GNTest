@@ -6,6 +6,8 @@
 using namespace warhol;
 using namespace warhol::imgui;
 
+namespace tetris {
+
 bool InitGame(Game* game,
               ::warhol::WindowBackendType window_type,
               ::warhol::RendererType renderer_type) {
@@ -111,4 +113,6 @@ void CreateImguiUI(Game* game) {
 
   ImGui::End();
 }
+
+}  // namespace tetris
 

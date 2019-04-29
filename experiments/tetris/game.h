@@ -14,6 +14,8 @@
 
 using namespace warhol;
 
+namespace tetris {
+
 struct Game {
   ::warhol::PlatformTime time;
   ::warhol::MemoryTracker memory_tracker;
@@ -36,3 +38,4 @@ void EndFrame(Game*, List<RenderCommand>);
 
 void UpdateTetris(Game*);
 
+}  // namespace tetris

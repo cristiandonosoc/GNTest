@@ -10,9 +10,9 @@
 #include "drawer.h"
 #include "shape.h"
 
-struct Game;
-
 namespace tetris {
+
+struct Game;
 
 enum class ShapeType {
   kSquare,
@@ -24,17 +24,24 @@ struct TetrisShape {
   Shape shape = {};
 };
 
+// Represents a timer that has to track when it last occured.
+// Time time is in seconds.
+struct TickTimer {
+  float length;
+  float last_tick;
+};
+
+// Will update |last_tick| if true.
+bool HasTickTimerTriggered(Game*, TickTimer*);
+
 struct Tetris {
   Board board;
 
-  float move_tick = 0.7f;   // In seconds.
-  float last_move_time = 0.0f;
+  TickTimer next_shape_tick = {1.0f, 0.0f};
+  TickTimer auto_down_tick = {0.7f, 0.0f};
 
-  float side_move_tick = 0.2f;
-  float last_side_move = 0.0f;
-
-  float next_shape_tick = 1.0f;
-  float last_shape_time = 0.0f;
+  TickTimer side_move_tick = {0.2f, 0.0f};
+  TickTimer down_move_tick = {0.1f, 0.0f};
 
   TetrisShape current_shape = {};
 

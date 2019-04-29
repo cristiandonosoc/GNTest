@@ -28,10 +28,10 @@ struct Board {
   int width = 0;
   int height = 0;
 
-  std::vector<uint8_t> slots;
+  std::vector<uint8_t> _slots;
 };
 
-inline bool Valid(Board* board) { return !board->slots.empty(); }
+inline bool Valid(Board* board) { return !board->_slots.empty(); }
 
 enum class CollisionType {
   kNone,
@@ -48,6 +48,8 @@ CollisionType CheckShapeCollision(Board*, Shape*, Int2 pos, Int2 offset);
 
 uint8_t GetSquare(Board*, Int2 coord);
 uint8_t GetSquare(Board*, int x, int y);
+void SetSquare(Board*, uint8_t val, int x, int y);
+void SetSquare(Board*, uint8_t val, Int2 coord);
 
 int CoordToIndex(Board*, Int2 coord);
 int CoordToIndex(Board*, int x, int y);
