@@ -5,7 +5,7 @@
 
 #include "warhol/graphics/common/mesh.h"
 #include "warhol/memory/memory_pool.h"
-#include "warhol/utils/assert.h"
+#include "warhol/utils/log.h"
 
 namespace warhol {
 

@@ -3,33 +3,31 @@
 
 source_set("utils") {
   public = [
-    "assert.h",
+    "align.h",
+    "coords.h",
+    "debug.h",
+    "file.h",
+    "glm.h",
+    "glm_impl.h",
+    "location.h",
+    "log.h",
     "macros.h",
+    "path.h",
+    "string.h",
     "types.h",
   ]
 
   sources = [
-    "assert.cc",
-    "align.h",
-    "coords.h",
     "debug.cc",
-    "debug.h",
     "file.cc",
-    "file.h",
-    "glm.h",
-    "glm_impl.h",
     "location.cc",
-    "location.h",
     "log.cc",
-    "log.h",
     "optional.h",
     "path.cc",
-    "path.h",
     "scope_trigger.h",
     "status.cc",
     "status.h",
     "string.cc",
-    "string.h",
     "types.cc",
   ]
 

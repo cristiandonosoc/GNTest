@@ -49,7 +49,7 @@ GLenum AttributeTypeToGL(AttributeType type) {
       break;
   }
 
-  NOT_REACHED("Invalid attribute type");
+  NOT_REACHED();
   return GL_NONE;
 }
 

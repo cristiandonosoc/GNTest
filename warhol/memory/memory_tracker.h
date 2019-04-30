@@ -5,8 +5,7 @@
 
 #include <set>
 
-#include "warhol/utils/assert.h"
-#include "warhol/utils/macros.h"
+#include "warhol/utils/log.h"
 
 namespace warhol {
 

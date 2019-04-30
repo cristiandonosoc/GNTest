@@ -6,7 +6,6 @@
 
 #include <unordered_map>
 
-#include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
@@ -118,7 +117,7 @@ const char* ToString(WindowBackendType type) {
     case WindowBackendType::kLast: return "Last";
   }
 
-  NOT_REACHED("Unknown backend type.");
+  NOT_REACHED() << "Unknown backend type: " << (uint32_t)type;
   return nullptr;
 }
 

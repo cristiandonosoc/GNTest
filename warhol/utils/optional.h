@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <utility>
 
-#include "warhol/utils/assert.h"
+#include "warhol/utils/log.h"
 
 // This optional works exactly as std::optional except that it will actually
 // clear the value as a move (which normal optional for some insane reason

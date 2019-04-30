@@ -5,7 +5,6 @@
 
 #include <unordered_map>
 
-#include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 #include "warhol/graphics/common/renderer_backend.h"
 #include "warhol/graphics/common/mesh.h"
@@ -34,10 +33,8 @@ std::unique_ptr<RendererBackend>
 CreateRendererBackend(RendererType type) {
   FactoryMap* factory_map = GetFactoryMap();
   auto it = factory_map->find(type);
-  if (it == factory_map->end()) {
-    LOG(ERROR) << "Could not find renderer backend: " << ToString(type);
-    NOT_REACHED("Non renderer backend. See logs.");
-  }
+  ASSERT(it != factory_map->end())
+      << "Could not find renderer backend: " << ToString(type);
 
   RendererBackendFactoryFunction factory = it->second;
   return factory();
@@ -171,7 +168,7 @@ const char* ToString(RendererType type) {
     case RendererType::kLast: return "Last";
   }
 
-  NOT_REACHED("Invalid renderer type.");
+  NOT_REACHED() << "Invalid renderer type: " << (uint32_t)type;
   return nullptr;
 }
 

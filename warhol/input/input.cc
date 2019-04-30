@@ -3,7 +3,7 @@
 
 #include "warhol/input/input.h"
 
-#include "warhol/utils/assert.h"
+#include "warhol/utils/log.h"
 
 namespace warhol {
 

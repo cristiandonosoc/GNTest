@@ -3,7 +3,6 @@
 
 #include "warhol/graphics/opengl/utils.h"
 
-#include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {

@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 #include "warhol/math/vec.h"
-#include "warhol/utils/assert.h"
+#include "warhol/utils/log.h"
 
 namespace warhol {
 

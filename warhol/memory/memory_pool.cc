@@ -8,7 +8,8 @@
 namespace warhol {
 
 void InitMemoryPool(MemoryPool* pool, size_t size) {
-  ASSERT(!Valid(pool));
+  LOG(DEBUG) << "Valid: " << Valid(pool);
+  ASSERT(!Valid(pool)) << "It is valid? " << Valid(pool);
   pool->size = size;
   pool->data = std::make_unique<uint8_t[]>(size);
   pool->current = pool->data.get();
@@ -33,14 +34,13 @@ void ShutdownMemoryPool(MemoryPool* pool) {
 
 uint8_t* Push(MemoryPool* pool, uint8_t* data, size_t size) {
   ASSERT(Valid(pool));
-#ifndef NDEBUG
+#if DEBUG_MODE
   if (pool->current + size > pool->data.get() + pool->size) {
-    LOG(DEBUG) << "Overflowing pool!";
-    LOG(DEBUG) << "Size: " << pool->size;
-    LOG(DEBUG) << "Used: " << Used(pool)
-               << " (diff: " << pool->size - Used(pool) << ").";
-    LOG(DEBUG) << "Required: " << size;
-    NOT_REACHED("Overflowing pool :(");
+    NOT_REACHED() << "Overflowing pool!" << std::endl
+                  << "Size: " << pool->size << std::endl
+                  << "Used: " << Used(pool) << std::endl
+                  << " (diff: " << pool->size - Used(pool) << ")." << std::endl
+                  << "Required: " << size;
   }
 #endif
 

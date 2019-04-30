@@ -27,7 +27,7 @@ namespace opengl {
               __LOCATION.line,                             \
               #opengl_call,                                \
               ::warhol::opengl::GLEnumToString(__GL_VAR)); \
-      NOT_REACHED("Invalid OpenGL call. See logs.");       \
+      NOT_REACHED() << "Invalid OpenGL call. See logs.";   \
     }                                                      \
   }
 

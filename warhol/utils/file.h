@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "warhol/utils/assert.h"
+#include "warhol/utils/log.h"
 #include "warhol/utils/clear_on_move.h"
 
 namespace warhol {

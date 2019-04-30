@@ -110,7 +110,7 @@ RenderCommand DrawerEndFrame(Drawer* drawer) {
 
   // Send the frame over.
   if (!RendererUploadMeshRange(drawer->renderer, &drawer->mesh))
-    NOT_REACHED("ERROR");
+    NOT_REACHED() << "Could not upload mesh range";
 
   MeshRenderAction action;
   action.mesh = &drawer->mesh;

@@ -11,7 +11,6 @@
 #include "warhol/graphics/common/render_command.h"
 #include "warhol/input/input.h"
 #include "warhol/memory/memory_tracker.h"
-#include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 #include "warhol/platform/timing.h"
 #include "warhol/window/common/window.h"

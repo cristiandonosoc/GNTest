@@ -6,7 +6,6 @@
 #include "warhol/ui/imgui/def.h"
 #include "warhol/ui/imgui/imgui.h"
 #include "warhol/ui/imgui/imgui_shaders.h"
-#include "warhol/utils/assert.h"
 #include "warhol/utils/file.h"
 #include "warhol/utils/glm_impl.h"
 #include "warhol/utils/log.h"
@@ -269,7 +268,7 @@ RenderCommand ImguiGetRenderCommand(ImguiRenderer* imgui_renderer) {
     // We stage the buffers to the renderer.
     if (!RendererUploadMeshRange(imgui_renderer->renderer,
                                  &imgui_renderer->mesh)) {
-      NOT_REACHED("Could not upload data to the renderer.");
+      NOT_REACHED() << "Could not upload data to the renderer.";
     }
   }
 

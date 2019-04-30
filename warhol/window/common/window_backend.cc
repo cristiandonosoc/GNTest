@@ -3,18 +3,18 @@
 
 #include "warhol/window/common/window_backend.h"
 
-#include "warhol/utils/assert.h"
+#include "warhol/utils/log.h"
 
 namespace warhol {
 
 std::vector<const char*>
 WindowBackend::GetVulkanInstanceExtensions() {
-  NOT_REACHED("This function must be subclassed.");
+  NOT_REACHED() << "This function must be subclassed.";
   return {};
 }
 
 bool WindowBackend::CreateVulkanSurface(void*, void*) {
-  NOT_REACHED("This function must be subclassed.");
+  NOT_REACHED() << "This function must be subclassed.";
   return false;
 }
 

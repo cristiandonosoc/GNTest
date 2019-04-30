@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {

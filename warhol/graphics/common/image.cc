@@ -6,7 +6,7 @@
 #include <third_party/stb/stb_image.h>
 
 #include "warhol/math/math.h"
-#include "warhol/utils/assert.h"
+#include "warhol/utils/log.h"
 
 namespace warhol {
 

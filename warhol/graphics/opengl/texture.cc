@@ -19,7 +19,7 @@ GLenum WrapToGL(StageTextureConfig::Wrap wrap) {
     case StageTextureConfig::Wrap::kRepeat: return GL_REPEAT;
   }
 
-  NOT_REACHED("Unknown wrap");
+  NOT_REACHED();
   return 0;
 }
 
@@ -37,7 +37,7 @@ GLenum FilterToGL(StageTextureConfig::Filter filter) {
       return GL_LINEAR_MIPMAP_LINEAR;
   }
 
-  NOT_REACHED("Unknown filter");
+  NOT_REACHED();
   return 0;
 }
 

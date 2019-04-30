@@ -7,7 +7,6 @@
 
 #include "warhol/assets/asset_paths.h"
 #include "warhol/graphics/common/renderer.h"
-#include "warhol/utils/assert.h"
 #include "warhol/utils/file.h"
 #include "warhol/utils/log.h"
 #include "warhol/utils/string.h"
@@ -28,7 +27,7 @@ const char* SubShaderTypeToString(SubShaderType type) {
     case SubShaderType::kFragment: return "Fragment";
   }
 
-  NOT_REACHED("Invalid subshader type.");
+  NOT_REACHED() << "Invalid subshader type.";
   return nullptr;
 }
 

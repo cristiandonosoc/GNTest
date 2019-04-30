@@ -3,6 +3,12 @@
 
 #pragma once
 
+#define SEGFAULT()                 \
+  do {                             \
+    volatile char* __segfault = 0; \
+    *__segfault = 1;               \
+  } while (false)
+
 // Join two macros into one string. Typical usage if for using __LINE__:
 //
 // const char* STRINGIFY(some_string_, __LINE__) = "bla";

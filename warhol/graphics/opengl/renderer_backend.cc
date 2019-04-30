@@ -215,7 +215,7 @@ void SetUniforms(Shader* shader, ShaderHandles* handles,
   }
 
   if (handles->frag_ubo_binding > -1) {
-    NOT_REACHED("Should not be here.");
+    NOT_IMPLEMENTED();
     ASSERT(handles->frag_ubo_handle > 0);
     /* GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, handles->frag_ubo_handle)); */
     /* GL_CHECK(glBufferSubData( */
@@ -323,7 +323,7 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
       case RenderCommandType::kNoop:
         continue;
       case RenderCommandType::kLast:
-        NOT_REACHED("Invalid render command type.");
+        NOT_REACHED() << "Invalid render command type.";
     }
 
     GL_CHECK(glUseProgram(NULL));

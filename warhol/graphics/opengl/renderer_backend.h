@@ -13,7 +13,6 @@
 
 #include "warhol/graphics/opengl/shader.h"
 #include "warhol/graphics/opengl/utils.h"
-#include "warhol/utils/assert.h"
 #include "warhol/utils/clear_on_move.h"
 #include "warhol/utils/location.h"
 #include "warhol/utils/macros.h"

@@ -8,7 +8,6 @@
 
 #include <third_party/tiny_obj_loader/tiny_obj_loader.h>
 
-#include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
@@ -26,7 +25,7 @@ size_t Hash(const Vertex& vertex) {
 
 Mesh::~Mesh() {
   if (Staged(this))
-    NOT_REACHED("Mesh has not been unstaged.");
+    NOT_REACHED() << "Mesh has not been unstaged.";
 }
 
 uint64_t GetNextMeshUUID() { return kNextMeshUUID++; }

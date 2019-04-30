@@ -27,8 +27,10 @@ bool WithinBoundsY(Board* board, int y) {
 CollisionType
 CheckShapeCollision(Board* board, Shape* shape, Int2 pos, Int2 offset) {
   SCOPE_LOCATION();
-  if (pos == Int2::Zero())
-    LOG(DEBUG) << "Checking zero pos";
+
+  bool is_side_move = offset.x != 0;
+
+
   for (Int2& sqr_offset : shape->offsets) {
     Int2 sqr_pos = pos + sqr_offset + offset;
     if (sqr_pos.y < 0)
@@ -39,8 +41,13 @@ CheckShapeCollision(Board* board, Shape* shape, Int2 pos, Int2 offset) {
 
     // Check if we hit a shape.
     uint8_t sqr = GetSquare(board, sqr_pos);
-    if (sqr == kDeadBlock)
-      return CollisionType::kShape;
+    if (sqr == kDeadBlock) {
+      if (!is_side_move) {
+        return CollisionType::kShape;
+      } else {
+        return CollisionType::kBorder;
+      }
+    }
   }
 
   return CollisionType::kNone;
@@ -94,7 +101,7 @@ const char* CollisionTypeToString(CollisionType type) {
     case CollisionType::kShape: return "Shape";
   }
 
-  NOT_REACHED("Invalid collision type");
+  NOT_REACHED();
   return nullptr;
 }
 

@@ -7,7 +7,6 @@
 
 #include <third_party/stb/stb_image.h>
 
-#include "warhol/utils/assert.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
@@ -65,7 +64,7 @@ const char* ToString(TextureType type) {
     case TextureType::kLast: return "Last";
   }
 
-  NOT_REACHED("Invalid texture type.");
+  NOT_REACHED();
   return nullptr;
 
 }

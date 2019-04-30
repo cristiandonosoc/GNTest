@@ -8,8 +8,7 @@
 #include <memory>
 
 #include "warhol/memory/memory_tracker.h"
-#include "warhol/utils/assert.h"
-#include "warhol/utils/macros.h"
+#include "warhol/utils/log.h"
 #include "warhol/utils/types.h"
 
 namespace warhol {

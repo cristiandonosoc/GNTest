@@ -3,9 +3,9 @@
 
 #include "warhol/assets/asset_paths.h"
 
-#include "warhol/utils/assert.h"
-#include "warhol/utils/path.h"
 #include "warhol/platform/platform.h"
+#include "warhol/utils/log.h"
+#include "warhol/utils/path.h"
 
 namespace warhol {
 
@@ -24,7 +24,7 @@ std::string GetShaderPath(const std::string_view& shader_name,
       shader_dir = "vulkan";
       break;
     case RendererType::kLast:
-      NOT_REACHED("Invalid shader path type.");
+      NOT_REACHED();
   }
 
   return PathJoin({GetBasePath(), "assets", "shaders", shader_dir,

@@ -150,10 +150,10 @@ Int2 UpdateAutoDownMovement(Game* game, Tetris* tetris) {
   return {0, -1};
 }
 
-void DoShapeCollision(Tetris* tetris, Int2 offset) {
+void DoShapeCollision(Tetris* tetris, Int2) {
   // We cristalize the shape.
   for (Int2& sqr_offset : tetris->current_shape.shape.offsets) {
-    Int2 sqr_pos = tetris->current_shape.pos + sqr_offset + offset;
+    Int2 sqr_pos = tetris->current_shape.pos + sqr_offset;
     SetSquare(&tetris->board, kDeadBlock, sqr_pos);
   }
 
@@ -177,15 +177,15 @@ void UpdateCurrentShape(Game* game, Tetris* tetris) {
   if (IsZero(offset))
     return;
 
-  LOG(DEBUG) << "Pos: " << ToString(tetris->current_shape.pos)
-             << ", Offset: " << ToString(offset);
+  /* LOG(DEBUG) << "Pos: " << ToString(tetris->current_shape.pos) */
+  /*            << ", Offset: " << ToString(offset); */
 
   auto collision_type = CheckShapeCollision(&tetris->board,
                                             &tetris->current_shape.shape,
                                             tetris->current_shape.pos,
                                             offset);
 
-  LOG(DEBUG) << "Collision Type: " << CollisionTypeToString(collision_type);
+  /* LOG(DEBUG) << "Collision Type: " << CollisionTypeToString(collision_type); */
 
   switch (collision_type) {
     case CollisionType::kNone:
@@ -198,9 +198,8 @@ void UpdateCurrentShape(Game* game, Tetris* tetris) {
       /* tetris->current_shape.pos += down_offset; */
       return;
     case CollisionType::kBottom:
-      DoShapeCollision(tetris, offset);
-      return;
     case CollisionType::kShape:
+      DoShapeCollision(tetris, offset);
       /* DoShapeCollision(tetris, offset); */
       return;
   }

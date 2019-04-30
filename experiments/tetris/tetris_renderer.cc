@@ -83,7 +83,7 @@ void DrawBoard(Game* game, Tetris* tetris) {
           DrawBlock(game, tetris, color, x, y);
           continue;
         default:
-          NOT_REACHED("Invalid square type");
+          NOT_REACHED() << "Invalid square type";
       }
     }
   }
