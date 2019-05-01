@@ -26,7 +26,8 @@ bool WithinBoundsY(Board* board, int y) {
 
 CollisionType
 CheckShapeCollision(Board* board, Shape* shape, Int2 pos, Int2 offset) {
-  SCOPE_LOCATION();
+  SCOPE_LOCATION() << "Pos: " << ToString(pos)
+                   << ", Offset: " << ToString(offset);
 
   bool is_side_move = offset.x != 0;
 
@@ -71,13 +72,14 @@ uint8_t GetSquare(Board* board, Int2 pos) {
 
 uint8_t GetSquare(Board* board, int x, int y) {
   int index = CoordToIndex(board, x, y);
-  ASSERT(index >= 0);
+  ASSERT(index >= 0) << "X: " << x << ", Y: " << y;
+  ASSERT(true);
   return board->_slots[index];
 }
 
 void SetSquare(Board* board, uint8_t val, int x, int y) {
   int index = CoordToIndex(board, x, y);
-  ASSERT(index >= 0);
+  ASSERT(index >= 0) << "X: " << x << ", Y: " << y;
   board->_slots[index] = val;
 }
 

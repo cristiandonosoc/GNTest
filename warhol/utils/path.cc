@@ -21,5 +21,12 @@ std::string PathJoin(std::vector<std::string_view> paths) {
   return Concatenate(std::move(pieces));
 }
 
+std::string GetBasename(const std::string& path) {
+  size_t separator = path.rfind('/');
+  if (separator == std::string::npos)
+    return path;
+  return path.substr(separator + 1);
+}
+
 }  // namespace warhol
 

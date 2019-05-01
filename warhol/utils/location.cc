@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "warhol/utils/log.h"
+#include "warhol/utils/path.h"
 
 namespace warhol {
 namespace {
@@ -19,33 +20,47 @@ LocationStack* GetPerThreadLocationStack() {
   return &stack;
 }
 
-}  // namespace
 
-void PushLocation(Location location) {
+
+
+void PushStackLocation(LocationScope* scope) {
   LocationStack* stack = GetPerThreadLocationStack();
   ASSERT(stack->size < (int)LocationStack::kMaxLocationStackSize - 1);
-  stack->locations[stack->size++] = std::move(location);
+  stack->entries[stack->size++] = {scope};
 }
 
-void PopLocation() {
+void PopStackLocation() {
   LocationStack* stack = GetPerThreadLocationStack();
   ASSERT(stack->size > 0);
   stack->size--;
 }
 
+}  // namespace
+
 LocationStack* GetLocationStack() {
   return GetPerThreadLocationStack();
 }
 
-void PrintLocationStack(const LocationStack& stack) {
-  for (int i = stack.size - 1; i >= 0; i--) {
-    const Location& loc = stack.locations[i];
-    printf("%.2d. %s [%s:%d]\n", stack.size - i - 1,
+void PrintLocationStack(LocationStack* stack) {
+  for (int i = stack->size - 1; i >= 0; i--) {
+    LocationStack::Entry& entry = stack->entries[i];
+
+    const Location& loc = entry.scope->location;
+    printf("%.2d. [%s:%d][%s] %s\n", stack->size - i - 1,
+                                 GetBasename(loc.file).c_str(),
+                                 loc.line,
                                  loc.function,
-                                 loc.file,
-                                 loc.line);
+                                 entry.scope->stream_.str().c_str());
   }
   fflush(stdout);
+}
+
+LocationScope::LocationScope(Location location) : location(location) {
+  PushStackLocation(this);
+}
+
+LocationScope::~LocationScope() {
+  PopStackLocation();
 }
 
 }  // namespace warhol

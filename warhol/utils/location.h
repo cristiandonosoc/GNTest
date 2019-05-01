@@ -4,13 +4,15 @@
 #pragma once
 
 #include <stdlib.h>
+
+#include <sstream>
 #include <utility>
 
 #include "warhol/utils/macros.h"
 
 namespace warhol {
 
-#define FROM_HERE ::warhol::Location{__FILE__, __LINE__, __PRETTY_FUNCTION__}
+#define FROM_HERE ::warhol::Location{__FILE__, __LINE__, __FUNCTION__}
 
 // Location is meant to provide a thread local context about where the code
 // is being called. Many logging operations will be scoped to this object.
@@ -36,36 +38,54 @@ struct Location {
 
 #ifdef DEBUG_MODE
 
-#define SCOPE_LOCATION()                             \
-  ::warhol::LocationBlock scope_location_##__LINE__( \
-      {__FILE__, __LINE__, __PRETTY_FUNCTION__})
+#define SCOPE_LOCATION()                                                     \
+  ::warhol::LocationScope STRINGIFY(__scope_location_, __LINE__)(FROM_HERE); \
+  STRINGIFY(__scope_location_, __LINE__).stream()
 
 #else
 
-#define SCOPE_LOCATION()
+#define SCOPE_LOCATION() ::warhol::LocationNullStream().stream()
 
 #endif
 
+struct LocationStack;
+struct LocationScope;
+LocationStack* GetLocationStack();
+void PrintLocationStack(LocationStack*);
+
+// Meant to be a scope trigger that will add elements to the stack.
+struct LocationScope {
+  LocationScope(Location location);
+  ~LocationScope();
+  DELETE_COPY_AND_ASSIGN(LocationScope);
+  DELETE_MOVE_AND_ASSIGN(LocationScope);
+
+  std::ostream& stream() { return stream_; }
+
+  Location location;
+  std::ostringstream stream_;
+};
+
 struct LocationStack {
+  struct Entry {
+    LocationScope* scope;
+  };
   static constexpr size_t kMaxLocationStackSize = 16;
 
-  Location locations[kMaxLocationStackSize];
+  Entry entries[kMaxLocationStackSize];
   int size = 0;
 };
 
-void PushLocation(Location);
-void PopLocation();
-LocationStack* GetLocationStack();
-void PrintLocationStack(const LocationStack&);
+// Utility ---------------------------------------------------------------------
 
-struct LocationBlock {
-  LocationBlock(Location location) {
-    PushLocation(std::move(location));
-  }
+// This class is meant to look as a ostream, but ignore all input.
+class LocationNullStream : std::ostream, std::streambuf {
+ public:
+   LocationNullStream() : std::ostream(this) {}
 
-  ~LocationBlock() {
-    PopLocation();
-  }
+  // All operations are no-ops.
+  int overflow(int) { return 0; }
+  std::ostream& stream() { return *this; }
 };
 
 }  // namespace warhol

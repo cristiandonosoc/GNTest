@@ -25,7 +25,7 @@ void AssertionFailed(Location loc,
 
   LocationStack* stack = GetLocationStack();
   printf("Printing contextual stack of size: %d\n", stack->size);
-  PrintLocationStack(*stack);
+  PrintLocationStack(stack);
 
   fflush(stdout);
 

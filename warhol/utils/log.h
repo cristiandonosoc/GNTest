@@ -73,32 +73,12 @@ class NullStream : std::ostream, std::streambuf {
 #define NOT_REACHED() \
   ::warhol::LogEntry(FROM_HERE, true, "Invalid Path").stream()
 
-/* #define ASSERT(condition)                               \ */
-/*   do {                                                  \ */
-/*     if (!(condition)) {                                 \ */
-/*       ::warhol::LogEntry(::warhol::LogLevel::kASSERT */
-/*       ::warhol::AssertionFailed(FROM_HERE, #condition); \ */
-/*     }                                                   \ */
-/*   } while (false) */
-
-/* #define NOT_IMPLEMENTED()                                    \ */
-/*   do {                                                       \ */
-/*     ::warhol::AssertionFailed(FROM_HERE, "Not implemented"); \ */
-/*   } while (false) */
-
-/* #define NOT_REACHED(message)                                       \ */
-/*   do {                                                             \ */
-/*     ::warhol::AssertionFailed(FROM_HERE, "Invalid path", message); \ */
-/*   } while (false) */
-
 #else
 
 #define ASSERT(condition) ::warhol::NullStream().stream()
 #define NOT_IMPLEMENTED() ::warhol::NullStream().stream()
 #define NOT_REACHED() ::warhol::NullStream().stream()
 
-/* #define ASSERT(condition) do {} while (false) */
-/* #define NOT_IMPLEMENTED() do {} while (false) */
 /* #define NOT_REACHED() do {} while (false) */
 
 #endif
