@@ -28,6 +28,12 @@ bool InitTetris(Game* game, Tetris* tetris) {
     board._slots[i] = 0;
   }
 
+  for (int y = 0; y < 2; y++) {
+    for (int x = 0; x < 8; x++) {
+      SetSquare(&board, kDeadBlock, x, y);
+    }
+  }
+
   *tetris = {};
   tetris->board = std::move(board);
 
@@ -112,7 +118,6 @@ void UpdateNewShape(Game* game, Tetris* tetris) {
   new_pos.x = rand() % board->width;
   tetris->current_shape.pos = new_pos;
   LOG(DEBUG) << "Creating new shape at: " << ToString(new_pos);
-
 }
 
 // Returns an offset of where the shape should move.
@@ -128,8 +133,6 @@ Int2 UpdateSideMove(Game* game, Tetris* tetris) {
     return {-1, 0};
   else
     return {1, 0};
-
-
 }
 
 Int2 UpdateDownMovement(Game* game, Tetris* tetris) {
@@ -150,6 +153,52 @@ Int2 UpdateAutoDownMovement(Game* game, Tetris* tetris) {
   return {0, -1};
 }
 
+bool IsRowComplete(Board* board, int y) {
+  for (int x = 0; x < board->width; x++) {
+    uint8_t square = GetSquare(board, x, y);
+    if (square != kDeadBlock)
+      return false;
+  }
+  return true;
+}
+
+void RemoveRow(Board* board, int y) {
+  for (int x = 0; x < board->width; x++) {
+    SetSquare(board, kNone, x, y);
+  }
+}
+
+void MoveBlocksDown(Board* board, int y) {
+  for (; y < board->height; y++) {
+    for (int x = 0; x < board->width; x++) {
+      uint8_t square = GetSquare(board, x, y);
+      if (square != kDeadBlock || y == 0)
+        continue;
+
+      // We set the square below this as dead and clear the top one.
+      SetSquare(board, kDeadBlock, x, y - 1);
+      SetSquare(board, kNone, x, y);
+    }
+  }
+}
+
+void LookForCompletedRows(Board* board) {
+  // We look bottom up for a complete row.
+  int y = 0;
+  while (y < board->height) {
+    if (!IsRowComplete(board, y)) {
+      y++;
+      continue;
+    }
+
+    RemoveRow(board, y);
+    MoveBlocksDown(board, y);
+
+    // We moved the blocks down, so we need to recheck this row again.
+    continue;
+  }
+}
+
 void DoShapeCollision(Tetris* tetris, Int2) {
   // We cristalize the shape.
   for (Int2& sqr_offset : tetris->current_shape.shape.offsets) {
@@ -158,6 +207,9 @@ void DoShapeCollision(Tetris* tetris, Int2) {
   }
 
   tetris->current_shape = {};
+
+  // We check if we destroyed lines.
+  LookForCompletedRows(&tetris->board);
 }
 
 void UpdateCurrentShape(Game* game, Tetris* tetris) {
@@ -177,15 +229,10 @@ void UpdateCurrentShape(Game* game, Tetris* tetris) {
   if (IsZero(offset))
     return;
 
-  /* LOG(DEBUG) << "Pos: " << ToString(tetris->current_shape.pos) */
-  /*            << ", Offset: " << ToString(offset); */
-
   auto collision_type = CheckShapeCollision(&tetris->board,
                                             &tetris->current_shape.shape,
                                             tetris->current_shape.pos,
                                             offset);
-
-  /* LOG(DEBUG) << "Collision Type: " << CollisionTypeToString(collision_type); */
 
   switch (collision_type) {
     case CollisionType::kNone:
@@ -194,13 +241,10 @@ void UpdateCurrentShape(Game* game, Tetris* tetris) {
       LOG(DEBUG) << "After: " << ToString(tetris->current_shape.pos);
       return;
     case CollisionType::kBorder:
-      // Ignore side offset.
-      /* tetris->current_shape.pos += down_offset; */
       return;
     case CollisionType::kBottom:
     case CollisionType::kShape:
       DoShapeCollision(tetris, offset);
-      /* DoShapeCollision(tetris, offset); */
       return;
   }
 }

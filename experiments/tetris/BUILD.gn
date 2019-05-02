@@ -5,6 +5,8 @@ source_set("base") {
   sources = [
     "drawer.h",
     "drawer.cc",
+    "imgui.h",
+    "imgui.cc",
     "game.h",
     "game.cc",
     "shape.h",

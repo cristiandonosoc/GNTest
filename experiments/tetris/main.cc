@@ -9,6 +9,7 @@
 
 #include <thread>
 
+#include "imgui.h"
 #include "game.h"
 #include "tetris.h"
 
@@ -53,6 +54,7 @@ int main() {
     ResetMemoryPool(&memory_pool);
 
     UpdateTetris(&game, &tetris);
+    DoImguiUI(&game, &tetris);
 
     auto command_list = CreateList<RenderCommand>(&memory_pool);
     Push(&command_list, TetrisEndFrame(&game, &tetris));

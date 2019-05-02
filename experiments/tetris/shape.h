@@ -12,9 +12,9 @@ using namespace warhol;
 
 namespace tetris {
 
+constexpr uint8_t kNone = 0;
 constexpr uint8_t kDeadBlock = 1;   // A block that is already stationed.
 constexpr uint8_t kLiveBlock = 2;   // A block of a current shape.
-constexpr uint8_t kNone = UINT8_MAX;
 
 // The offsets define the places where this shape has a square offseted from its
 // position.

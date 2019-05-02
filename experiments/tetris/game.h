@@ -29,13 +29,7 @@ struct Game {
 };
 
 bool InitGame(Game*, WindowBackendType, RendererType);
-
 List<WindowEvent> NewFrame(Game*);
-
-void CreateImguiUI(Game*);
-
 void EndFrame(Game*, List<RenderCommand>);
-
-void UpdateTetris(Game*);
 
 }  // namespace tetris

@@ -67,7 +67,6 @@ LogEntry::LogEntry(const Location& location,
                    const char* condition_str)
     : level_(LogLevel::kASSERT), assert_(condition) {
   if (condition) {
-    LOG(DEBUG) << "This will assert!";
     set_condition(condition_str);
     set_location(location);
   }

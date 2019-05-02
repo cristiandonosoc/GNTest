@@ -28,12 +28,12 @@ CollisionType
 CheckShapeCollision(Board* board, Shape* shape, Int2 pos, Int2 offset) {
   SCOPE_LOCATION() << "Pos: " << ToString(pos)
                    << ", Offset: " << ToString(offset);
-
   bool is_side_move = offset.x != 0;
-
-
   for (Int2& sqr_offset : shape->offsets) {
     Int2 sqr_pos = pos + sqr_offset + offset;
+    if (sqr_pos.y >= board->height)
+      continue;
+
     if (sqr_pos.y < 0)
       return CollisionType::kBottom;
 

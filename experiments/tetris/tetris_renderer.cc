@@ -15,33 +15,37 @@ namespace {
 void DrawBackground(Game* game, Tetris* tetris) {
   // Generate the board.
   Board* board = &tetris->board;
-  int side = game->window.height / 20;
-  int width = side * tetris->board.width;
-  int left = (game->window.width - width) / 2;
-  int right = left + width;
+
+  auto dims = GetTetrisScreenDimensions(game, tetris);
+  int right_pad = dims.screen_pad + dims.board_width;
 
   int border = 3;
   // Draw border.
-  DrawSquare(&tetris->drawer, {left - border, 0}, {left, game->window.height},
+  DrawSquare(&tetris->drawer,
+             {dims.screen_pad - border, 0},
+             {dims.screen_pad, game->window.height},
              Colors::kTeal);
 
-  DrawSquare(&tetris->drawer, {right, 0}, {right + border, game->window.height},
+  DrawSquare(&tetris->drawer,
+             {right_pad, 0},
+             {right_pad + border, game->window.height},
              Colors::kTeal);
 
   // Draw the grid.
   for (int y = 1; y < (int)board->height; y++) {
-    DrawSquare(&tetris->drawer, {left, y * side}, {right, y * side - 1},
+    DrawSquare(&tetris->drawer,
+               {dims.screen_pad, y * dims.block_size},
+               {right_pad, y * dims.block_size - 1},
                Colors::kGray);
   }
 
   for (int x = 1; x < (int)board->width; x++) {
     DrawSquare(&tetris->drawer,
-               {left + x * side, 0},
-               {left + x * side - 1, game->window.height},
+               {dims.screen_pad + x * dims.block_size, 0},
+               {dims.screen_pad + x * dims.block_size - 1, game->window.height},
                Colors::kGray);
   }
 }
-
 
 int BlockTypeToColor(uint8_t type) {
   static std::map<uint8_t, int> kColorMap = {
@@ -57,13 +61,13 @@ int BlockTypeToColor(uint8_t type) {
 
 void DrawBlock(Game* game, Tetris* tetris, int color, int x, int y) {
   // Generate the board.
-  int side = game->window.height / 20;
-  int width = side * tetris->board.width;
-  int left_pad = (game->window.width - width) / 2;
+  auto dims = GetTetrisScreenDimensions(game, tetris);
 
-  int ax = left_pad + x * side;
-  int ay = game->window.height - y * side - side;
-  DrawSquare(&tetris->drawer, {ax, ay}, {ax + side - 1, ay + side - 1}, color);
+  int ax = dims.screen_pad + x * dims.block_size;
+  int ay = game->window.height - y * dims.block_size - dims.block_size;
+  DrawSquare(&tetris->drawer,
+             {ax, ay}, {ax + dims.block_size - 1, ay + dims.block_size - 1},
+             color);
 }
 
 void DrawBoard(Game* game, Tetris* tetris) {
@@ -73,7 +77,6 @@ void DrawBoard(Game* game, Tetris* tetris) {
       uint8_t block_type = GetSquare(&tetris->board, x, y);
       int color = BlockTypeToColor(block_type);
       switch (block_type) {
-        case 0:
         case kNone:
           continue;
         case kLiveBlock:
@@ -111,6 +114,15 @@ RenderCommand GetTetrisRenderCommand(Game* game, Tetris* tetris) {
   return DrawerEndFrame(&tetris->drawer);
 }
 
+// Screen Dimensions -----------------------------------------------------------
 
+TetrisScreenDimensions
+GetTetrisScreenDimensions(Game* game, Tetris* tetris) {
+  TetrisScreenDimensions dims;
+  dims.block_size = game->window.height / tetris->board.height;
+  dims.board_width = dims.block_size * tetris->board.width;
+  dims.screen_pad = (game->window.width - dims.board_width) / 2;
+  return dims;
+}
 
 }  // namespace tetris
