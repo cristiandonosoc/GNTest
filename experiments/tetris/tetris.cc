@@ -44,16 +44,28 @@ bool InitTetris(Game* game, Tetris* tetris) {
 
 namespace {
 
-
 const Shape kShapes[] = {
+    // Square.
     {{{0, 0}, {-1, 0}, {-1, 1}, {0, 1}}},
+    // L.
+    {{{0, 0}, {-1, 0}, {-2, 0}, {0, 1}}},
+    // Reverse-L.
+    {{{0, 0}, {1, 0}, {2, 0}, {0, 1}}},
+    // Squiggly.
+    {{{0, 0}, {1, 0}, {1, 1}, {0, -1}}},
+    // Reverse-Squiggly.
+    {{{0, 0}, {-1, 0}, {-1, 1}, {0, -1}}},
 };
 
 enum class ShapeIndex {
   kSquare = 0,
+  kL,
+  kInverseL,
+  kSquiggly,
+  kReverseSquiggly,
   kLast,
 };
-static_assert(ARRAY_SIZE(kShapes) - 1 < (size_t)ShapeIndex::kLast);
+static_assert(ARRAY_SIZE(kShapes) == (size_t)ShapeIndex::kLast);
 
 #define GET_SHAPE_PTR(shape_name) \
   (&kShapes[(uint32_t)ShapeIndex::k##shape_name])
@@ -112,7 +124,8 @@ void UpdateNewShape(Game* game, Tetris* tetris) {
 
   // Create a new shape.
   Board* board = &tetris->board;
-  tetris->current_shape.shape = GET_SHAPE(Square);
+  int index = rand() % ARRAY_SIZE(kShapes);
+  tetris->current_shape.shape = kShapes[index];
   Int2 new_pos;
   new_pos.y = board->height - 1;
   new_pos.x = rand() % board->width;
