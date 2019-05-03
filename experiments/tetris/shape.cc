@@ -21,7 +21,6 @@ bool WithinBoundsY(Board* board, int y) {
   return true;
 }
 
-
 }  // namespace
 
 CollisionType
@@ -95,6 +94,21 @@ bool WithinBounds(Board* board, int x, int y) {
   return WithinBoundsX(board, x) && WithinBoundsY(board, y);
 }
 
+IntBox2 GetShapeBoundingBox(Shape* shape, Int2 pos) {
+  constexpr int kBigBound = 1000000;
+  IntBox2 bounds = {{+kBigBound, -kBigBound}, {+kBigBound, -kBigBound}};
+  for (Int2 offset : shape->offsets) {
+    Int2 true_pos = pos + offset;
+    if (true_pos.x < bounds.min.x) bounds.min.x = true_pos.x;
+    if (true_pos.x > bounds.min.y) bounds.min.y = true_pos.x;
+
+    if (true_pos.y < bounds.max.x) bounds.max.x = true_pos.y;
+    if (true_pos.y > bounds.max.y) bounds.max.y = true_pos.y;
+  }
+
+  return bounds;
+}
+
 const char* CollisionTypeToString(CollisionType type) {
   switch (type) {
     case CollisionType::kNone: return "None";
@@ -106,5 +120,6 @@ const char* CollisionTypeToString(CollisionType type) {
   NOT_REACHED();
   return nullptr;
 }
+
 
 }  // namespace tetris

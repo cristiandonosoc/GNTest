@@ -12,52 +12,58 @@ except Exception as err:
     print(err)
 
 flags = [
-'-Wall',
-'-Wextra',
-'Wmissing-prototypes',
-'-x', 'c++',
-'-std=c++17',
+    '-Wall',
+    '-Wextra',
+    'Wmissing-prototypes',
+    '-x', 'c++',
+    '-std=c++17',
 
-'-I', os.path.join(os.getcwd()),
+    '-I', os.path.join(os.getcwd()),
 
-'-D', 'WARHOL_SDL_ENABLED',
-'-D', 'WARHOL_VULKAN_ENABLED',
-'-D', 'WARHOL_OPENGL_ENABLED',
+    '-D', 'WARHOL_SDL_ENABLED',
+    '-D', 'WARHOL_VULKAN_ENABLED',
+    '-D', 'WARHOL_OPENGL_ENABLED',
 
-'-isystem', os.path.join(os.getcwd(), 'third_party'),
-'-isystem', os.path.join(os.getcwd(), 'third_party', 'include'),
-'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui'),
-'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui', 'examples'),
-'-isystem', os.path.join(os.getcwd(), 'third_party', 'catch2'),
+    '-isystem', os.path.join(os.getcwd(), 'third_party'),
+    '-isystem', os.path.join(os.getcwd(), 'third_party', 'include'),
+    '-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui'),
+    '-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui', 'examples'),
+    '-isystem', os.path.join(os.getcwd(), 'third_party', 'catch2'),
 
 
-#'-isystem', os.path.join(os.getcwd(), 'third_party'),
-#'-isystem', os.path.join(os.getcwd(), 'third_party', 'include'),
-#'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui'),
-#'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui', 'examples'),
-#'-isystem', os.path.join(os.getcwd(), 'third_party', 'catch2'),
-#'-isystem', '/mnt/c/Code/include/c++/v1',
-#'-isystem', '/usr/local/google/home/donosoc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include/c++/v1',
-#'-I', os.path.join(os.getcwd()),
-#'-I', os.path.join(os.getcwd(), 'src'),
-## Fake headers so that YCM doesn't explode win windows
-#'-isystem', '/mnt/c/Code/external/fake-windows-headers-for-ycm',
-#'-isystem', '/mnt/c/Code/include',
-#'-isystem', '/mnt/c/Code/vulkan/Include',
-#
-#'-D', 'WARHOL_SDL_ENABLED',
-#'-D', 'WARHOL_VULKAN_ENABLED',
-#'-D', 'WARHOL_OPENGL_ENABLED',
-#
-## Linux
-#'-isystem', '/home/cdc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include/c++/v1',
-#'-isystem', '/usr/local/include',
-#'-isystem', '/home/cdc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include',
-#'-isystem', '/usr/include/x86_64-linux-gnu',
-#'-isystem', '/usr/include',
-#'-I', os.path.join('/usr', 'local', 'include'),
-#'-I', os.path.join('/usr', 'include'),
-#'-I', os.path.expanduser('~/Local/include'),
+]
+
+flags += local_flags
+
+flags += [
+
+    #'-isystem', os.path.join(os.getcwd(), 'third_party'),
+    #'-isystem', os.path.join(os.getcwd(), 'third_party', 'include'),
+    #'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui'),
+    #'-isystem', os.path.join(os.getcwd(), 'third_party', 'imgui', 'examples'),
+    #'-isystem', os.path.join(os.getcwd(), 'third_party', 'catch2'),
+    #'-isystem', '/mnt/c/Code/include/c++/v1',
+    #'-isystem', '/usr/local/google/home/donosoc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include/c++/v1',
+    #'-I', os.path.join(os.getcwd()),
+    #'-I', os.path.join(os.getcwd(), 'src'),
+    ## Fake headers so that YCM doesn't explode win windows
+    #'-isystem', '/mnt/c/Code/external/fake-windows-headers-for-ycm',
+    #'-isystem', '/mnt/c/Code/include',
+    #'-isystem', '/mnt/c/Code/vulkan/Include',
+    #
+    #'-D', 'WARHOL_SDL_ENABLED',
+    #'-D', 'WARHOL_VULKAN_ENABLED',
+    #'-D', 'WARHOL_OPENGL_ENABLED',
+    #
+    ## Linux
+    #'-isystem', '/home/cdc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include/c++/v1',
+    #'-isystem', '/usr/local/include',
+    #'-isystem', '/home/cdc/Source/fuchsia/buildtools/linux-x64/clang/lib/clang/9.0.0/include',
+    #'-isystem', '/usr/include/x86_64-linux-gnu',
+    #'-isystem', '/usr/include',
+    #'-I', os.path.join('/usr', 'local', 'include'),
+    #'-I', os.path.join('/usr', 'include'),
+    #'-I', os.path.expanduser('~/Local/include'),
 ]
 
 flags += local_flags

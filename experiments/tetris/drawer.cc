@@ -7,10 +7,16 @@
 #include <warhol/utils/glm_impl.h>
 #include <warhol/window/window.h>
 
+namespace tetris {
+
+namespace {
+
 struct DrawerVertex {
   Vec2 pos;
   uint32_t color;
 };
+
+}  // namespace
 
 bool InitDrawer(Drawer* drawer, Renderer* renderer, Window* window) {
   if (!LoadShader("square", renderer, &drawer->shader)) {
@@ -133,3 +139,5 @@ RenderCommand DrawerEndFrame(Drawer* drawer) {
 
   return render_command;
 }
+
+}  // namespace tetris

@@ -27,7 +27,6 @@ inline bool Valid(Shape* shape) { return !shape->offsets.empty(); }
 struct Board {
   int width = 0;
   int height = 0;
-
   std::vector<uint8_t> _slots;
 };
 
@@ -56,5 +55,7 @@ int CoordToIndex(Board*, int x, int y);
 
 bool WithinBounds(Board*, Int2 coord);
 bool WithinBounds(Board*, int x, int y);
+
+IntBox2 GetShapeBoundingBox(Shape*, Int2);
 
 }  // namespace tetris

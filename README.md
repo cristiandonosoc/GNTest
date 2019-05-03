@@ -32,7 +32,7 @@ specially in cross-platform development. For this, I have modified the
 `GetYCMLocalFlags` that should return a python array with the flags YCM style:
 
 ```
-local_flags [
+local_flags = [
   "-I", "/some/path/to/includes",
   "-isystem", "/other/path/to/system/includes",
 ]

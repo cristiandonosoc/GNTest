@@ -10,6 +10,8 @@
 
 using namespace warhol;
 
+namespace tetris {
+
 struct Colors {
   static constexpr uint32_t kBlack=   0xff'00'00'00;
   static constexpr uint32_t kBlue=    0xff'ff'00'00;
@@ -46,3 +48,4 @@ void DrawSquare(Drawer*, Pair<int> bl, Pair<int> tr, uint32_t color);
 
 ::warhol::RenderCommand DrawerEndFrame(Drawer*);
 
+}  // namespace tetris

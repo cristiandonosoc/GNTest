@@ -33,7 +33,7 @@ using Int2 = _v2<int>;
 
 template <typename T>
 inline std::string ToString(const _v2<T>& v) {
-  return StringPrintf("X: %f, Y: %f", (float)v.x, (float)v.y);
+  return StringPrintf("(%f, %f)", (float)v.x, (float)v.y);
 }
 
 template <typename T>
@@ -55,6 +55,22 @@ inline float Sum(const _v4<T>& v) {
 
 using Vec4 = _v4<float>;
 using Int4 = _v4<int>;
+
+// Boxes -----------------------------------------------------------------------
+
+template <typename T>
+struct _box {
+  T min;
+  T max;
+};
+
+using IntBox2 = _box<Int2>;
+
+template <typename T>
+inline std::string ToString(const _box<T>& box) {
+  return StringPrintf("MIN: (%f, %f), MAX: (%f, %f)", box.min.x, box.min.y,
+                                                      box.max.x, box.max.y);
+}
 
 // Old implementation ----------------------------------------------------------
 

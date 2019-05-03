@@ -7,6 +7,7 @@
 
 #include "tetris_renderer.h"
 #include "game.h"
+#include "shape.h"
 
 namespace tetris {
 
@@ -20,7 +21,7 @@ bool HasTickTimerTriggered(Game* game, TickTimer* timer) {
 
 bool InitTetris(Game* game, Tetris* tetris) {
   Board board = {};
-  board.width = 10;
+  board.width = 15;
   board.height = 20;
   uint32_t slot_count = board.width * board.height;
   board._slots.resize(slot_count);
@@ -127,10 +128,20 @@ void UpdateNewShape(Game* game, Tetris* tetris) {
   int index = rand() % ARRAY_SIZE(kShapes);
   tetris->current_shape.shape = kShapes[index];
   Int2 new_pos;
-  new_pos.y = board->height - 1;
   new_pos.x = rand() % board->width;
-  tetris->current_shape.pos = new_pos;
+  new_pos.y = board->height - 1;
+
+  // We check that we're not crossing the x_bounds.
+  IntBox2 bounds = GetShapeBoundingBox(&tetris->current_shape.shape, new_pos);
+  LOG(DEBUG) << "New shape bounds: " << ToString(bounds);
+  if (bounds.min.x < 0) {
+    new_pos.x += 0 - bounds.min.x;
+  } else if (bounds.min.x >= board->width) {
+    new_pos.x -= bounds.max.x - (board->width - 1);
+  }
+
   LOG(DEBUG) << "Creating new shape at: " << ToString(new_pos);
+  tetris->current_shape.pos = new_pos;
 }
 
 // Returns an offset of where the shape should move.
@@ -246,17 +257,18 @@ void UpdateCurrentShape(Game* game, Tetris* tetris) {
                                             &tetris->current_shape.shape,
                                             tetris->current_shape.pos,
                                             offset);
-
   switch (collision_type) {
     case CollisionType::kNone:
-      LOG(DEBUG) << "Before: " << ToString(tetris->current_shape.pos);
       tetris->current_shape.pos += offset;
-      LOG(DEBUG) << "After: " << ToString(tetris->current_shape.pos);
       return;
     case CollisionType::kBorder:
+      LOG(DEBUG) << "Got collision: " 
+                 << CollisionTypeToString(collision_type);
       return;
     case CollisionType::kBottom:
     case CollisionType::kShape:
+      LOG(DEBUG) << "Got collision: " 
+                 << CollisionTypeToString(collision_type);
       DoShapeCollision(tetris, offset);
       return;
   }
