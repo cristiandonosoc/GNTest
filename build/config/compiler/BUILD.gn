@@ -15,6 +15,7 @@ if (compiler == "msvc") {
       "/wd4700",    # Un-initialized variable.
       "/wd4702",    # Un-reachable code.
       "/wd4996",    # fopen.
+      "/wd4201",    # Anonymouse structs within union.
     ]
   }
 

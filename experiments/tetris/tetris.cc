@@ -255,7 +255,6 @@ void UpdateCurrentShape(Game* game, Tetris* tetris) {
 
   Int2 offset = {};
   if (game->input.down) {
-    LOG(DEBUG) << "Updating down move.";
     offset = UpdateDownMovement(game, tetris);
   } else {
     offset = UpdateAutoDownMovement(game, tetris);
