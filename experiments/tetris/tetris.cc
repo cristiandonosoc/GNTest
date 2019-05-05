@@ -11,14 +11,6 @@
 
 namespace tetris {
 
-bool HasTickTimerTriggered(Game* game, TickTimer* timer) {
-  if (timer->last_tick + timer->length > game->time.seconds)
-    return false;
-
-  timer->last_tick = game->time.seconds;
-  return true;
-}
-
 bool InitTetris(Game* game, Tetris* tetris) {
   Board board = {};
   board.width = 15;
@@ -46,16 +38,11 @@ bool InitTetris(Game* game, Tetris* tetris) {
 namespace {
 
 const Shape kShapes[] = {
-    // Square.
-    {{{0, 0}, {-1, 0}, {-1, 1}, {0, 1}}},
-    // L.
-    {{{0, 0}, {-1, 0}, {-2, 0}, {0, 1}}},
-    // Reverse-L.
-    {{{0, 0}, {1, 0}, {2, 0}, {0, 1}}},
-    // Squiggly.
-    {{{0, 0}, {1, 0}, {1, 1}, {0, -1}}},
-    // Reverse-Squiggly.
-    {{{0, 0}, {-1, 0}, {-1, 1}, {0, -1}}},
+    {"square",            {{0, 0}, {-1, 0}, {-1, 1}, {0, 1}}},
+    {"l",                 {{0, 0}, {-1, 0}, {-2, 0}, {0, 1}}},
+    {"reverse-l",         {{0, 0}, {1, 0}, {2, 0}, {0, 1}}},
+    {"squiggly",          {{0, 0}, {1, 0}, {1, 1}, {0, -1}}},
+    {"reverse-squiggly",  {{0, 0}, {-1, 0}, {-1, 1}, {0, -1}}},
 };
 
 enum class ShapeIndex {
@@ -88,7 +75,8 @@ void ClearLiveShape(Tetris* tetris) {
       int index = CoordToIndex(board, x, y);
       if (index < 0)
         continue;
-      if (GetSquare(board, x, y) == kLiveBlock)
+      uint8_t square = GetSquare(board, x, y);
+      if (square == kLiveBlock || square == kPivot)
           SetSquare(board, 0, x, y);
     }
   }
@@ -100,12 +88,13 @@ void PlaceCurrentShape(Tetris* tetris) {
 
   Int2 pos = tetris->current_shape.pos;
   Board* board = &tetris->board;
-  SetSquare(board, kLiveBlock, tetris->current_shape.pos);
-  for (auto& offset : tetris->current_shape.shape.offsets) {
+  for (auto& offset : tetris->current_shape.shape.rotated_offsets) {
     auto new_pos = pos + offset;
     if (WithinBounds(board, new_pos))
-    SetSquare(board, kLiveBlock, new_pos);
+      SetSquare(board, kLiveBlock, new_pos);
   }
+
+  SetSquare(board, kPivot, pos + tetris->current_shape.shape.pivot);
 }
 
 }  // namespace
@@ -133,10 +122,11 @@ void UpdateNewShape(Game* game, Tetris* tetris) {
 
   // We check that we're not crossing the x_bounds.
   IntBox2 bounds = GetShapeBoundingBox(&tetris->current_shape.shape, new_pos);
-  LOG(DEBUG) << "New shape bounds: " << ToString(bounds);
+  LOG(DEBUG) << "New " << tetris->current_shape.shape.name << " at "
+             << ToString(new_pos) << ", Bounds: " << ToString(bounds);
   if (bounds.min.x < 0) {
     new_pos.x += 0 - bounds.min.x;
-  } else if (bounds.min.x >= board->width) {
+  } else if (bounds.min.y >= board->width) {
     new_pos.x -= bounds.max.x - (board->width - 1);
   }
 
@@ -172,6 +162,8 @@ Int2 UpdateDownMovement(Game* game, Tetris* tetris) {
 }
 
 Int2 UpdateAutoDownMovement(Game* game, Tetris* tetris) {
+  if (tetris->no_down)
+    return {};
   if (!HasTickTimerTriggered(game, &tetris->auto_down_tick))
     return {};
   return {0, -1};
@@ -223,9 +215,9 @@ void LookForCompletedRows(Board* board) {
   }
 }
 
-void DoShapeCollision(Tetris* tetris, Int2) {
+void DoShapeCollision(Tetris* tetris) {
   // We cristalize the shape.
-  for (Int2& sqr_offset : tetris->current_shape.shape.offsets) {
+  for (Int2& sqr_offset : tetris->current_shape.shape.rotated_offsets) {
     Int2 sqr_pos = tetris->current_shape.pos + sqr_offset;
     SetSquare(&tetris->board, kDeadBlock, sqr_pos);
   }
@@ -236,11 +228,34 @@ void DoShapeCollision(Tetris* tetris, Int2) {
   LookForCompletedRows(&tetris->board);
 }
 
+void AttemptRotation(Tetris* tetris) {
+  // Get the rotated tetris offsets.
+  Shape* shape = &tetris->current_shape.shape;
+  auto rotated_offsets = GetRotatedOffsets(shape, shape->rotation + 1);
+
+  auto collision = CheckCollision(
+      &tetris->board, tetris->current_shape.pos, rotated_offsets);
+  // Check if a rotation is possible.
+  if (collision.type != CollisionType::kNone)
+    return;
+
+  // A rotation was possible!
+  shape->rotation++;
+  shape->rotated_offsets = std::move(rotated_offsets);
+}
+
 void UpdateCurrentShape(Game* game, Tetris* tetris) {
   SCOPE_LOCATION();
 
+  if (KeyDownThisFrame(&game->input, Key::kSpace))
+    tetris->no_down = !tetris->no_down;
+
+  if (KeyDownThisFrame(&game->input, Key::kUp))
+    AttemptRotation(tetris);
+
   Int2 offset = {};
   if (game->input.down) {
+    LOG(DEBUG) << "Updating down move.";
     offset = UpdateDownMovement(game, tetris);
   } else {
     offset = UpdateAutoDownMovement(game, tetris);
@@ -253,30 +268,38 @@ void UpdateCurrentShape(Game* game, Tetris* tetris) {
   if (IsZero(offset))
     return;
 
-  auto collision_type = CheckShapeCollision(&tetris->board,
-                                            &tetris->current_shape.shape,
-                                            tetris->current_shape.pos,
-                                            offset);
-  switch (collision_type) {
+  auto collision = CheckShapeCollision(&tetris->board,
+                                       &tetris->current_shape.shape,
+                                       tetris->current_shape.pos + offset);
+  if (collision.type != CollisionType::kNone) {
+    LOG(DEBUG) << "Got collision: " << CollisionTypeToString(collision.type)
+               << " at " << ToString(collision.pos);
+  }
+
+  switch (collision.type) {
     case CollisionType::kNone:
       tetris->current_shape.pos += offset;
       return;
     case CollisionType::kBorder:
-      LOG(DEBUG) << "Got collision: " 
-                 << CollisionTypeToString(collision_type);
       return;
     case CollisionType::kBottom:
+      DoShapeCollision(tetris);
+      return;
     case CollisionType::kShape:
-      LOG(DEBUG) << "Got collision: " 
-                 << CollisionTypeToString(collision_type);
-      DoShapeCollision(tetris, offset);
+      // If it was a side move, we simply bump against the shape.
+      if (offset.x == 0)
+        DoShapeCollision(tetris);
       return;
   }
+
+  NOT_REACHED() << "Unknown collision type: " << (int)collision.type;
 }
 
 }  // namespace
 
 void UpdateTetris(Game* game, Tetris* tetris) {
+  DrawerNewFrame(&tetris->drawer);
+
   // We see if we need to createa a new shape.
   if (!HasCurrentShape(tetris)) {
     UpdateNewShape(game, tetris);
@@ -285,14 +308,26 @@ void UpdateTetris(Game* game, Tetris* tetris) {
   }
 
   UpdateBoard(tetris);
-
-  DrawerNewFrame(&tetris->drawer);
 }
 
 // End Frame -------------------------------------------------------------------
 
 RenderCommand TetrisEndFrame(Game* game, Tetris* tetris) {
   return GetTetrisRenderCommand(game, tetris);
+}
+
+// TickTimer -------------------------------------------------------------------
+
+bool HasTickTimerTriggered(Game* game, TickTimer* timer) {
+  if (timer->last_tick + timer->length > game->time.seconds)
+    return false;
+
+  timer->last_tick = game->time.seconds;
+  return true;
+}
+
+float TimerRatio(Game* game, TickTimer* timer) {
+  return (game->time.seconds - timer->last_tick) / timer->length;
 }
 
 }  // namespace tetris

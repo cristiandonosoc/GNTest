@@ -33,6 +33,7 @@ struct TickTimer {
 
 // Will update |last_tick| if true.
 bool HasTickTimerTriggered(Game*, TickTimer*);
+float TimerRatio(Game*, TickTimer*);
 
 struct TetrisStats {
   int lines_completed = 0;
@@ -41,11 +42,12 @@ struct TetrisStats {
 struct Tetris {
   Board board;
 
-  TickTimer next_shape_tick = {1.0f, 0.0f};
-  TickTimer auto_down_tick = {0.7f, 0.0f};
-
   TickTimer side_move_tick = {0.2f, 0.0f};
-  TickTimer down_move_tick = {0.05f, 0.0f};
+  TickTimer down_move_tick = {0.02f, 0.0f};
+
+  TickTimer auto_down_tick = {0.7f, 0.0f};
+  bool no_down = false;
+  TickTimer next_shape_tick = {0.1f, 0.0f};
 
   TetrisShape current_shape = {};
 

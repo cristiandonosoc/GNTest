@@ -104,14 +104,14 @@ void RestartKeys(Window* window, InputState* input, ImGuiIO* io) {
 
 
   for (size_t i = 0; i < InputState::kInputSize; i++) {
-    if (input->keys_down[i])
+    if (input->down_this_frame[i])
       io->KeysDown[i] = true;
   }
 
-  io->KeyCtrl = input->keys_down[GET_KEY(Ctrl)];
-  io->KeyAlt = input->keys_down[GET_KEY(Alt)];
-  io->KeyShift = input->keys_down[GET_KEY(Shift)];
-  io->KeySuper = input->keys_down[GET_KEY(Super)];
+  io->KeyCtrl = input->down_this_frame[GET_KEY(Ctrl)];
+  io->KeyAlt = input->down_this_frame[GET_KEY(Alt)];
+  io->KeyShift = input->down_this_frame[GET_KEY(Shift)];
+  io->KeySuper = input->down_this_frame[GET_KEY(Super)];
 
   // Pass in the text input characters.
   io->AddInputCharactersUTF8(window->utf8_chars_inputted);

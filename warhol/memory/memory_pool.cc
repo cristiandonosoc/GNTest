@@ -8,8 +8,7 @@
 namespace warhol {
 
 void InitMemoryPool(MemoryPool* pool, size_t size) {
-  LOG(DEBUG) << "Valid: " << Valid(pool);
-  ASSERT(!Valid(pool)) << "It is valid? " << Valid(pool);
+  ASSERT(!Valid(pool));
   pool->size = size;
   pool->data = std::make_unique<uint8_t[]>(size);
   pool->current = pool->data.get();

@@ -15,11 +15,19 @@ namespace tetris {
 constexpr uint8_t kNone = 0;
 constexpr uint8_t kDeadBlock = 1;   // A block that is already stationed.
 constexpr uint8_t kLiveBlock = 2;   // A block of a current shape.
+constexpr uint8_t kPivot = 3;       // Represents the pivot point of a shape.
 
 // The offsets define the places where this shape has a square offseted from its
 // position.
 struct Shape {
+  Shape() = default;
+  Shape(const char* name, std::vector<Int2> offsets);
+
+  const char* name = nullptr;
+  int rotation = 0;   // +1 means a clockwise rotation.
+  Int2 pivot = {};
   std::vector<Int2> offsets;
+  std::vector<Int2> rotated_offsets;
 };
 
 inline bool Valid(Shape* shape) { return !shape->offsets.empty(); }
@@ -41,9 +49,17 @@ enum class CollisionType {
 const char* CollisionTypeToString(CollisionType);
 
 // Checks if where a shape would move creates some kind of collision.
-CollisionType CheckShapeCollision(Board*, Shape*, Int2 pos, Int2 offset);
+struct Collision {
+  CollisionType type = CollisionType::kNone;
+  Int2 pos;       // Where the collision occured.
+};
+Collision CheckShapeCollision(Board*, Shape*, Int2 pivot);
+Collision CheckCollision(Board*, Int2 pivot, const std::vector<Int2>& offsets);
 
 // Utils -----------------------------------------------------------------------
+
+std::vector<Int2> GetRotatedOffsets(Shape*, int offset);
+/* std::vector<Int2> GetRotatedOffsets(Shape*); */
 
 uint8_t GetSquare(Board*, Int2 coord);
 uint8_t GetSquare(Board*, int x, int y);

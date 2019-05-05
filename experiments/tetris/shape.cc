@@ -7,6 +7,9 @@
 
 namespace tetris {
 
+Shape::Shape(const char* name, std::vector<Int2> offsets)
+    : name(name), offsets(offsets), rotated_offsets(std::move(offsets)) {}
+
 namespace {
 
 bool WithinBoundsX(Board* board, int x) {
@@ -23,37 +26,56 @@ bool WithinBoundsY(Board* board, int y) {
 
 }  // namespace
 
-CollisionType
-CheckShapeCollision(Board* board, Shape* shape, Int2 pos, Int2 offset) {
-  SCOPE_LOCATION() << "Pos: " << ToString(pos)
-                   << ", Offset: " << ToString(offset);
-  bool is_side_move = offset.x != 0;
-  for (Int2& sqr_offset : shape->offsets) {
-    Int2 sqr_pos = pos + sqr_offset + offset;
+Collision
+CheckShapeCollision(Board* board, Shape* shape, Int2 pivot) {
+  return CheckCollision(board, pivot, shape->rotated_offsets);
+}
+
+
+Collision
+CheckCollision(Board* board, Int2 pivot, const std::vector<Int2>& offsets) {
+  for (const Int2& sqr_offset : offsets) {
+    Int2 sqr_pos = pivot + sqr_offset;
     if (sqr_pos.y >= board->height)
       continue;
 
     if (sqr_pos.y < 0)
-      return CollisionType::kBottom;
+      return {CollisionType::kBottom, sqr_pos};
 
     if (!WithinBoundsX(board, sqr_pos.x))
-      return CollisionType::kBorder;
+      return {CollisionType::kBorder, sqr_pos};
 
     // Check if we hit a shape.
     uint8_t sqr = GetSquare(board, sqr_pos);
-    if (sqr == kDeadBlock) {
-      if (!is_side_move) {
-        return CollisionType::kShape;
-      } else {
-        return CollisionType::kBorder;
-      }
-    }
+    if (sqr == kDeadBlock)
+      return {CollisionType::kShape, sqr_pos};
   }
 
-  return CollisionType::kNone;
+  return {};
 }
 
 // Utils -----------------------------------------------------------------------
+
+std::vector<Int2> GetRotatedOffsets(Shape* shape, int index) {
+  // We apply rotation matrices for all "right" angles (0, 90, 180, 270).
+  // Note that these angles grow clockwise.
+  static IntMat2 rotations[4] = {
+    IntMat2::FromRows({ 1,  0}, { 0,  1}),  // 0.
+    IntMat2::FromRows({ 0,  1}, {-1,  0}),  // pi / 4.
+    IntMat2::FromRows({-1,  0}, { 0, -1}),  // pi / 2.
+    IntMat2::FromRows({ 0, -1}, { 1,  0}),  // (3 * pi) / 4.
+
+  };
+
+  index = index % 4;
+  std::vector<Int2> offsets;
+  offsets.reserve(shape->offsets.size());
+  for (auto& offset : shape->offsets) {
+    offsets.push_back(rotations[index] * offset);
+  }
+
+  return offsets;
+}
 
 int CoordToIndex(Board* board, Int2 coord) {
   return CoordToIndex(board, coord.x, coord.y);
@@ -95,8 +117,9 @@ bool WithinBounds(Board* board, int x, int y) {
 }
 
 IntBox2 GetShapeBoundingBox(Shape* shape, Int2 pos) {
-  constexpr int kBigBound = 1000000;
-  IntBox2 bounds = {{+kBigBound, -kBigBound}, {+kBigBound, -kBigBound}};
+  IntBox2 bounds;
+  bounds.min = {10000, -10000};
+  bounds.max = {10000, -10000};
   for (Int2 offset : shape->offsets) {
     Int2 true_pos = pos + offset;
     if (true_pos.x < bounds.min.x) bounds.min.x = true_pos.x;
@@ -120,6 +143,5 @@ const char* CollisionTypeToString(CollisionType type) {
   NOT_REACHED();
   return nullptr;
 }
-
 
 }  // namespace tetris

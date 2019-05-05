@@ -48,7 +48,7 @@ int main() {
       }
     }
 
-    if (!running || game.input.keys_up[GET_KEY(Escape)])
+    if (!running || KeyUpThisFrame(&game.input, Key::kEscape))
       break;
 
     ResetMemoryPool(&memory_pool);
@@ -63,5 +63,5 @@ int main() {
     EndFrame(&game, std::move(command_list));
   }
 
-  LOG(DEBUG) << "Adios, amigo!";
+  printf("またね\n");
 }

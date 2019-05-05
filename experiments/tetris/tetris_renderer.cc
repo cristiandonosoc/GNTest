@@ -51,6 +51,7 @@ int BlockTypeToColor(uint8_t type) {
   static std::map<uint8_t, int> kColorMap = {
     {kLiveBlock, Colors::kBlue},
     {kDeadBlock, Colors::kRed},
+    {kPivot, Colors::kGreen},
   };
 
   auto it = kColorMap.find(type);
@@ -79,9 +80,8 @@ void DrawBoard(Game* game, Tetris* tetris) {
       switch (block_type) {
         case kNone:
           continue;
+        case kPivot:
         case kLiveBlock:
-          DrawBlock(game, tetris, color, x, y);
-          continue;
         case kDeadBlock:
           DrawBlock(game, tetris, color, x, y);
           continue;
@@ -109,7 +109,7 @@ RenderCommand GetTetrisRenderCommand(Game* game, Tetris* tetris) {
   DrawBackground(game, tetris);
   DrawBoard(game, tetris);
 
-  DrawDebugSquares(game, tetris);
+  /* DrawDebugSquares(game, tetris); */
 
   return DrawerEndFrame(&tetris->drawer);
 }

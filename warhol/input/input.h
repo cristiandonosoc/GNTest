@@ -10,9 +10,9 @@
 
 namespace warhol {
 
-#define GET_KEY(key) ((uint8_t)::warhol::Keys::k##key)
+#define GET_KEY(key) ((uint8_t)::warhol::Key::k##key)
 
-enum class Keys {
+enum class Key {
   kUp, kDown, kLeft, kRight,
   kA, kB, kC, kD, kE, kF, kG, kH, kI, kJ, kK, kL, kM, kN, kEnhe /* Ñ */, kO, kP,
   kQ, kR, kS, kT, kU, kV, kW, kX, kY, kZ,
@@ -22,15 +22,17 @@ enum class Keys {
   kTab, kCtrl, kAlt, kShift, kSuper /* windows key */,
   kLast,  // Not a key, used to verify the input buffer size.
 };
+const char* KeyToString(Key);
 
 struct InputState {
   static constexpr uint8_t kInputSize = 128;
-  static_assert((uint8_t)Keys::kLast < InputState::kInputSize);
+  static_assert((uint8_t)Key::kLast < InputState::kInputSize);
 
-  bool keys_down[kInputSize];
-  bool keys_up[kInputSize];
+  bool down_last_frame[kInputSize];
+  bool down_this_frame[kInputSize];
+  static_assert(sizeof(down_last_frame) == sizeof(down_this_frame));
 
-  // These are equal to keys_down[<ARROW KEY>] == true.
+  // These are equal to down_this_frame[<ARROW KEY>] == true.
   bool up = false;
   bool down = false;
   bool left = false;
@@ -58,16 +60,22 @@ struct InputState {
   static void InitFrame(InputState*);
 };
 
-inline bool IsDown(InputState* input, Keys key) {
+inline bool KeyDown(InputState* input, Key key) {
   int val = (int)key;
-  ASSERT(val < (int)Keys::kLast);
-  return input->keys_down[val];
+  ASSERT(val < (int)Key::kLast);
+  return input->down_this_frame[val];
 }
 
-inline bool WasUp(InputState* input, Keys key) {
+inline bool KeyDownThisFrame(InputState* input, Key key) {
   int val = (int)key;
-  ASSERT(val < (int)Keys::kLast);
-  return input->keys_up[val];
+  ASSERT(val < (int)Key::kLast);
+  return input->down_this_frame[val] && !input->down_last_frame[val];
+}
+
+inline bool KeyUpThisFrame(InputState* input, Key key) {
+  int val = (int)key;
+  ASSERT(val < (int)Key::kLast);
+  return !input->down_this_frame[val] && input->down_last_frame[val];
 }
 
 }  // warhol
