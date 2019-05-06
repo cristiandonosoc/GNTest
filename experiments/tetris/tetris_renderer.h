@@ -41,7 +41,7 @@ void Shutdown(TetrisRenderer*);
 
 
 void NewFrame(TetrisRenderer*);
-bool EndFrame(TetrisRenderer*, List<RenderCommand>* out);
+RenderCommand EndFrame(TetrisRenderer*);
 
 ::warhol::RenderCommand GetTetrisRenderCommand(Game*, Tetris*);
 

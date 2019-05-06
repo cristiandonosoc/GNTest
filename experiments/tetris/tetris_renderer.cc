@@ -3,12 +3,172 @@
 
 #include "tetris_renderer.h"
 
+#include <warhol/utils/glm_impl.h>
+
 #include <map>
 
 #include "game.h"
 #include "tetris.h"
 
 namespace tetris {
+
+TetrisRenderer::~TetrisRenderer() {
+  if (Valid(this))
+    Shutdown(this);
+}
+
+bool Valid(TetrisRenderer* renderer) {
+  return renderer->shader.uuid.has_value();
+}
+
+// Init ------------------------------------------------------------------------
+
+namespace {
+
+struct TetrisRendererVertex {
+  Vec2 pos;
+};
+
+}  // namespace
+
+bool Init(TetrisRenderer* tetris_renderer, Renderer* renderer, Window* window) {
+  NOT_IMPLEMENTED();
+  ASSERT(!Valid(tetris_renderer));
+
+  /* if (!LoadShader("direct", "skydome", &tetris_renderer->shader)) { */
+  /*   LOG(ERROR) << "Could not load shader!"; */
+  /*   return false; */
+  /* } */
+
+  tetris_renderer->mesh.name = "TetrisRenderer";
+
+  // Create a mesh for creating a buffer.
+  tetris_renderer->mesh.name = "TetrisRendererMesh";
+  tetris_renderer->mesh.uuid = GetNextMeshUUID();
+  tetris_renderer->mesh.vertex_size = sizeof(TetrisRendererVertex);
+  tetris_renderer->mesh.attributes = {
+    {2, AttributeType::kFloat, false},
+  };
+
+  InitMeshPools(&tetris_renderer->mesh, KILOBYTES(16), KILOBYTES(16));
+  if (!RendererStageMesh(renderer, &tetris_renderer->mesh)) {
+    LOG(ERROR) << "Could not stage mesh!";
+    return false;
+  }
+
+  tetris_renderer->renderer = renderer;
+  tetris_renderer->window = window;
+
+  InitMemoryPool(&tetris_renderer->pool, KILOBYTES(2));
+
+  tetris_renderer->camera.projection = glm::mat4(1.0f);
+  tetris_renderer->camera.view = glm::mat4(1.0f);
+
+  return true;
+}
+
+// Shutdown --------------------------------------------------------------------
+
+void Shutdown(TetrisRenderer* renderer) {
+  ASSERT(Valid(renderer));
+  RendererUnstageMesh(renderer->renderer, &renderer->mesh);
+  renderer->mesh = {};
+  RendererUnstageShader(renderer->renderer, &renderer->shader);
+  renderer->shader = {};
+}
+
+// New Frame -------------------------------------------------------------------
+
+void NewFrame(TetrisRenderer* tetris_renderer) {
+  ResetMemoryPool(&tetris_renderer->pool);
+  ResetMesh(&tetris_renderer->mesh);
+}
+
+// EndFrame --------------------------------------------------------------------
+
+namespace {
+
+void AddQuad(Mesh* mesh, Window* window) {
+  TetrisRendererVertex vertices[4];
+  vertices[0].pos = { 0.0f, 0.0f };
+  vertices[1].pos = { (float)window->width, 0.0f};
+  vertices[2].pos = { 0.0f, (float)window->height };
+  vertices[3].pos = { (float)window->width, (float)window->height };
+
+  uint32_t indices[6];
+  indices[0] = 0;
+  indices[1] = 1;
+  indices[2] = 2;
+  indices[3] = 2;
+  indices[4] = 3;
+  indices[5] = 0;
+
+  PushVertices(mesh, vertices, ARRAY_SIZE(vertices));
+  PushIndices(mesh, indices, ARRAY_SIZE(indices));
+}
+
+void AddUniforms(MeshRenderAction* action, Window* window, MemoryPool* pool) {
+  uint8_t* ptr = pool->current;
+  Push(pool, &window->width, 1);
+  Push(pool, &window->height, 1);
+
+  float f;
+  f = 49.0f / 255.0f; Push(pool, &f, 1);
+  f = 33.0f / 255.0f; Push(pool, &f, 1);
+  f = 66.0f / 255.0f; Push(pool, &f, 1);
+
+  f = 0.0f; Push(pool, &f, 1);
+  f = 0.05f; Push(pool, &f, 1);
+  f = 0.2f; Push(pool, &f, 1);
+
+  action->frag_uniforms = ptr;
+}
+
+}  // namespace
+
+RenderCommand EndFrame(TetrisRenderer* renderer) {
+  SCOPE_LOCATION();
+
+  renderer->camera.viewport_p1 = {0, 0};
+  renderer->camera.viewport_p2 = {renderer->window->width,
+                                  renderer->window->height};
+
+  // TODO(Cristian): Move this to camera.
+  float L = renderer->camera.viewport_p1.x;
+  float R = renderer->camera.viewport_p2.x;
+  float T = renderer->camera.viewport_p1.y;
+  float B = renderer->camera.viewport_p2.y;
+  renderer->camera.projection = glm::ortho(L, R, B, T);
+
+  // Send the frame over.
+  AddQuad(&renderer->mesh, renderer->window);
+  if (RendererUploadMeshRange(renderer->renderer, &renderer->mesh))
+    NOT_REACHED() << "Could not upload mesh range";
+
+  MeshRenderAction action;
+  action.mesh = &renderer->mesh;
+  action.index_range = CreateRange(renderer->mesh.index_count, 0);
+  AddUniforms(&action, renderer->window, &renderer->pool);
+
+  auto actions = CreateList<MeshRenderAction>(&renderer->pool);
+  Push(&actions, std::move(action));
+
+  RenderCommand render_command;
+  render_command.name = "TetrisRendererSkybox";
+  render_command.type = RenderCommandType::kMesh;
+  render_command.config.blend_enabled = false;
+  render_command.config.cull_faces = false;
+  render_command.config.depth_test = false;
+  render_command.config.scissor_test = false;
+  render_command.config.wireframe_mode = false;
+  render_command.camera = &renderer->camera;
+  render_command.shader = &renderer->shader;
+  render_command.actions.mesh_actions = std::move(actions);
+
+  return render_command;
+}
+
+// Drawing ---------------------------------------------------------------------
 
 namespace {
 

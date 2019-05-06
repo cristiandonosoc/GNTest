@@ -66,8 +66,8 @@ struct MeshRenderAction {
   IndexRange index_range;
 
   // The counts of this are defined in the corresponding shader.
-  float* vert_uniforms = nullptr;
-  float* frag_uniforms = nullptr;
+  uint8_t* vert_uniforms = nullptr;
+  uint8_t* frag_uniforms = nullptr;
   Texture* textures = nullptr;
 };
 

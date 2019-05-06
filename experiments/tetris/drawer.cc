@@ -104,14 +104,12 @@ void DrawSquare(Drawer* drawer, Int2 tl, Int2 br, uint32_t color) {
 
 void DrawBorderSquare(Drawer* drawer, Int2 tl, Int2 br, uint32_t color) {
   SCOPE_LOCATION();
-  DrawSquare(drawer, tl, br, 0x22'22'22'22);
 
   int bs = 2;   // Border Size.
-  int ss = 0;
-  DrawSquare(drawer, {tl.x, tl.y}, {tl.x + bs, br.y - ss}, color);
-  DrawSquare(drawer, {tl.x, tl.y}, {br.x - ss, tl.y + bs}, color);
-
-  /* DrawSquare(drawer, {br.x - 5, br.y}, {br.x, br.y - bs}, color); */
+  DrawSquare(drawer, {tl.x, tl.y}, {tl.x + bs, br.y}, color);
+  DrawSquare(drawer, {tl.x, tl.y}, {br.x, tl.y + bs}, color);
+  DrawSquare(drawer, {tl.x, br.y - bs}, {br.x, br.y}, color);
+  DrawSquare(drawer, {br.x - bs, tl.y}, {br.x, br.y}, color);
 }
 
 RenderCommand DrawerEndFrame(Drawer* drawer) {

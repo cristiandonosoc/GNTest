@@ -84,7 +84,6 @@ bool LoadShader(const std::string_view& name,
                 const std::string_view& base_path,
                 RendererType shader_type,
                 Shader* shader) {
-
   if (shader_type == RendererType::kVulkan) {
     LOG(ERROR) << "Vulkan shader type not supported yet.";
     return false;
@@ -119,9 +118,11 @@ bool LoadShader(const std::string_view& name,
 }  // namespace
 
 
-bool LoadShader(const std::string_view& name, Renderer* renderer, Shader* shader) {
-  if (!LoadShader(name, GetShaderPath(name, renderer->type),
-                  renderer->type, shader)) {
+bool LoadShader(const std::string_view& name,
+                Renderer* renderer,
+                Shader* shader) {
+  if (!LoadShader(
+          name, GetShaderPath(name, renderer->type), renderer->type, shader)) {
     LOG(ERROR) << "Could not load shader " << name;
     return false;
   }
