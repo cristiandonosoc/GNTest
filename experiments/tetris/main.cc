@@ -57,6 +57,7 @@ int main() {
     DoImguiUI(&game, &tetris);
 
     auto command_list = CreateList<RenderCommand>(&memory_pool);
+
     Push(&command_list, TetrisEndFrame(&game, &tetris));
     Push(&command_list, ImguiEndFrame(&game.imgui));
 

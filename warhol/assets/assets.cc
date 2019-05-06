@@ -3,8 +3,8 @@
 
 #include "warhol/assets/assets.h"
 
+#include "warhol/platform/path.h"
 #include "warhol/platform/platform.h"
-#include "warhol/utils/path.h"
 
 namespace warhol {
 

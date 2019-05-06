@@ -4,11 +4,11 @@
 #pragma once
 
 #include <stdint.h>
-
 #include <warhol/math/vec.h>
 
 #include "drawer.h"
 #include "shape.h"
+#include "tetris_renderer.h"
 
 namespace tetris {
 
@@ -50,6 +50,7 @@ struct Tetris {
   TickTimer next_shape_tick = {0.1f, 0.0f};
 
   TetrisShape current_shape = {};
+  TetrisScreenDimensions dimensions;
 
   Drawer drawer;
 };

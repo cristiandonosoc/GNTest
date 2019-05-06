@@ -3,12 +3,12 @@
 
 #include "warhol/platform/platform.h"
 
+#include <errno.h>
+#include <stdio.h>
 #include <mach-o/dyld.h>
 #include <sys/errno.h>
 
-#include "warhol/utils/assert.h"
-#include "warhol/utils/log.h"
-#include "warhol/utils/path.h"
+#include "warhol/platform/path.h"
 
 namespace warhol {
 
@@ -17,8 +17,9 @@ std::string GetCurrentExecutablePath() {
   uint32_t bufsize = sizeof(buf);
   int res = _NSGetExecutablePath(buf, &bufsize);
   if (res != 0) {
-    LOG(ERROR) << "Could not get path to current executable: "
-               << strerror(errno);
+    fprintf(stderr, "Could not get path to current executable: %s\n",
+            strerror(errno));
+    fflush(stderr);
     return {};
   }
 

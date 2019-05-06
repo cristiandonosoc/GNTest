@@ -5,6 +5,7 @@
 
 #include <iostream>
 
+#include "warhol/platform/timing.h"
 #include "warhol/utils/macros.h"
 
 namespace warhol {
@@ -14,7 +15,12 @@ namespace {
 void AssertionFailed(Location loc,
                      const char* condition,
                      std::string message) {
-  printf("Assertion failed at %s (%s:%d):\n", loc.function, loc.file, loc.line);
+  auto time = GetCurrentTime();
+  printf("[%s] Assertion failed at %s (%s:%d):\n",
+         TimeToString(time).c_str(),
+         loc.function,
+         loc.file,
+         loc.line);
 
   if (message.empty()) {
     printf("\n    %s\n\n", condition);
@@ -77,7 +83,7 @@ LogEntry::LogEntry(const Location& location,
 LogEntry::~LogEntry() {
   os_ << std::endl;
   if (level_ != LogLevel::kASSERT) {
-    std::cerr << os_.str();
+    std::cerr << "[" << TimeToString(GetCurrentTime()) << "]" << os_.str();
     std::cerr.flush();
   } else if (assert_) {
     AssertionFailed(location_, condition_, os_.str());

@@ -3,12 +3,13 @@
 
 #include "warhol/platform/platform.h"
 
-#include <time.h>
+#include <errno.h>
+#include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
-#include "warhol/utils/log.h"
-#include "warhol/utils/path.h"
+#include "warhol/platform/path.h"
 
 namespace warhol {
 
@@ -16,8 +17,9 @@ std::string GetCurrentExecutablePath() {
   char buf[1024];
   int res = readlink("/proc/self/exe", buf, sizeof(buf));
   if (res < 0) {
-    LOG(ERROR) << "Could not get path to current executable: "
-               << strerror(errno);
+    fprintf(stderr, "Could not get path to current executable: %s\n",
+            strerror(errno));
+    fflush(stderr);
     return std::string();
   }
 

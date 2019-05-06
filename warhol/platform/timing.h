@@ -5,10 +5,11 @@
 
 #include <stdint.h>
 
+#include <string>
+
 namespace warhol {
 
 struct PlatformTime {
-
   // Represents the time since the beginning of the program.
   uint64_t total_time = 0;    // In nanoseconds.
   float seconds = 0;
@@ -27,5 +28,16 @@ struct PlatformTime {
 };
 
 void PlatformUpdateTiming(PlatformTime*);
+
+struct Timepoint {
+  int hours;
+  int seconds;
+  int minutes;
+  int ms;
+};
+
+Timepoint GetCurrentTime();
+
+std::string TimeToString(const Timepoint&);
 
 }  // namespace

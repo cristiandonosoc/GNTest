@@ -6,7 +6,7 @@ Language: Cpp
 # AlignEscapedNewlines: Right
 
 AlignOperands: true
-# AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: Align
 AlignTrailingComments: true
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: true

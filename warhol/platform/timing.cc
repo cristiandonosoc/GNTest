@@ -3,8 +3,9 @@
 
 #include "warhol/platform/timing.h"
 
+#include <chrono>
+
 #include "warhol/platform/platform.h"
-#include "warhol/utils/log.h"
 
 namespace warhol {
 
@@ -40,6 +41,29 @@ void PlatformUpdateTiming(PlatformTime* time) {
                : PlatformTime::kFrameTimesCounts;
   time->frame_delta_average = accum;
   time->frame_rate = 1.0f / accum;
+}
+
+Timepoint GetCurrentTime() {
+  auto now = std::chrono::system_clock::now();
+  auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
+  auto fraction = now - seconds;
+
+  time_t cnow = std::chrono::system_clock::to_time_t(now);
+  std::tm* tm = std::localtime(&cnow);
+  Timepoint time = {};
+  time.hours = tm->tm_hour;
+  time.minutes = tm->tm_min;
+  time.seconds = tm->tm_sec;
+  time.ms =
+      std::chrono::duration_cast<std::chrono::milliseconds>(fraction).count();
+  return time;
+}
+
+std::string TimeToString(const Timepoint& time) {
+  char buf[30];
+  snprintf(buf, sizeof(buf) - 1, "%02d:%02d:%02d.%03d",
+           time.hours, time.minutes, time.seconds, time.ms);
+  return buf;
 }
 
 }  // namespace

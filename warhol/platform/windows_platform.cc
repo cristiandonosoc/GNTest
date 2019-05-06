@@ -3,9 +3,6 @@
 
 #include "warhol/platform/platform.h"
 
-#include "warhol/utils/log.h"
-#include "warhol/utils/path.h"
-
 // For some reason it needs to be defined at the end.
 #include <windows.h>
 

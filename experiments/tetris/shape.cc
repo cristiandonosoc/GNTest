@@ -7,8 +7,75 @@
 
 namespace tetris {
 
-Shape::Shape(const char* name, std::vector<Int2> offsets)
-    : name(name), offsets(offsets), rotated_offsets(std::move(offsets)) {}
+Shape::Shape(const char* name,
+             std::vector<Int2> offsets,
+             std::vector<IntMat2*> rotation_matrices)
+    : name(name),
+      offsets(std::move(offsets)),
+      rotation_matrices(std::move(rotation_matrices)) {
+  rotated_offsets = this->offsets;
+}
+
+// Get Shapes.
+
+namespace {
+
+IntMat2 kRotationMatrices[] = {
+    IntMat2::FromRows({ 1,  0}, { 0,  1}),  // 0.
+    IntMat2::FromRows({ 0,  1}, {-1,  0}),  // pi / 4.
+    IntMat2::FromRows({-1,  0}, { 0, -1}),  // pi / 2.
+    IntMat2::FromRows({ 0, -1}, { 1,  0}),  // (3 * pi) / 4.
+};
+
+Shape CreateShape(const char* name, std::vector<Int2> offsets, std::initializer_list<uint32_t> matrix_indices) {
+  std::vector<IntMat2*> matrices;
+  matrices.reserve(matrix_indices.size());
+  for (uint32_t i : matrix_indices) {
+    ASSERT(i < ARRAY_SIZE(kRotationMatrices));
+    matrices.push_back(&kRotationMatrices[i]);
+  }
+
+  return Shape(name, std::move(offsets), std::move(matrices));
+}
+
+
+};  // namespace
+
+const std::vector<Shape>& GetShapes() {
+  // * Is the pivot (0, 0) of the shape.
+  static std::vector<Shape> kShapes = {
+      // S:   xx
+      //     x*
+      CreateShape("S", {{-1, 0}, {0, 0}, {1, 0}, {1, 1}}, {0, 1}),
+      // Z:  xx
+      //      *x
+      CreateShape("Z", {{-1, 1}, {0, 1}, {0, 0}, {1, 0}}, {0, 1}),
+      // O:  xx
+      //     *x
+      CreateShape("O", {{0, 0}, {1, 0}, {0, 1}, {1, 1}}, {0}),
+      // L:    x
+      //     x*x
+      CreateShape("L", {{-1, 0}, {0, 0}, {1, 0}, {1, 1}}, {0, 1, 2, 3}),
+      // J:  x
+      //     x*x
+      CreateShape("J", {{-1, 1}, {-1, 0}, {0, 0}, {1, 0}}, {0, 1, 2, 3}),
+      // T:   x
+      //     x*x
+      CreateShape("T", {{-1, 0}, {0, 0}, {1, 0}, {0, 1}}, {0, 1, 2, 3}),
+      // I:  x*xx
+      CreateShape("I", {{-1, 0}, {0, 0}, {1, 0}, {2, 0}}, {0, 1}),
+  };
+
+  return kShapes;
+}
+
+Shape GetRandomShape() {
+  auto& shapes = GetShapes();
+  int index = rand() % shapes.size();
+  return shapes[index];
+}
+
+// Collision -------------------------------------------------------------------
 
 namespace {
 
@@ -31,24 +98,28 @@ CheckShapeCollision(Board* board, Shape* shape, Int2 pivot) {
   return CheckCollision(board, pivot, shape->rotated_offsets);
 }
 
-
-Collision
-CheckCollision(Board* board, Int2 pivot, const std::vector<Int2>& offsets) {
+Collision CheckCollision(Board* board, Int2 pivot,
+                         const std::vector<Int2>& offsets,
+                         bool collide_live) {
   for (const Int2& sqr_offset : offsets) {
     Int2 sqr_pos = pivot + sqr_offset;
-    if (sqr_pos.y >= board->height)
-      continue;
-
+    if (!WithinBoundsX(board, sqr_pos.x))
+      return {CollisionType::kBorder, sqr_pos};
     if (sqr_pos.y < 0)
       return {CollisionType::kBottom, sqr_pos};
 
-    if (!WithinBoundsX(board, sqr_pos.x))
-      return {CollisionType::kBorder, sqr_pos};
+    // We don't check over the board.
+    if (sqr_pos.y >= board->height)
+      continue;
 
     // Check if we hit a shape.
     uint8_t sqr = GetSquare(board, sqr_pos);
-    if (sqr == kDeadBlock)
+    if (sqr == kDeadBlock) {
       return {CollisionType::kShape, sqr_pos};
+    }
+    if (collide_live && sqr == kLiveBlock) {
+      return {CollisionType::kSame, sqr_pos};
+    }
   }
 
   return {};
@@ -57,21 +128,12 @@ CheckCollision(Board* board, Int2 pivot, const std::vector<Int2>& offsets) {
 // Utils -----------------------------------------------------------------------
 
 std::vector<Int2> GetRotatedOffsets(Shape* shape, int index) {
-  // We apply rotation matrices for all "right" angles (0, 90, 180, 270).
-  // Note that these angles grow clockwise.
-  static IntMat2 rotations[4] = {
-    IntMat2::FromRows({ 1,  0}, { 0,  1}),  // 0.
-    IntMat2::FromRows({ 0,  1}, {-1,  0}),  // pi / 4.
-    IntMat2::FromRows({-1,  0}, { 0, -1}),  // pi / 2.
-    IntMat2::FromRows({ 0, -1}, { 1,  0}),  // (3 * pi) / 4.
-
-  };
-
-  index = index % 4;
+  index = index % shape->rotation_matrices.size();
+  IntMat2* rotation_matrix = shape->rotation_matrices[index];
   std::vector<Int2> offsets;
   offsets.reserve(shape->offsets.size());
   for (auto& offset : shape->offsets) {
-    offsets.push_back(rotations[index] * offset);
+    offsets.push_back((*rotation_matrix) * offset);
   }
 
   return offsets;
@@ -137,6 +199,7 @@ const char* CollisionTypeToString(CollisionType type) {
     case CollisionType::kNone: return "None";
     case CollisionType::kBorder: return "Border";
     case CollisionType::kBottom: return "Bottom";
+    case CollisionType::kSame: return "Same";
     case CollisionType::kShape: return "Shape";
   }
 

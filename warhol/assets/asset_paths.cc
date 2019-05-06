@@ -3,9 +3,9 @@
 
 #include "warhol/assets/asset_paths.h"
 
+#include "warhol/platform/path.h"
 #include "warhol/platform/platform.h"
 #include "warhol/utils/log.h"
-#include "warhol/utils/path.h"
 
 namespace warhol {
 

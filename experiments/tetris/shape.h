@@ -16,21 +16,31 @@ constexpr uint8_t kNone = 0;
 constexpr uint8_t kDeadBlock = 1;   // A block that is already stationed.
 constexpr uint8_t kLiveBlock = 2;   // A block of a current shape.
 constexpr uint8_t kPivot = 3;       // Represents the pivot point of a shape.
+constexpr uint8_t kShadow = 4;      // Where the shape will be when dropped.
 
 // The offsets define the places where this shape has a square offseted from its
 // position.
 struct Shape {
   Shape() = default;
-  Shape(const char* name, std::vector<Int2> offsets);
+  Shape(const char* name,
+        std::vector<Int2> offsets,
+        std::vector<IntMat2*> rotation_matrices);
 
   const char* name = nullptr;
   int rotation = 0;   // +1 means a clockwise rotation.
-  Int2 pivot = {};
   std::vector<Int2> offsets;
+  std::vector<IntMat2*> rotation_matrices;
+
+  // Cache of offsets * current rotation_matrix.
   std::vector<Int2> rotated_offsets;
 };
 
 inline bool Valid(Shape* shape) { return !shape->offsets.empty(); }
+
+const std::vector<Shape>& GetShapes();
+Shape GetRandomShape();
+
+// Board -----------------------------------------------------------------------
 
 struct Board {
   int width = 0;
@@ -45,6 +55,7 @@ enum class CollisionType {
   kBorder,
   kBottom,
   kShape,     // Hit another shape square.
+  kSame,      // Used for shadow placement.
 };
 const char* CollisionTypeToString(CollisionType);
 
@@ -54,12 +65,16 @@ struct Collision {
   Int2 pos;       // Where the collision occured.
 };
 Collision CheckShapeCollision(Board*, Shape*, Int2 pivot);
-Collision CheckCollision(Board*, Int2 pivot, const std::vector<Int2>& offsets);
+
+// If |collide_live| is true, check if the offsets collides with a live shape
+// placed within the board.
+Collision CheckCollision(Board*, Int2 pivot,
+                         const std::vector<Int2>& offsets,
+                         bool collide_live = false);
 
 // Utils -----------------------------------------------------------------------
 
 std::vector<Int2> GetRotatedOffsets(Shape*, int offset);
-/* std::vector<Int2> GetRotatedOffsets(Shape*); */
 
 uint8_t GetSquare(Board*, Int2 coord);
 uint8_t GetSquare(Board*, int x, int y);

@@ -75,6 +75,7 @@ const char* KeyToString(Key key) {
     case Key::k7: return "7";
     case Key::k8: return "8";
     case Key::k9: return "9";
+    case Key::kBackquote: return "`";
     case Key::kPageUp: return "PageUp";
     case Key::kPageDown: return "PageDown";
     case Key::kHome: return "Home";

@@ -16,7 +16,7 @@ void DrawBackground(Game* game, Tetris* tetris) {
   // Generate the board.
   Board* board = &tetris->board;
 
-  auto dims = GetTetrisScreenDimensions(game, tetris);
+  auto& dims = tetris->dimensions;
   int right_pad = dims.screen_pad + dims.board_width;
 
   int border = 3;
@@ -52,60 +52,74 @@ int BlockTypeToColor(uint8_t type) {
     {kLiveBlock, Colors::kBlue},
     {kDeadBlock, Colors::kRed},
     {kPivot, Colors::kGreen},
+    {kShadow, Colors::kGray},
   };
 
   auto it = kColorMap.find(type);
-  if (it == kColorMap.end())
-    return 0;
+  ASSERT(it != kColorMap.end());
   return it->second;
 }
 
-void DrawBlock(Game* game, Tetris* tetris, int color, int x, int y) {
-  // Generate the board.
-  auto dims = GetTetrisScreenDimensions(game, tetris);
-
+void DrawColoredSquare(Game* game, Tetris* tetris, uint8_t square, int x, int y) {
+  auto& dims = tetris->dimensions;
   int ax = dims.screen_pad + x * dims.block_size;
   int ay = game->window.height - y * dims.block_size - dims.block_size;
   DrawSquare(&tetris->drawer,
              {ax, ay}, {ax + dims.block_size - 1, ay + dims.block_size - 1},
-             color);
+             BlockTypeToColor(square));
+}
+
+void DrawShadow(Game* game, Tetris* tetris, int x, int y) {
+  auto& dims = tetris->dimensions;
+  int ax = dims.screen_pad + x * dims.block_size;
+  int ay = game->window.height - y * dims.block_size - dims.block_size;
+  DrawBorderSquare(&tetris->drawer,
+                   {ax, ay},
+                   {ax + dims.block_size - 1, ay + dims.block_size - 1},
+                   Colors::kTeal);
+}
+
+void DrawBlock(Game* game, Tetris* tetris, int x, int y) {
+  uint8_t square = GetSquare(&tetris->board, x, y);
+  switch (square) {
+    case kLiveBlock:
+    case kDeadBlock:
+    case kPivot:
+      return DrawColoredSquare(game, tetris, square, x, y);
+    case kShadow:
+      return DrawShadow(game, tetris, x, y);
+    case kNone:
+      return;
+    default:
+      break;
+  }
 }
 
 void DrawBoard(Game* game, Tetris* tetris) {
   Board* board = &tetris->board;
   for (int y = 0; y < (int)board->height; y++) {
     for (int x = 0; x < (int)board->width; x++) {
-      uint8_t block_type = GetSquare(&tetris->board, x, y);
-      int color = BlockTypeToColor(block_type);
-      switch (block_type) {
-        case kNone:
-          continue;
-        case kPivot:
-        case kLiveBlock:
-        case kDeadBlock:
-          DrawBlock(game, tetris, color, x, y);
-          continue;
-        default:
-          NOT_REACHED() << "Invalid square type";
-      }
+      DrawBlock(game, tetris, x, y);
     }
   }
 }
 
-static inline int CreateColor(uint8_t i) {
-  return 0xff000000 | i << 16 | i << 8 | i;
-}
+/* static inline int CreateColor(uint8_t i) { */
+/*   return 0xff000000 | i << 16 | i << 8 | i; */
+/* } */
 
-void DrawDebugSquares(Game* game, Tetris* tetris) {
-  Board* board = &tetris->board;
-  for (int i = 0; i < board->height; i++) {
-    DrawBlock(game, tetris, CreateColor(i * 10), 0, i);
-  }
-}
+/* void DrawDebugSquares(Game* game, Tetris* tetris) { */
+/*   Board* board = &tetris->board; */
+/*   for (int i = 0; i < board->height; i++) { */
+/*     DrawBlock(game, tetris, CreateColor(i * 10), 0, i); */
+/*   } */
+/* } */
 
 }  // namespace
 
 RenderCommand GetTetrisRenderCommand(Game* game, Tetris* tetris) {
+  tetris->dimensions = GetTetrisScreenDimensions(game, tetris);
+
   DrawBackground(game, tetris);
   DrawBoard(game, tetris);
 

@@ -1,7 +1,7 @@
 // Copyright 2018, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include "warhol/utils/path.h"
+#include "warhol/platform/path.h"
 
 #include "warhol/utils/string.h"
 

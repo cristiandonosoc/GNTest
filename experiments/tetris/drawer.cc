@@ -73,20 +73,20 @@ void DrawerNewFrame(Drawer* drawer) {
   ResetMesh(&drawer->mesh);
 }
 
-void DrawSquare(Drawer* drawer, Pair<int> bl, Pair<int> tr, uint32_t color) {
+void DrawSquare(Drawer* drawer, Int2 tl, Int2 br, uint32_t color) {
   SCOPE_LOCATION();
 
   DrawerVertex vertices[4];
-  vertices[0].pos = {(float)bl.x, (float)bl.y};
+  vertices[0].pos = {(float)tl.x, (float)tl.y};
   vertices[0].color = color;
 
-  vertices[1].pos = {(float)tr.x, (float)bl.y};
+  vertices[1].pos = {(float)br.x, (float)tl.y};
   vertices[1].color = color;
 
-  vertices[2].pos = {(float)tr.x, (float)tr.y};
+  vertices[2].pos = {(float)br.x, (float)br.y};
   vertices[2].color = color;
 
-  vertices[3].pos = {(float)bl.x, (float)tr.y};
+  vertices[3].pos = {(float)tl.x, (float)br.y};
   vertices[3].color = color;
 
   uint32_t vert_count = drawer->mesh.vertex_count;
@@ -101,6 +101,18 @@ void DrawSquare(Drawer* drawer, Pair<int> bl, Pair<int> tr, uint32_t color) {
   PushVertices(&drawer->mesh, vertices, ARRAY_SIZE(vertices));
   PushIndices(&drawer->mesh, indices, 6);
 };
+
+void DrawBorderSquare(Drawer* drawer, Int2 tl, Int2 br, uint32_t color) {
+  SCOPE_LOCATION();
+  DrawSquare(drawer, tl, br, 0x22'22'22'22);
+
+  int bs = 2;   // Border Size.
+  int ss = 0;
+  DrawSquare(drawer, {tl.x, tl.y}, {tl.x + bs, br.y - ss}, color);
+  DrawSquare(drawer, {tl.x, tl.y}, {br.x - ss, tl.y + bs}, color);
+
+  /* DrawSquare(drawer, {br.x - 5, br.y}, {br.x, br.y - bs}, color); */
+}
 
 RenderCommand DrawerEndFrame(Drawer* drawer) {
   SCOPE_LOCATION();

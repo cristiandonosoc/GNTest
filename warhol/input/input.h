@@ -17,6 +17,7 @@ enum class Key {
   kA, kB, kC, kD, kE, kF, kG, kH, kI, kJ, kK, kL, kM, kN, kEnhe /* Ñ */, kO, kP,
   kQ, kR, kS, kT, kU, kV, kW, kX, kY, kZ,
   k0, k1, k2, k3, k4, k5, k6, k7, k8, k9,
+  kBackquote,
   kPageUp, kPageDown, kHome, kEnd, kInsert, kDelete,
   kBackspace, kSpace, kEnter, kEscape,
   kTab, kCtrl, kAlt, kShift, kSuper /* windows key */,

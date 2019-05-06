@@ -37,32 +37,6 @@ bool InitTetris(Game* game, Tetris* tetris) {
 
 namespace {
 
-const Shape kShapes[] = {
-    {"square",            {{0, 0}, {-1, 0}, {-1, 1}, {0, 1}}},
-    {"l",                 {{0, 0}, {-1, 0}, {-2, 0}, {0, 1}}},
-    {"reverse-l",         {{0, 0}, {1, 0}, {2, 0}, {0, 1}}},
-    {"squiggly",          {{0, 0}, {1, 0}, {1, 1}, {0, -1}}},
-    {"reverse-squiggly",  {{0, 0}, {-1, 0}, {-1, 1}, {0, -1}}},
-};
-
-enum class ShapeIndex {
-  kSquare = 0,
-  kL,
-  kInverseL,
-  kSquiggly,
-  kReverseSquiggly,
-  kLast,
-};
-static_assert(ARRAY_SIZE(kShapes) == (size_t)ShapeIndex::kLast);
-
-#define GET_SHAPE_PTR(shape_name) \
-  (&kShapes[(uint32_t)ShapeIndex::k##shape_name])
-#define GET_SHAPE(shape_name) (*GET_SHAPE_PTR(shape_name))
-
-};  // namespace
-
-namespace {
-
 bool HasCurrentShape(Tetris* tetris) {
   return Valid(&tetris->current_shape.shape);
 }
@@ -76,8 +50,8 @@ void ClearLiveShape(Tetris* tetris) {
       if (index < 0)
         continue;
       uint8_t square = GetSquare(board, x, y);
-      if (square == kLiveBlock || square == kPivot)
-          SetSquare(board, 0, x, y);
+      if (square == kLiveBlock || square == kPivot || square == kShadow)
+        SetSquare(board, 0, x, y);
     }
   }
 }
@@ -94,7 +68,30 @@ void PlaceCurrentShape(Tetris* tetris) {
       SetSquare(board, kLiveBlock, new_pos);
   }
 
-  SetSquare(board, kPivot, pos + tetris->current_shape.shape.pivot);
+  SetSquare(board, kPivot, pos);
+}
+
+void PlaceShadow(Tetris* tetris) {
+  Int2 pos = tetris->current_shape.pos;
+  Shape* shape = &tetris->current_shape.shape;
+  Board* board = &tetris->board;
+
+  // We go upwards looking for a collision. The first place we don't find any,
+  // is where this shape will be if dropped.
+  auto offsets = shape->rotated_offsets;
+  // We go one below to also collide with the bottom.
+  for (int y = pos.y - 1; y >= -1; y--) {
+    Int2 new_pos = {pos.x, y};
+    auto collision = CheckCollision(board, new_pos, offsets);
+    if (collision.type == CollisionType::kNone)
+      continue;
+
+    // We found a slot where we didn't collide. The shadow goes here.
+    for (auto& offset : offsets) {
+      SetSquare(board, kShadow, new_pos + Int2{0, 1} + offset);
+    }
+    break;
+  }
 }
 
 }  // namespace
@@ -105,6 +102,7 @@ namespace {
 
 void UpdateBoard(Tetris* tetris) {
   ClearLiveShape(tetris);
+  PlaceShadow(tetris);
   PlaceCurrentShape(tetris);
 }
 
@@ -114,8 +112,7 @@ void UpdateNewShape(Game* game, Tetris* tetris) {
 
   // Create a new shape.
   Board* board = &tetris->board;
-  int index = rand() % ARRAY_SIZE(kShapes);
-  tetris->current_shape.shape = kShapes[index];
+  tetris->current_shape.shape = GetRandomShape();
   Int2 new_pos;
   new_pos.x = rand() % board->width;
   new_pos.y = board->height - 1;
@@ -233,8 +230,9 @@ void AttemptRotation(Tetris* tetris) {
   Shape* shape = &tetris->current_shape.shape;
   auto rotated_offsets = GetRotatedOffsets(shape, shape->rotation + 1);
 
-  auto collision = CheckCollision(
-      &tetris->board, tetris->current_shape.pos, rotated_offsets);
+  auto collision = CheckCollision(&tetris->board,
+                                  tetris->current_shape.pos,
+                                  rotated_offsets);
   // Check if a rotation is possible.
   if (collision.type != CollisionType::kNone)
     return;
@@ -271,6 +269,7 @@ void UpdateCurrentShape(Game* game, Tetris* tetris) {
                                        &tetris->current_shape.shape,
                                        tetris->current_shape.pos + offset);
   if (collision.type != CollisionType::kNone) {
+    LOG(DEBUG) << "Offset: " << ToString(offset);
     LOG(DEBUG) << "Got collision: " << CollisionTypeToString(collision.type)
                << " at " << ToString(collision.pos);
   }
@@ -289,6 +288,8 @@ void UpdateCurrentShape(Game* game, Tetris* tetris) {
       if (offset.x == 0)
         DoShapeCollision(tetris);
       return;
+    case CollisionType::kSame:
+      NOT_REACHED() << "Should not collide with same here.";
   }
 
   NOT_REACHED() << "Unknown collision type: " << (int)collision.type;

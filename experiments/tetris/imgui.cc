@@ -19,9 +19,14 @@ void TetrisUI(Game*, Tetris*);
 }  // namespace
 
 void DoImguiUI(Game* game, Tetris* tetris) {
-  /* ImGui::ShowDemoWindow(); */
-  SystemUI(game, tetris);
-  TetrisUI(game, tetris);
+  static bool show_system_ui = true;
+  if (KeyDownThisFrame(&game->input, Key::kBackquote))
+    show_system_ui = !show_system_ui;
+
+  if (show_system_ui) {
+    SystemUI(game, tetris);
+    TetrisUI(game, tetris);
+  }
 }
 
 namespace {
@@ -36,7 +41,6 @@ void SystemUI(Game* game, Tetris* tetris) {
   ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
               1000.0f * game->time.frame_delta_average,
               game->time.frame_rate);
-
 
   ImGui::Separator();
 

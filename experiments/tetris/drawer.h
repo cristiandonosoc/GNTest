@@ -44,7 +44,8 @@ void ShutdownDrawer(Drawer*);
 
 void DrawerNewFrame(Drawer*);
 
-void DrawSquare(Drawer*, Pair<int> bl, Pair<int> tr, uint32_t color);
+void DrawSquare(Drawer*, Int2 tl, Int2 br, uint32_t color);
+void DrawBorderSquare(Drawer*, Int2 tl, Int2 br, uint32_t color);
 
 ::warhol::RenderCommand DrawerEndFrame(Drawer*);
 

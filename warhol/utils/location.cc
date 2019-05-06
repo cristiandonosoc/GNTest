@@ -9,8 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include "warhol/platform/path.h"
 #include "warhol/utils/log.h"
-#include "warhol/utils/path.h"
 
 namespace warhol {
 namespace {

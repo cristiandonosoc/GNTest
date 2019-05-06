@@ -1,14 +1,17 @@
 # Copyright 2018, Cristián Donoso.
 # This code has a BSD license. See LICENSE.
 
+# Platform is the a base level library, it has no dependencies.
 source_set("platform") {
   public = [
     "platform.h",
     "timing.h",
+    "path.h"
   ]
 
   sources = [
     "timing.cc",
+    "path.cc"
   ]
 
   # Platform specific sources --------------------------------------------------
@@ -22,9 +25,5 @@ source_set("platform") {
   } else {
     assert(false, "Unhandled arch: $target_os")
   }
-
-  deps = [
-    "//warhol/utils",
-  ]
 }
 

@@ -3,21 +3,19 @@
 
 // Attributes ------------------------------------------------------------------
 
-layout (location = 0) in vec2 in_pos;
-layout (location = 1) in vec4 in_color;
-
 out vec4 color;
 
 // Uniforms --------------------------------------------------------------------
 
-layout (std140) uniform Camera {
-  mat4 proj;
-  mat4 view;
-} camera;
+layout (std140) uniform FragUniforms {
+  ivec2 screen_size;
+  vec3 sky_color1;
+  vec3 sky_color2;
+} uniforms;
 
 // Code ------------------------------------------------------------------------
 
 void main() {
-  gl_Position = camera.proj * camera.view * vec4(in_pos.xy, 0, 1.0);
-  color = in_color;
+  float i = gl_FragCoord.x / screen_size.x;
+  color = vec4(i * sky_color1 + (1 - i) * sky_color2, 1.0f);
 }

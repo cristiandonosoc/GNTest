@@ -56,6 +56,7 @@ void HandleKeysDown(InputState* input) {
   SET_SDL_KEY(input->down_this_frame, key_state, 7, 7);
   SET_SDL_KEY(input->down_this_frame, key_state, 8, 8);
   SET_SDL_KEY(input->down_this_frame, key_state, 9, 9);
+  SET_SDL_KEY(input->down_this_frame, key_state, GRAVE, Backquote);
   SET_SDL_KEY(input->down_this_frame, key_state, PAGEUP, PageUp);
   SET_SDL_KEY(input->down_this_frame, key_state, PAGEDOWN, PageDown);
   SET_SDL_KEY(input->down_this_frame, key_state, HOME, Home);
