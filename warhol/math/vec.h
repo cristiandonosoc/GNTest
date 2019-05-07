@@ -5,6 +5,8 @@
 
 #include <assert.h>
 
+#include <array>
+
 #include "warhol/math/math.h"
 #include "warhol/utils/log.h"
 #include "warhol/utils/string.h"
@@ -147,7 +149,7 @@ union _mat2 {
     return _mat2({r1[0], r2[0]}, {r1[1], r2[1]});
   }
 
-  inline _v2<T>& operator[](int index) {
+  _v2<T>& operator[](int index) {
     ASSERT(index >= 0 && index < 2);
     return columns[index];
   }
@@ -157,6 +159,16 @@ union _mat2 {
             columns[0][1] * v[0] + columns[1][1] * v[1]};
   }
 };
+
+template <typename T>
+std::array<T, 4> ToRowArray(_mat2<T>* mat) {
+  std::array<T, 4> array;
+  array[0] = (*mat)[0][0];
+  array[1] = (*mat)[1][0];
+  array[2] = (*mat)[0][1];
+  array[3] = (*mat)[1][1];
+  return array;
+}
 
 using IntMat2 = _mat2<int>;
 using Mat2 = _mat2<float>;

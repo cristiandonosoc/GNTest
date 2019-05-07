@@ -105,9 +105,18 @@ void TetrisUI(Game* game, Tetris* tetris) {
   if (ImGui::CollapsingHeader("Current Shape",
                               ImGuiTreeNodeFlags_DefaultOpen)) {
 
+
     ImGui::LabelText("Name", "%s", tetris->current_shape.shape.name);
     ImGui::InputFloat2("Pos", (float*)&tetris->current_shape.pos);
     ImGui::InputInt("Rotation", &tetris->current_shape.shape.rotation);
+
+    Shape* shape = &tetris->current_shape.shape;
+    if (Valid(shape)) {
+      IntMat2* rotation_matrix = GetRotationMatrix(shape);
+      auto rows = ToRowArray(rotation_matrix);
+      ImGui::InputInt2("row1", (int*)&rows);
+      ImGui::InputInt2("row2", (int*)&rows[2]);
+    }
   }
 
   if (ImGui::CollapsingHeader("Timings", ImGuiTreeNodeFlags_DefaultOpen)) {

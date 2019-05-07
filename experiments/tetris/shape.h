@@ -36,6 +36,8 @@ struct Shape {
 };
 
 inline bool Valid(Shape* shape) { return !shape->offsets.empty(); }
+// INT_MIN means the shape default.
+IntMat2* GetRotationMatrix(Shape* shape, int index = INT_MIN);
 
 const std::vector<Shape>& GetShapes();
 Shape GetRandomShape();

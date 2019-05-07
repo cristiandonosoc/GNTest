@@ -27,7 +27,9 @@ IntMat2 kRotationMatrices[] = {
     IntMat2::FromRows({ 0, -1}, { 1,  0}),  // (3 * pi) / 4.
 };
 
-Shape CreateShape(const char* name, std::vector<Int2> offsets, std::initializer_list<uint32_t> matrix_indices) {
+Shape CreateShape(const char* name,
+                  std::vector<Int2> offsets,
+                  std::initializer_list<uint32_t> matrix_indices) {
   std::vector<IntMat2*> matrices;
   matrices.reserve(matrix_indices.size());
   for (uint32_t i : matrix_indices) {
@@ -46,7 +48,7 @@ const std::vector<Shape>& GetShapes() {
   static std::vector<Shape> kShapes = {
       // S:   xx
       //     x*
-      CreateShape("S", {{-1, 0}, {0, 0}, {1, 0}, {1, 1}}, {0, 1}),
+      CreateShape("S", {{-1, 0}, {0, 0}, {0, 1}, {1, 1}}, {0, 1}),
       // Z:  xx
       //      *x
       CreateShape("Z", {{-1, 1}, {0, 1}, {0, 0}, {1, 0}}, {0, 1}),
@@ -72,7 +74,8 @@ const std::vector<Shape>& GetShapes() {
 Shape GetRandomShape() {
   auto& shapes = GetShapes();
   int index = rand() % shapes.size();
-  return shapes[index];
+  Shape shape = shapes[index];
+  return shape;
 }
 
 // Collision -------------------------------------------------------------------
@@ -128,8 +131,7 @@ Collision CheckCollision(Board* board, Int2 pivot,
 // Utils -----------------------------------------------------------------------
 
 std::vector<Int2> GetRotatedOffsets(Shape* shape, int index) {
-  index = index % shape->rotation_matrices.size();
-  IntMat2* rotation_matrix = shape->rotation_matrices[index];
+  IntMat2* rotation_matrix = GetRotationMatrix(shape, index);
   std::vector<Int2> offsets;
   offsets.reserve(shape->offsets.size());
   for (auto& offset : shape->offsets) {
@@ -137,6 +139,14 @@ std::vector<Int2> GetRotatedOffsets(Shape* shape, int index) {
   }
 
   return offsets;
+}
+
+IntMat2* GetRotationMatrix(Shape* shape, int index) {
+  ASSERT(!shape->rotation_matrices.empty());
+  if (index == INT_MIN)
+    index = shape->rotation;
+  index = index % shape->rotation_matrices.size();
+  return shape->rotation_matrices[index];
 }
 
 int CoordToIndex(Board* board, Int2 coord) {
