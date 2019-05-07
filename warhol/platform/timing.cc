@@ -3,6 +3,7 @@
 
 #include "warhol/platform/timing.h"
 
+#include <ctime>
 #include <chrono>
 
 #include "warhol/platform/platform.h"

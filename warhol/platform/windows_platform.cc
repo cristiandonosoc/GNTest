@@ -3,6 +3,8 @@
 
 #include "warhol/platform/platform.h"
 
+#include "warhol/platform/path.h"
+
 // For some reason it needs to be defined at the end.
 #include <windows.h>
 
@@ -12,13 +14,14 @@ std::string GetCurrentExecutablePath() {
   // Get the executable handle.
   HMODULE exe_module = GetModuleHandleA(NULL);
   char path[MAX_PATH];
-  GetModuleFileName(exe_module, path, MAX_PATH);
+  GetModuleFileName(exe_module, (LPSTR)path, MAX_PATH);
 
   return path;
 }
 
 std::string GetCurrentExecutableDirectory() {
   std::string exe_path = GetCurrentExecutablePath();
+
   size_t separator = exe_path.rfind('\\');
   if (separator == std::string::npos)
     return exe_path;

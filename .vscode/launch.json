@@ -5,7 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
+            "name": "(Windows) Launch",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/out/tetris.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true
+        },
+        {
+            "name": "Debug Launch",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/out/tetris",
@@ -22,6 +33,6 @@
                     "ignoreFailures": true
                 }
             ]
-        },
+        }
     ]
 }
