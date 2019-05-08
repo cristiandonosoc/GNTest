@@ -30,7 +30,7 @@ bool InitTetris(Game* game, Tetris* tetris) {
   *tetris = {};
   tetris->board = std::move(board);
 
-  return InitDrawer(&tetris->drawer, &game->renderer, &game->window);
+  return InitDrawer(game, &game->renderer, &game->window, &tetris->drawer);
 }
 
 // Update ----------------------------------------------------------------------

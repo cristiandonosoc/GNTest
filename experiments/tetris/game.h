@@ -3,10 +3,11 @@
 
 #pragma once
 
-#include <warhol/platform/timing.h>
-#include <warhol/window/window.h>
+#include <warhol/assets/asset_paths.h>
 #include <warhol/graphics/graphics.h>
+#include <warhol/platform/timing.h>
 #include <warhol/ui/imgui.h>
+#include <warhol/window/window.h>
 
 #include <warhol/input/input.h>
 
@@ -22,6 +23,7 @@ struct Game {
   ::warhol::Window window;
   ::warhol::Renderer renderer;
   ::warhol::InputState input;
+  ::warhol::BasePaths paths;
 
   ::warhol::imgui::ImguiContext imgui;
 

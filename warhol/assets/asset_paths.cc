@@ -9,14 +9,12 @@
 
 namespace warhol {
 
-std::string GetTexturePath(const std::string_view& texture_name) {
-  return PathJoin({GetBasePath(), "assets", "textures", texture_name});
-}
+BasePaths GetBasePaths(RendererType type) {
+  BasePaths paths;
+  paths.texture = PathJoin({GetBasePath(), "assets", "textures"});
 
-std::string GetShaderPath(const std::string_view& shader_name,
-                          RendererType path_type) {
   const char* shader_dir = nullptr;
-  switch (path_type) {
+  switch (type) {
     case RendererType::kOpenGL:
       shader_dir = "opengl";
       break;
@@ -26,9 +24,18 @@ std::string GetShaderPath(const std::string_view& shader_name,
     case RendererType::kLast:
       NOT_REACHED();
   }
+  paths.shader = PathJoin({GetBasePath(), "assets", "shaders", shader_dir});
 
-  return PathJoin({GetBasePath(), "assets", "shaders", shader_dir,
-                   std::move(shader_name)});
+  return paths;
+}
+
+std::string GetTexturePath(BasePaths* paths, const std::string_view& texture_name) {
+  return PathJoin({paths->texture, texture_name});
+}
+
+std::string GetShaderPath(BasePaths* paths,
+                          const std::string_view& shader_name) {
+  return PathJoin({paths->shader, shader_name});
 }
 
 }  // namespace warhol

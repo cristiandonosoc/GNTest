@@ -78,28 +78,34 @@ uint32_t GetUniformsSize(const std::vector<Uniform>& uniforms) {
 
 uint64_t GetNextShaderUUID() { return kNextShaderUUID++; }
 
+// Load Shader -----------------------------------------------------------------
+
 namespace {
 
-bool LoadShader(const std::string_view& name,
-                const std::string_view& base_path,
-                RendererType shader_type,
-                Shader* shader) {
-  if (shader_type == RendererType::kVulkan) {
+bool DoShaderParsing(BasePaths* paths, Renderer* renderer,
+                     const std::string_view& shader_name,
+                     const std::string_view& vert_name,
+                     const std::string_view& frag_name,
+                     Shader* shader) {
+  if (renderer->type == RendererType::kVulkan) {
     LOG(ERROR) << "Vulkan shader type not supported yet.";
     return false;
   }
 
   ShaderParseResult vert_parse;
-  if (!ParseShader(base_path, SubShaderType::kVertex, &vert_parse))
+  if (!ParseShader(GetShaderPath(paths, vert_name), SubShaderType::kVertex,
+                   &vert_parse)) {
     return false;
+  }
 
   ShaderParseResult frag_parse;
-  if (!ParseShader(base_path, SubShaderType::kFragment, &frag_parse))
+  if (!ParseShader(GetShaderPath(paths, frag_name), SubShaderType::kFragment,
+                   &frag_parse)) {
     return false;
+  }
 
   shader->uuid = GetNextShaderUUID();
-  shader->name = name;
-  shader->path = base_path;
+  shader->name = shader_name;
 
   shader->vert_source = std::move(vert_parse.source);
   shader->vert_ubo_size = GetUniformsSize(vert_parse.uniforms);
@@ -117,23 +123,36 @@ bool LoadShader(const std::string_view& name,
 
 }  // namespace
 
-
-bool LoadShader(const std::string_view& name,
-                Renderer* renderer,
+bool LoadShader(BasePaths* paths, Renderer* renderer,
+                const std::string_view& shader_name,
+                const std::string_view& vert_name,
+                const std::string_view& frag_name,
                 Shader* shader) {
-  if (!LoadShader(
-          name, GetShaderPath(name, renderer->type), renderer->type, shader)) {
-    LOG(ERROR) << "Could not load shader " << name;
+  if (!DoShaderParsing(paths, renderer, shader_name, vert_name, frag_name,
+                       shader)) {
     return false;
   }
 
   if (!RendererStageShader(renderer, shader)) {
-    LOG(ERROR) << "Could not load shader " << name;
+    LOG(ERROR) << "Could not load shader " << shader_name;
     return false;
   }
 
   return true;
 }
+
+bool LoadShader(BasePaths* paths, Renderer* renderer,
+                const std::string_view& shader_name,
+                const std::string_view& filename,
+                Shader* shader) {
+  if (!LoadShader(paths, renderer, shader_name, filename, filename, shader)) {
+    LOG(ERROR) << "Could not load shader " << shader_name;
+    return false;
+  }
+
+  return true;
+}
+
 
 void RemoveSources(Shader* shader) {
   shader->vert_source.clear();

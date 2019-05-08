@@ -6,11 +6,12 @@
 #include <warhol/graphics/graphics.h>
 #include <warhol/scene/camera.h>
 
+#include "game.h"
+
 using namespace warhol;
 
 namespace tetris {
 
-struct Game;
 struct Tetris;
 
 // How much to the left the UI is.
@@ -36,7 +37,7 @@ struct TetrisRenderer {
 };
 bool Valid(TetrisRenderer*);
 
-bool Init(TetrisRenderer*, Renderer*, Window*);
+bool Init(Game*, Renderer*, Window*,TetrisRenderer* out);
 void Shutdown(TetrisRenderer*);
 
 
@@ -44,6 +45,5 @@ void NewFrame(TetrisRenderer*);
 RenderCommand EndFrame(TetrisRenderer*);
 
 ::warhol::RenderCommand GetTetrisRenderCommand(Game*, Tetris*);
-
 
 }  // namespace tetris

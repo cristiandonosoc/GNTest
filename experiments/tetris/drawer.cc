@@ -7,6 +7,8 @@
 #include <warhol/utils/glm_impl.h>
 #include <warhol/window/window.h>
 
+#include "game.h"
+
 namespace tetris {
 
 namespace {
@@ -18,8 +20,10 @@ struct DrawerVertex {
 
 }  // namespace
 
-bool InitDrawer(Drawer* drawer, Renderer* renderer, Window* window) {
-  if (!LoadShader("square", renderer, &drawer->shader)) {
+bool InitDrawer(Game* game, Renderer* renderer, Window* window,
+                Drawer* drawer) {
+  if (!LoadShader(&game->paths, renderer, "drawer", "square",
+                  &drawer->shader)) {
     LOG(ERROR) << "Could not load shader!";
     return false;
   }

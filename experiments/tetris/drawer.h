@@ -12,6 +12,8 @@ using namespace warhol;
 
 namespace tetris {
 
+struct Game;
+
 struct Colors {
   static constexpr uint32_t kBlack=   0xff'00'00'00;
   static constexpr uint32_t kBlue=    0xff'ff'00'00;
@@ -38,7 +40,7 @@ struct Drawer {
 
 bool Valid(Drawer*);
 
-bool InitDrawer(Drawer*, Renderer*, Window*);
+bool InitDrawer(Game*, Renderer*, Window*, Drawer* out);
 
 void ShutdownDrawer(Drawer*);
 

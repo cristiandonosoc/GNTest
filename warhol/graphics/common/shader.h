@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "warhol/assets/asset_paths.h"
 #include "warhol/utils/clear_on_move.h"
 #include "warhol/utils/macros.h"
 
@@ -45,11 +46,21 @@ inline bool Loaded(Shader* shader) {
   return !shader->vert_source.empty() && !shader->frag_source.empty();
 }
 
-bool LoadShader(const std::string_view& vert_name,
+// |shader_name| is the name identifier for this shader.
+// |vert_name| and |frag_name| are the actual filenames of the shaders (without
+// the .vert and .frag extensions).
+bool LoadShader(BasePaths*, Renderer*,
+                const std::string_view& shader_name,
+                const std::string_view& vert_name,
                 const std::string_view& frag_name,
                 Shader* out);
 
-bool LoadShader(const std::string_view& name, Renderer*, Shader*);
+// Same as the overload above, but assumes |vert_name| == |frag_name|, both
+// being |filename|.
+bool LoadShader(BasePaths*, Renderer*,
+                const std::string_view& shader_name,
+                const std::string_view& filename,
+                Shader*);
 
 void RemoveSources(Shader*);
 

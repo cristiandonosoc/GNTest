@@ -9,8 +9,14 @@
 
 namespace warhol {
 
-std::string GetTexturePath(const std::string_view& texture_name);
+// Represents the paths where each particular assert lives.
+struct BasePaths {
+  std::string texture;
+  std::string shader;
+};
 
-std::string GetShaderPath(const std::string_view& shader_name, RendererType);
+BasePaths GetBasePaths(RendererType);
+std::string GetTexturePath(BasePaths*, const std::string_view& texture_name);
+std::string GetShaderPath(BasePaths*, const std::string_view& shader_path);
 
 }  // namespace warhol

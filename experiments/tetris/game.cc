@@ -11,6 +11,7 @@ namespace tetris {
 bool InitGame(Game* game,
               ::warhol::WindowBackendType window_type,
               ::warhol::RendererType renderer_type) {
+
   InitWindowConfig window_config;
   /* window_config.maximized = true; */
   window_config.resizable = true;
@@ -25,6 +26,7 @@ bool InitGame(Game* game,
     LOG(ERROR) << "Could not start renderer.";
     return false;
   }
+  game->paths = GetBasePaths(game->renderer.type);
 
   LOG(DEBUG) << "Initializing imgui.";
 
@@ -36,7 +38,7 @@ bool InitGame(Game* game,
 
   game->input = InputState::Create();
 
-  if (!InitDrawer(&game->drawer, &game->renderer, &game->window)) {
+  if (!InitDrawer(game, &game->renderer, &game->window, &game->drawer)) {
     LOG(ERROR) << "Could not start drawer.";
     return false;
   }

@@ -31,14 +31,16 @@ struct TetrisRendererVertex {
 
 }  // namespace
 
-bool Init(TetrisRenderer* tetris_renderer, Renderer* renderer, Window* window) {
+bool Init(Game* game, Renderer* renderer, Window* window,
+          TetrisRenderer* tetris_renderer) {
   NOT_IMPLEMENTED();
   ASSERT(!Valid(tetris_renderer));
 
-  /* if (!LoadShader("direct", "skydome", &tetris_renderer->shader)) { */
-  /*   LOG(ERROR) << "Could not load shader!"; */
-  /*   return false; */
-  /* } */
+  if (!LoadShader(&game->paths, renderer, "direct", "skydome",
+                  &tetris_renderer->shader)) {
+    LOG(ERROR) << "Could not load shader!";
+    return false;
+  }
 
   tetris_renderer->mesh.name = "TetrisRenderer";
 
