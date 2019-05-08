@@ -52,7 +52,7 @@ struct Tetris {
   TetrisShape current_shape = {};
   TetrisScreenDimensions dimensions;
 
-  Drawer drawer;
+  TetrisRenderer renderer;
 };
 
 // Define Shapes
@@ -63,8 +63,7 @@ struct Shapes {
 };
 
 bool InitTetris(Game*, Tetris*);
-
-void UpdateTetris(Game*, Tetris*);
+void TetrisNewFrame(Game*, Tetris*);
 
 ::warhol::RenderCommand TetrisEndFrame(Game*, Tetris*);
 

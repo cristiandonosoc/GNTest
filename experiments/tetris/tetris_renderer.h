@@ -30,6 +30,10 @@ struct TetrisRenderer {
   Mesh mesh;
   Shader shader;
   MemoryPool pool;
+  uint8_t* background_frag_uniform = nullptr;
+
+  // Used for the blocks.
+  Drawer drawer;
 
   // Must outlive.
   Renderer* renderer = nullptr;
@@ -37,9 +41,8 @@ struct TetrisRenderer {
 };
 bool Valid(TetrisRenderer*);
 
-bool Init(Game*, Renderer*, Window*,TetrisRenderer* out);
+bool InitTetrisRenderer(Game*, Renderer*, Window*, TetrisRenderer* out);
 void Shutdown(TetrisRenderer*);
-
 
 void NewFrame(TetrisRenderer*);
 RenderCommand EndFrame(TetrisRenderer*);

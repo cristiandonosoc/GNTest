@@ -53,7 +53,7 @@ int main() {
 
     ResetMemoryPool(&memory_pool);
 
-    UpdateTetris(&game, &tetris);
+    TetrisNewFrame(&game, &tetris);
     DoImguiUI(&game, &tetris);
 
     auto command_list = CreateList<RenderCommand>(&memory_pool);

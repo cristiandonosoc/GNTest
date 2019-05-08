@@ -146,7 +146,7 @@ bool LoadShader(BasePaths* paths, Renderer* renderer,
                 const std::string_view& filename,
                 Shader* shader) {
   if (!LoadShader(paths, renderer, shader_name, filename, filename, shader)) {
-    LOG(ERROR) << "Could not load shader " << shader_name;
+    NOT_REACHED() << "Could not load shader " << shader_name;
     return false;
   }
 

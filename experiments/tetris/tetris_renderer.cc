@@ -29,14 +29,32 @@ struct TetrisRendererVertex {
   Vec2 pos;
 };
 
+void InitBackgroundLogic(Game* game, TetrisRenderer* renderer) {
+  renderer->camera.projection = glm::mat4(1.0f);
+  renderer->camera.view = glm::mat4(1.0f);
+
+  InitMemoryPool(&renderer->pool, KILOBYTES(2));
+
+  // Add the fragment uniforms.
+
+  uint8_t* frag_ptr = renderer->pool.current;
+  Push(&renderer->pool, game->window.width);
+  Push(&renderer->pool, game->window.height);
+
+  float sky_color1[3] = {0.1f, 0.5f, 0.4f};
+  float sky_color2[3] = {0.4f, 0.33f, 0.11f};
+  Push(&renderer->pool, sky_color1, ARRAY_SIZE(sky_color1));
+  Push(&renderer->pool, sky_color2, ARRAY_SIZE(sky_color2));
+  renderer->background_frag_uniform = frag_ptr;
+}
+
 }  // namespace
 
-bool Init(Game* game, Renderer* renderer, Window* window,
-          TetrisRenderer* tetris_renderer) {
-  NOT_IMPLEMENTED();
+bool InitTetrisRenderer(Game* game, Renderer* renderer, Window* window,
+                        TetrisRenderer* tetris_renderer) {
   ASSERT(!Valid(tetris_renderer));
 
-  if (!LoadShader(&game->paths, renderer, "direct", "skydome",
+  if (!LoadShader(&game->paths, renderer, "background", "direct", "skydome",
                   &tetris_renderer->shader)) {
     LOG(ERROR) << "Could not load shader!";
     return false;
@@ -61,12 +79,9 @@ bool Init(Game* game, Renderer* renderer, Window* window,
   tetris_renderer->renderer = renderer;
   tetris_renderer->window = window;
 
-  InitMemoryPool(&tetris_renderer->pool, KILOBYTES(2));
+  InitBackgroundLogic(game, tetris_renderer);
 
-  tetris_renderer->camera.projection = glm::mat4(1.0f);
-  tetris_renderer->camera.view = glm::mat4(1.0f);
-
-  return true;
+  return InitDrawer(game, renderer, window, &tetris_renderer->drawer);
 }
 
 // Shutdown --------------------------------------------------------------------
@@ -82,6 +97,8 @@ void Shutdown(TetrisRenderer* renderer) {
 // New Frame -------------------------------------------------------------------
 
 void NewFrame(TetrisRenderer* tetris_renderer) {
+  DrawerNewFrame(&tetris_renderer->drawer);
+
   ResetMemoryPool(&tetris_renderer->pool);
   ResetMesh(&tetris_renderer->mesh);
 }
@@ -174,7 +191,24 @@ RenderCommand EndFrame(TetrisRenderer* renderer) {
 
 namespace {
 
-void DrawBackground(Game* game, Tetris* tetris) {
+void DrawBackground(Game* game, TetrisRenderer* renderer) {
+  (void)game;
+  (void)renderer;
+  MeshRenderAction action;
+
+  RenderCommand command;
+  command.name = "background";
+  command.type = RenderCommandType::kMesh;
+  command.config.blend_enabled = false;
+  command.config.cull_faces = false;
+  command.config.depth_test = false;
+  command.config.scissor_test = false;
+  command.config.wireframe_mode = false;
+  command.camera = &renderer->camera;
+  command.shader = &renderer->shader;
+}
+
+void DrawBoardBackground(Game* game, Tetris* tetris) {
   // Generate the board.
   Board* board = &tetris->board;
 
@@ -183,26 +217,26 @@ void DrawBackground(Game* game, Tetris* tetris) {
 
   int border = 3;
   // Draw border.
-  DrawSquare(&tetris->drawer,
+  DrawSquare(&tetris->renderer.drawer,
              {dims.screen_pad - border, 0},
              {dims.screen_pad, game->window.height},
              Colors::kTeal);
 
-  DrawSquare(&tetris->drawer,
+  DrawSquare(&tetris->renderer.drawer,
              {right_pad, 0},
              {right_pad + border, game->window.height},
              Colors::kTeal);
 
   // Draw the grid.
   for (int y = 1; y < (int)board->height; y++) {
-    DrawSquare(&tetris->drawer,
+    DrawSquare(&tetris->renderer.drawer,
                {dims.screen_pad, y * dims.block_size},
                {right_pad, y * dims.block_size - 1},
                Colors::kGray);
   }
 
   for (int x = 1; x < (int)board->width; x++) {
-    DrawSquare(&tetris->drawer,
+    DrawSquare(&tetris->renderer.drawer,
                {dims.screen_pad + x * dims.block_size, 0},
                {dims.screen_pad + x * dims.block_size - 1, game->window.height},
                Colors::kGray);
@@ -222,11 +256,12 @@ int BlockTypeToColor(uint8_t type) {
   return it->second;
 }
 
-void DrawColoredSquare(Game* game, Tetris* tetris, uint8_t square, int x, int y) {
+void DrawColoredSquare(Game* game, Tetris* tetris, uint8_t square,
+                       int x, int y) {
   auto& dims = tetris->dimensions;
   int ax = dims.screen_pad + x * dims.block_size;
   int ay = game->window.height - y * dims.block_size - dims.block_size;
-  DrawSquare(&tetris->drawer,
+  DrawSquare(&tetris->renderer.drawer,
              {ax, ay}, {ax + dims.block_size - 1, ay + dims.block_size - 1},
              BlockTypeToColor(square));
 }
@@ -235,7 +270,7 @@ void DrawShadow(Game* game, Tetris* tetris, int x, int y) {
   auto& dims = tetris->dimensions;
   int ax = dims.screen_pad + x * dims.block_size;
   int ay = game->window.height - y * dims.block_size - dims.block_size;
-  DrawBorderSquare(&tetris->drawer,
+  DrawBorderSquare(&tetris->renderer.drawer,
                    {ax, ay},
                    {ax + dims.block_size - 1, ay + dims.block_size - 1},
                    Colors::kTeal);
@@ -258,6 +293,7 @@ void DrawBlock(Game* game, Tetris* tetris, int x, int y) {
 }
 
 void DrawBoard(Game* game, Tetris* tetris) {
+  DrawBoardBackground(game, tetris);
   Board* board = &tetris->board;
   for (int y = 0; y < (int)board->height; y++) {
     for (int x = 0; x < (int)board->width; x++) {
@@ -266,28 +302,17 @@ void DrawBoard(Game* game, Tetris* tetris) {
   }
 }
 
-/* static inline int CreateColor(uint8_t i) { */
-/*   return 0xff000000 | i << 16 | i << 8 | i; */
-/* } */
-
-/* void DrawDebugSquares(Game* game, Tetris* tetris) { */
-/*   Board* board = &tetris->board; */
-/*   for (int i = 0; i < board->height; i++) { */
-/*     DrawBlock(game, tetris, CreateColor(i * 10), 0, i); */
-/*   } */
-/* } */
-
 }  // namespace
 
 RenderCommand GetTetrisRenderCommand(Game* game, Tetris* tetris) {
   tetris->dimensions = GetTetrisScreenDimensions(game, tetris);
 
-  DrawBackground(game, tetris);
+  // DrawBackground(game, tetris);
   DrawBoard(game, tetris);
 
   /* DrawDebugSquares(game, tetris); */
 
-  return DrawerEndFrame(&tetris->drawer);
+  return DrawerEndFrame(&tetris->renderer.drawer);
 }
 
 // Screen Dimensions -----------------------------------------------------------

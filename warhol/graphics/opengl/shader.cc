@@ -86,7 +86,6 @@ bool LinkUniformBinding(const char* block_name, uint32_t prog_handle,
                         uint32_t binding) {
   uint32_t block_index = glGetUniformBlockIndex(prog_handle, block_name);
   if (block_index == GL_INVALID_INDEX) {
-    LOG(WARNING) << "Could not find uniform buffer block " << block_name;
     return false;
   }
 

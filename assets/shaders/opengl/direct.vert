@@ -1,21 +1,22 @@
 #version 330 core
 #extension GL_ARB_separate_shader_objects : enable
 
+// Pass through vertex shader.
+// Meant to be used for screen processing fragment shaders.
+
 // Attributes ------------------------------------------------------------------
 
-out vec4 color;
+layout (location = 0) in vec3 in_pos;
 
 // Uniforms --------------------------------------------------------------------
 
-layout (std140) uniform FragUniforms {
-  ivec2 screen_size;
-  vec3 sky_color1;
-  vec3 sky_color2;
-} uniforms;
+layout (std140) uniform Camera {
+  mat4 proj;
+  mat4 view;
+} camera;
 
 // Code ------------------------------------------------------------------------
 
 void main() {
-  float i = gl_FragCoord.x / screen_size.x;
-  color = vec4(i * sky_color1 + (1 - i) * sky_color2, 1.0f);
+  gl_Position = camera.proj * camera.view * vec4(in_pos, 1.0);
 }

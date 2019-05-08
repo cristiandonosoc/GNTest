@@ -30,7 +30,8 @@ bool InitTetris(Game* game, Tetris* tetris) {
   *tetris = {};
   tetris->board = std::move(board);
 
-  return InitDrawer(game, &game->renderer, &game->window, &tetris->drawer);
+  return InitTetrisRenderer(game, &game->renderer, &game->window,
+                            &tetris->renderer);
 }
 
 // Update ----------------------------------------------------------------------
@@ -297,8 +298,8 @@ void UpdateCurrentShape(Game* game, Tetris* tetris) {
 
 }  // namespace
 
-void UpdateTetris(Game* game, Tetris* tetris) {
-  DrawerNewFrame(&tetris->drawer);
+void TetrisNewFrame(Game* game, Tetris* tetris) {
+  NewFrame(&tetris->renderer);
 
   // We see if we need to createa a new shape.
   if (!HasCurrentShape(tetris)) {
