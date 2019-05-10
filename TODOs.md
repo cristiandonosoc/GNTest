@@ -4,6 +4,8 @@
 
 - List should be joinable (move one into another).
 - Nodes should be extractable/movable.
+- Currently Lists own their own memory, for ease of API, but eventually they
+- should have exclusive externally owned memory sections.
 
 ## Graphics
 

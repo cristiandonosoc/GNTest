@@ -193,7 +193,7 @@ SDLOpenGLUpdateWindow(SDLOpenGLWindow* sdl, Window* window, InputState* input) {
   HandleMouse(input);
 
   // Chain the events into a linked list.
-  auto event_list = CreateList<WindowEvent>(&sdl->memory_pool);
+  auto event_list = CreateList<WindowEvent>(KILOBYTES(1));
   for (int i = 0; i < sdl->event_index; i++) {
     Push(&event_list, sdl->events[i]);
   }

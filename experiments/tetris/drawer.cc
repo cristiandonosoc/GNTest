@@ -20,9 +20,8 @@ struct DrawerVertex {
 
 }  // namespace
 
-bool InitDrawer(Game* game, Renderer* renderer, Window* window,
-                Drawer* drawer) {
-  if (!LoadShader(&game->paths, renderer, "drawer", "square",
+bool InitDrawer(Game* game, Drawer* drawer) {
+  if (!LoadShader(&game->paths, &game->renderer, "drawer", "square",
                   &drawer->shader)) {
     LOG(ERROR) << "Could not load shader!";
     return false;
@@ -41,11 +40,11 @@ bool InitDrawer(Game* game, Renderer* renderer, Window* window,
 
   InitMeshPools(&drawer->mesh, MEGABYTES(16), MEGABYTES(16));
 
-  if (!RendererStageMesh(renderer, &drawer->mesh))
+  if (!RendererStageMesh(&game->renderer, &drawer->mesh))
     return false;
 
-  drawer->renderer = renderer;
-  drawer->window = window;
+  drawer->renderer = &game->renderer;
+  drawer->window = &game->window;
 
   InitMemoryPool(&drawer->pool, KILOBYTES(1));
 
@@ -136,7 +135,7 @@ RenderCommand DrawerEndFrame(Drawer* drawer) {
   action.mesh = &drawer->mesh;
   action.index_range = CreateRange(drawer->mesh.index_count, 0);
 
-  auto actions = CreateList<MeshRenderAction>(&drawer->pool);
+  auto actions = CreateList<MeshRenderAction>(KILOBYTES(1));
   Push(&actions, std::move(action));
 
   RenderCommand render_command;
@@ -149,7 +148,7 @@ RenderCommand DrawerEndFrame(Drawer* drawer) {
   render_command.config.wireframe_mode = true;
   render_command.camera = &drawer->camera;
   render_command.shader = &drawer->shader;
-  render_command.actions.mesh_actions = std::move(actions);
+  render_command.mesh_actions = std::move(actions);
 
   return render_command;
 }

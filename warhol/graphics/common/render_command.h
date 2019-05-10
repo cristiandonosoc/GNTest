@@ -87,7 +87,7 @@ struct RenderCommandConfig {
 };
 
 struct RenderCommand {
-  DEFAULT_ALL_CONSTRUCTORS(RenderCommand);
+  RAII_CONSTRUCTORS(RenderCommand);
 
   const char* name = nullptr;   // Useful for debugging purposes.
 
@@ -96,11 +96,8 @@ struct RenderCommand {
 
   Camera* camera;
   Shader* shader;
-  union Actions {
-    DECLARE_ALL_CONTRUCTORS(Actions);
 
-    List<MeshRenderAction> mesh_actions;
-  } actions;
+  List<MeshRenderAction> mesh_actions;
 };
 
 }  // namespace warhol

@@ -38,7 +38,7 @@ bool InitGame(Game* game,
 
   game->input = InputState::Create();
 
-  if (!InitDrawer(game, &game->renderer, &game->window, &game->drawer)) {
+  if (!InitDrawer(game, &game->drawer)) {
     LOG(ERROR) << "Could not start drawer.";
     return false;
   }

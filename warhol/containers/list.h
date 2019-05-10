@@ -21,7 +21,7 @@ struct List {
 
   Node* head = nullptr;
   Node* tail = nullptr;
-  MemoryPool* pool = nullptr;
+  MemoryPool pool = {};
 
   struct Iterator;
   Iterator begin() { return Iterator(head); }
@@ -36,9 +36,9 @@ void Reset(List<T>* list) {
 }
 
 template <typename T>
-List<T> CreateList(MemoryPool* pool) {
+List<T> CreateList(size_t bytes) {
   List<T> list = {};
-  list.pool = pool;
+  InitMemoryPool(&list.pool, bytes);
   return list;
 }
 
@@ -55,7 +55,6 @@ T* Push(List<T>* list);
 template <typename T>
 T* Push(List<T>* list, T t);
 
-
 // *****************************************************************************
 // Template Implementation
 // *****************************************************************************
@@ -66,16 +65,16 @@ void PushNode(List<T>* list, typename List<T>::Node* node);
 // Will allocate into the pool first and then create a node into the list.
 template <typename T>
 T* Push(List<T>* list) {
-  ASSERT(list->pool);
-  auto* node = Push<typename List<T>::Node>(list->pool);
+  ASSERT(Valid(&list->pool));
+  auto* node = Push<typename List<T>::Node>(&list->pool);
   PushNode(list, node);
   return &node->value;
 }
 
 template <typename T>
 T* Push(List<T>* list, T t) {
-  ASSERT(list->pool);
-  auto* node = Push<typename List<T>::Node>(list->pool);
+  ASSERT(Valid(&list->pool));
+  auto* node = Push<typename List<T>::Node>(&list->pool);
   PushNode(list, node);
   node->value = std::move(t);
   return &node->value;

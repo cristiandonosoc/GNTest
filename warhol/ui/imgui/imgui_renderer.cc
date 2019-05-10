@@ -198,8 +198,7 @@ RenderCommand ImguiGetRenderCommand(ImguiRenderer* imgui_renderer) {
 
   std::vector<uint32_t> index_data;
 
-  auto mesh_actions =
-      CreateList<MeshRenderAction>(&imgui_renderer->memory_pool);
+  auto mesh_actions = CreateList<MeshRenderAction>(KILOBYTES(1));
 
   // Create the draw list.
   ImVec2 pos = draw_data->DisplayPos;
@@ -281,7 +280,7 @@ RenderCommand ImguiGetRenderCommand(ImguiRenderer* imgui_renderer) {
   render_command.config.scissor_test = true;
   render_command.camera = &imgui_renderer->camera;
   render_command.shader = &imgui_renderer->shader;
-  render_command.actions.mesh_actions = std::move(mesh_actions);
+  render_command.mesh_actions = std::move(mesh_actions);
 
   return render_command;
 }

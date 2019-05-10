@@ -41,7 +41,7 @@ struct TetrisRenderer {
 };
 bool Valid(TetrisRenderer*);
 
-bool InitTetrisRenderer(Game*, Renderer*, Window*, TetrisRenderer* out);
+bool InitTetrisRenderer(Game*, TetrisRenderer* out);
 void Shutdown(TetrisRenderer*);
 
 void NewFrame(TetrisRenderer*);

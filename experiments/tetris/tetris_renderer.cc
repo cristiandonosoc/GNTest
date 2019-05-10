@@ -29,41 +29,20 @@ struct TetrisRendererVertex {
   Vec2 pos;
 };
 
-void InitBackgroundLogic(Game* game, TetrisRenderer* renderer) {
-  renderer->camera.projection = glm::mat4(1.0f);
-  renderer->camera.view = glm::mat4(1.0f);
+bool InitBackgroundLogic(Game* game, TetrisRenderer* tetris_renderer) {
+  tetris_renderer->camera.projection = glm::mat4(1.0f);
+  tetris_renderer->camera.view = glm::mat4(1.0f);
 
-  InitMemoryPool(&renderer->pool, KILOBYTES(2));
-
-  // Add the fragment uniforms.
-
-  uint8_t* frag_ptr = renderer->pool.current;
-  Push(&renderer->pool, game->window.width);
-  Push(&renderer->pool, game->window.height);
-
-  float sky_color1[3] = {0.1f, 0.5f, 0.4f};
-  float sky_color2[3] = {0.4f, 0.33f, 0.11f};
-  Push(&renderer->pool, sky_color1, ARRAY_SIZE(sky_color1));
-  Push(&renderer->pool, sky_color2, ARRAY_SIZE(sky_color2));
-  renderer->background_frag_uniform = frag_ptr;
-}
-
-}  // namespace
-
-bool InitTetrisRenderer(Game* game, Renderer* renderer, Window* window,
-                        TetrisRenderer* tetris_renderer) {
-  ASSERT(!Valid(tetris_renderer));
-
-  if (!LoadShader(&game->paths, renderer, "background", "direct", "skydome",
+  // Load the shader.
+  if (!LoadShader(&game->paths, &game->renderer,
+                  "background", "direct", "skydome",
                   &tetris_renderer->shader)) {
     LOG(ERROR) << "Could not load shader!";
     return false;
   }
 
-  tetris_renderer->mesh.name = "TetrisRenderer";
-
-  // Create a mesh for creating a buffer.
-  tetris_renderer->mesh.name = "TetrisRendererMesh";
+  // Initialize the mesh.
+  tetris_renderer->mesh.name = "TetrisBackgroundMesh";
   tetris_renderer->mesh.uuid = GetNextMeshUUID();
   tetris_renderer->mesh.vertex_size = sizeof(TetrisRendererVertex);
   tetris_renderer->mesh.attributes = {
@@ -71,17 +50,50 @@ bool InitTetrisRenderer(Game* game, Renderer* renderer, Window* window,
   };
 
   InitMeshPools(&tetris_renderer->mesh, KILOBYTES(16), KILOBYTES(16));
-  if (!RendererStageMesh(renderer, &tetris_renderer->mesh)) {
+  if (!RendererStageMesh(tetris_renderer->renderer, &tetris_renderer->mesh)) {
     LOG(ERROR) << "Could not stage mesh!";
     return false;
   }
 
-  tetris_renderer->renderer = renderer;
-  tetris_renderer->window = window;
+  // Put in the window-sized quad.
+  // TODO(Cristian): This won't detect window size changes. For that we need to
+  //                 recreate the mesh in NewFrame.
+  TetrisRendererVertex vertices[4];
+  vertices[0] = {0.0f, 0.0f};
+  vertices[1] = {0.0f, (float)game->window.width};
+  vertices[2] = {(float)game->window.height, 0.0f};
+  vertices[3] = {(float)game->window.width, (float)game->window.height};
+  uint32_t indices[6] = {0, 1, 2, 2, 3, 0};
 
-  InitBackgroundLogic(game, tetris_renderer);
+  PushVertices(&tetris_renderer->mesh, vertices, ARRAY_SIZE(vertices));
+  PushIndices(&tetris_renderer->mesh, indices, ARRAY_SIZE(indices));
 
-  return InitDrawer(game, renderer, window, &tetris_renderer->drawer);
+  InitMemoryPool(&tetris_renderer->pool, KILOBYTES(2));
+
+  // Add the fragment uniforms.
+  uint8_t* frag_ptr = tetris_renderer->pool.current;
+  Push(&tetris_renderer->pool, game->window.width);
+  Push(&tetris_renderer->pool, game->window.height);
+  float sky_color1[3] = {0.1f, 0.5f, 0.4f};
+  float sky_color2[3] = {0.4f, 0.33f, 0.11f};
+  Push(&tetris_renderer->pool, sky_color1, ARRAY_SIZE(sky_color1));
+  Push(&tetris_renderer->pool, sky_color2, ARRAY_SIZE(sky_color2));
+  tetris_renderer->background_frag_uniform = frag_ptr;
+
+  return true;
+}
+
+}  // namespace
+
+bool InitTetrisRenderer(Game* game, TetrisRenderer* tetris_renderer) {
+  ASSERT(!Valid(tetris_renderer));
+
+  tetris_renderer->renderer = &game->renderer;
+  tetris_renderer->window = &game->window;
+
+  if (!InitBackgroundLogic(game, tetris_renderer))
+    return false;
+  return InitDrawer(game, &tetris_renderer->drawer);
 }
 
 // Shutdown --------------------------------------------------------------------
@@ -169,7 +181,7 @@ RenderCommand EndFrame(TetrisRenderer* renderer) {
   action.index_range = CreateRange(renderer->mesh.index_count, 0);
   AddUniforms(&action, renderer->window, &renderer->pool);
 
-  auto actions = CreateList<MeshRenderAction>(&renderer->pool);
+  auto actions = CreateList<MeshRenderAction>(KILOBYTES(1));
   Push(&actions, std::move(action));
 
   RenderCommand render_command;
@@ -182,7 +194,7 @@ RenderCommand EndFrame(TetrisRenderer* renderer) {
   render_command.config.wireframe_mode = false;
   render_command.camera = &renderer->camera;
   render_command.shader = &renderer->shader;
-  render_command.actions.mesh_actions = std::move(actions);
+  render_command.mesh_actions = std::move(actions);
 
   return render_command;
 }
@@ -191,10 +203,10 @@ RenderCommand EndFrame(TetrisRenderer* renderer) {
 
 namespace {
 
-void DrawBackground(Game* game, TetrisRenderer* renderer) {
-  (void)game;
-  (void)renderer;
+RenderCommand DrawBackground(TetrisRenderer* renderer) {
   MeshRenderAction action;
+  action.mesh = &renderer->mesh;
+  action.index_range = CreateRange(renderer->mesh.index_count, 0);
 
   RenderCommand command;
   command.name = "background";
@@ -206,6 +218,11 @@ void DrawBackground(Game* game, TetrisRenderer* renderer) {
   command.config.wireframe_mode = false;
   command.camera = &renderer->camera;
   command.shader = &renderer->shader;
+
+  command.mesh_actions = CreateList<MeshRenderAction>(KILOBYTES(1));
+  Push(&command.mesh_actions, std::move(action));
+
+  return command;
 }
 
 void DrawBoardBackground(Game* game, Tetris* tetris) {
@@ -307,12 +324,12 @@ void DrawBoard(Game* game, Tetris* tetris) {
 RenderCommand GetTetrisRenderCommand(Game* game, Tetris* tetris) {
   tetris->dimensions = GetTetrisScreenDimensions(game, tetris);
 
-  // DrawBackground(game, tetris);
-  DrawBoard(game, tetris);
+  return DrawBackground(&tetris->renderer);
+  // DrawBoard(game, tetris);
 
   /* DrawDebugSquares(game, tetris); */
 
-  return DrawerEndFrame(&tetris->renderer.drawer);
+  // return DrawerEndFrame(&tetris->renderer.drawer);
 }
 
 // Screen Dimensions -----------------------------------------------------------

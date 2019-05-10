@@ -251,7 +251,7 @@ void SetConfigs(RenderCommandConfig* config) {
 void ExecuteMeshActions(OpenGLRendererBackend* opengl,
                         RenderCommand* command,
                         ShaderHandles* shader_handles) {
-  for (MeshRenderAction& action : command->actions.mesh_actions) {
+  for (MeshRenderAction& action : command->mesh_actions) {
     size_t size = GetSize(action.index_range);
     size_t offset = GetOffset(action.index_range);
     if (size == 0)
@@ -294,7 +294,7 @@ void ValidateRenderCommands(List<RenderCommand>* commands) {
     ASSERT(command.camera);
     ASSERT(command.shader);
     ASSERT(command.type == RenderCommandType::kMesh);
-    for (auto& action : command.actions.mesh_actions) {
+    for (auto& action : command.mesh_actions) {
       ASSERT(action.mesh);
     }
   }

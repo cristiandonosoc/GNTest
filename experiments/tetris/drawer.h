@@ -40,7 +40,7 @@ struct Drawer {
 
 bool Valid(Drawer*);
 
-bool InitDrawer(Game*, Renderer*, Window*, Drawer* out);
+bool InitDrawer(Game*, Drawer* out);
 
 void ShutdownDrawer(Drawer*);
 
