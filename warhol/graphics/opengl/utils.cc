@@ -120,10 +120,10 @@ GLEnumToSize(GLenum type) {
     case GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY: return;
     case GL_UNSIGNED_INT_ATOMIC_COUNTER: return;
 #endif
+
     default:
-      LOG(ERROR) << "Uncovered GLenum type: " << GLEnumToString(type) << "("
-                 << (uint32_t)type << ").";
-      ASSERT(false);
+      NOT_REACHED() << "Uncovered GLenum type: " << GLEnumToString(type) << "("
+                    << (uint32_t)type << ").";
       return 0;
   }
 }
@@ -428,11 +428,17 @@ GLEnumToString(GLenum type) {
     case GL_TEXTURE_WRAP_T: return "GL_TEXTURE_WRAP_T";
     case GL_REPEAT: return "GL_REPEAT";
 
+    case GL_DEBUG_SOURCE_API: return "GL_DEBUG_SOURCE_API";
+    case GL_DEBUG_SOURCE_WINDOW_SYSTEM: return "GL_DEBUG_SOURCE_WINDOW_SYSTEM";
+    case GL_DEBUG_SOURCE_SHADER_COMPILER: return "GL_DEBUG_SOURCE_SHADER_COMPILER";
+    case GL_DEBUG_SOURCE_THIRD_PARTY: return "GL_DEBUG_SOURCE_THIRD_PARTY";
+    case GL_DEBUG_SOURCE_APPLICATION: return "GL_DEBUG_SOURCE_APPLICATION";
+    case GL_DEBUG_SOURCE_OTHER: return "GL_DEBUG_SOURCE_OTHER";
+    /* case GL_DONT_CARE: return "GL_DONT_CARE"; */
 
     default:
-      LOG(ERROR) << "Uncovered GLenum type: " << (uint32_t)type;
-      ASSERT(false);
-      return nullptr;
+      LOG(WARNING) << "Uncovered GLenum type: " << (uint32_t)type;
+      return "<unknown>";
   }
 }
 

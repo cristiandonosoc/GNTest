@@ -19,6 +19,10 @@ void TetrisUI(Game*, Tetris*);
 }  // namespace
 
 void DoImguiUI(Game* game, Tetris* tetris) {
+  SCOPE_LOCATION();
+
+  ImguiStartFrame(&game->window, &game->time, &game->input, &game->imgui);
+
   static bool show_system_ui = true;
   if (KeyDownThisFrame(&game->input, Key::kBackquote))
     show_system_ui = !show_system_ui;

@@ -298,6 +298,8 @@ void UpdateCurrentShape(Game* game, Tetris* tetris) {
 }  // namespace
 
 void TetrisNewFrame(Game* game, Tetris* tetris) {
+  SCOPE_LOCATION();
+
   NewFrame(&tetris->renderer);
 
   // We see if we need to createa a new shape.
@@ -313,6 +315,7 @@ void TetrisNewFrame(Game* game, Tetris* tetris) {
 // End Frame -------------------------------------------------------------------
 
 RenderCommand TetrisEndFrame(Game* game, Tetris* tetris) {
+  SCOPE_LOCATION();
   return GetTetrisRenderCommand(game, tetris);
 }
 

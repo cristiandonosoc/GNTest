@@ -162,6 +162,8 @@ ImguiRenderer::~ImguiRenderer() {
 // GetRenderCommand ------------------------------------------------------------
 
 RenderCommand ImguiGetRenderCommand(ImguiRenderer* imgui_renderer) {
+  SCOPE_LOCATION();
+
   ASSERT(Valid(imgui_renderer));
 
   // Reset the memory pools wher ethe new index data is going to be.
@@ -203,6 +205,8 @@ RenderCommand ImguiGetRenderCommand(ImguiRenderer* imgui_renderer) {
   // Create the draw list.
   ImVec2 pos = draw_data->DisplayPos;
   for (int i = 0; i < draw_data->CmdListsCount; i++) {
+    SCOPE_LOCATION() << "Entry " << i;
+
     ImDrawList* cmd_list = draw_data->CmdLists[i];
 
     // Represents how much in the indices mesh buffer we're in.

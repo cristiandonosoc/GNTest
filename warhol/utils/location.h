@@ -51,7 +51,7 @@ struct Location {
 struct LocationStack;
 struct LocationScope;
 LocationStack* GetLocationStack();
-void PrintLocationStack(LocationStack*);
+std::string LocationStackToString(LocationStack*);
 
 // Meant to be a scope trigger that will add elements to the stack.
 struct LocationScope {

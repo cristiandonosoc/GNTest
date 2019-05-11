@@ -63,6 +63,10 @@ void WriteToFile(FileHandle* handle, void* data, size_t size) {
   ASSERT(res == size);
 }
 
+void Flush(FileHandle* handle) {
+  fflush((FILE*)handle->hndl.value);
+}
+
 void CloseFile(FileHandle* handle) {
   ASSERT(Valid(handle));
   int res = fclose((FILE*)handle->hndl.value);

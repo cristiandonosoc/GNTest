@@ -53,38 +53,38 @@ bool OpenGLStageTexture(OpenGLRendererBackend* opengl, Texture* texture,
   }
 
   uint32_t handle;
-  GL_CHECK(glGenTextures(1, &handle));
-  GL_CHECK(glBindTexture(GL_TEXTURE_2D, handle));
+  glGenTextures(1, &handle);
+  glBindTexture(GL_TEXTURE_2D, handle);
 
   // Setup wrapping/filtering options.
-  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                           WrapToGL(config->wrap_u)));
-  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-                           WrapToGL(config->wrap_v)));
-  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                           FilterToGL(config->min_filter)));
-  GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                           FilterToGL(config->max_filter)));
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
+                  WrapToGL(config->wrap_u));
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
+                  WrapToGL(config->wrap_v));
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  FilterToGL(config->min_filter));
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+                  FilterToGL(config->max_filter));
 
   // Send the bits over.
-  GL_CHECK(glTexImage2D(GL_TEXTURE_2D,          // target
-                        0,                      // level
-                        GL_RGBA,                // internalformat
-                        texture->x,             // width,
-                        texture->y,             // height
-                        0,                      // border
-                        GL_RGBA,                // format
-                        GL_UNSIGNED_BYTE,       // type,
-                        texture->data.value));
+  glTexImage2D(GL_TEXTURE_2D,         // target
+               0,                     // level
+               GL_RGBA,               // internalformat
+               texture->x,            // width,
+               texture->y,            // height
+               0,                     // border
+               GL_RGBA,               // format
+               GL_UNSIGNED_BYTE,      // type,
+               texture->data.value);
 
   if (config->generate_mipmaps)
-    GL_CHECK(glGenerateMipmap(GL_TEXTURE_2D));
+    glGenerateMipmap(GL_TEXTURE_2D);
 
   TextureHandles handles;
   handles.tex_handle = handle;
   opengl->loaded_textures[uuid] = std::move(handles);
 
-  GL_CHECK(glBindTexture(GL_TEXTURE_2D, NULL));
+  glBindTexture(GL_TEXTURE_2D, NULL);
   return true;
 }
 
@@ -92,7 +92,7 @@ void OpenGLUnstageTexture(OpenGLRendererBackend* opengl, Texture* texture) {
   auto it = opengl->loaded_textures.find(texture->uuid.value);
   ASSERT(it != opengl->loaded_textures.end());
 
-  GL_CHECK(glDeleteTextures(1, &it->second.tex_handle));
+  glDeleteTextures(1, &it->second.tex_handle);
   opengl->loaded_textures.erase(it);
 }
 

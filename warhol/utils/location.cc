@@ -11,6 +11,7 @@
 
 #include "warhol/platform/path.h"
 #include "warhol/utils/log.h"
+#include "warhol/utils/string.h"
 
 namespace warhol {
 namespace {
@@ -19,9 +20,6 @@ LocationStack* GetPerThreadLocationStack() {
   thread_local LocationStack stack;
   return &stack;
 }
-
-
-
 
 void PushStackLocation(LocationScope* scope) {
   LocationStack* stack = GetPerThreadLocationStack();
@@ -41,18 +39,23 @@ LocationStack* GetLocationStack() {
   return GetPerThreadLocationStack();
 }
 
-void PrintLocationStack(LocationStack* stack) {
+std::string LocationStackToString(LocationStack* stack) {
+  std::vector<std::string> log_stack;
+  log_stack.reserve(stack->size);
   for (int i = stack->size - 1; i >= 0; i--) {
     LocationStack::Entry& entry = stack->entries[i];
 
     const Location& loc = entry.scope->location;
-    printf("%.2d. [%s:%d][%s] %s\n", stack->size - i - 1,
-                                 GetBasename(loc.file).c_str(),
-                                 loc.line,
-                                 loc.function,
-                                 entry.scope->stream_.str().c_str());
+    std::string line = StringPrintf("%.2d. [%s:%d][%s] %s\n",
+                                    stack->size - i - 1,
+                                    GetBasename(loc.file).c_str(),
+                                    loc.line,
+                                    loc.function,
+                                    entry.scope->stream_.str().c_str());
+    log_stack.push_back(std::move(line));
   }
-  fflush(stdout);
+
+  return Join(log_stack);
 }
 
 LocationScope::LocationScope(Location location) : location(location) {

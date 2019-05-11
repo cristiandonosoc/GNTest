@@ -48,12 +48,13 @@ bool InitGame(Game* game,
 
 List<WindowEvent> NewFrame(Game* game) {
   PlatformUpdateTiming(&game->time);
-  ImguiStartFrame(&game->window, &game->time, &game->input, &game->imgui);
   DrawerNewFrame(&game->drawer);
   return UpdateWindow(&game->window, &game->input);
 }
 
 void EndFrame(Game* game, List<RenderCommand> command_list) {
+  SCOPE_LOCATION();
+
   RendererStartFrame(&game->renderer);
   RendererExecuteCommands(&game->renderer, &command_list);
   RendererEndFrame(&game->renderer);

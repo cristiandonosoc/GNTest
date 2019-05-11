@@ -71,8 +71,14 @@ bool SDLOpenGLInit(SDLOpenGLWindow* sdl, Window* window,
     return false;
   }
 
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+#if DEBUG_MODE
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+#endif
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
   // Setup SDL flags.
   uint32_t window_flags = SDL_WINDOW_OPENGL;
@@ -111,7 +117,7 @@ bool SDLOpenGLInit(SDLOpenGLWindow* sdl, Window* window,
   }
 
 
-  SDL_GL_SetSwapInterval(1);  // Enable v-sync.
+  /* SDL_GL_SetSwapInterval(1);  // Enable v-sync. */
   SDL_GetWindowSize(sdl->sdl_window.value, &window->width, &window->height);
 
   sdl->window = window;

@@ -9,6 +9,8 @@
 
 ## Graphics
 
+- There should be a clear action, instead of doing it by default on New frame
+  (like it's the case with the OpenGL render backend).
 - Shader loading is now in common, so it has knowhow about opengl and vulkan.
   This should be moved into the backend.
 - Path now are relative and hardcoded to a name (*especially* shaders).

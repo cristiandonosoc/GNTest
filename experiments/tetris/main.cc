@@ -18,6 +18,8 @@ using namespace warhol::imgui;
 using namespace tetris;
 
 int main() {
+  SCOPE_LOCATION();
+
   Game game = {};
   if (!InitGame(&game, WindowBackendType::kSDLOpenGL, RendererType::kOpenGL)) {
     LOG(ERROR) << "Could not initialize game.";

@@ -153,6 +153,8 @@ namespace {
 
 
 RenderCommand ImguiEndFrame(ImguiContext* imgui) {
+  SCOPE_LOCATION();
+
   ASSERT(Valid(imgui));
   // Will finalize the draw data needed for getting the draw lists for getting
   // the render command.

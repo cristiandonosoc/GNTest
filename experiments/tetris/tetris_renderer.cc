@@ -109,10 +109,11 @@ void Shutdown(TetrisRenderer* renderer) {
 // New Frame -------------------------------------------------------------------
 
 void NewFrame(TetrisRenderer* tetris_renderer) {
-  DrawerNewFrame(&tetris_renderer->drawer);
-
+  SCOPE_LOCATION();
   ResetMemoryPool(&tetris_renderer->pool);
   ResetMesh(&tetris_renderer->mesh);
+
+  DrawerNewFrame(&tetris_renderer->drawer);
 }
 
 // EndFrame --------------------------------------------------------------------
@@ -204,6 +205,8 @@ RenderCommand EndFrame(TetrisRenderer* renderer) {
 namespace {
 
 RenderCommand DrawBackground(TetrisRenderer* renderer) {
+  SCOPE_LOCATION();
+
   MeshRenderAction action;
   action.mesh = &renderer->mesh;
   action.index_range = CreateRange(renderer->mesh.index_count, 0);
@@ -322,14 +325,12 @@ void DrawBoard(Game* game, Tetris* tetris) {
 }  // namespace
 
 RenderCommand GetTetrisRenderCommand(Game* game, Tetris* tetris) {
+  SCOPE_LOCATION();
   tetris->dimensions = GetTetrisScreenDimensions(game, tetris);
 
-  return DrawBackground(&tetris->renderer);
-  // DrawBoard(game, tetris);
-
-  /* DrawDebugSquares(game, tetris); */
-
-  // return DrawerEndFrame(&tetris->renderer.drawer);
+  /* return DrawBackground(&tetris->renderer); */
+  DrawBoard(game, tetris);
+  return DrawerEndFrame(&tetris->renderer.drawer);
 }
 
 // Screen Dimensions -----------------------------------------------------------

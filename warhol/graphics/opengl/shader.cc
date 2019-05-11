@@ -23,15 +23,15 @@ bool CompileShader(Shader* shader, const char* source, GLenum shader_kind,
 
   // Compile the shader source.
   const GLchar* gl_src = source;
-  GL_CHECK(glShaderSource(handle, 1, &gl_src, 0));
-  GL_CHECK(glCompileShader(handle));
+  glShaderSource(handle, 1, &gl_src, 0);
+  glCompileShader(handle);
 
   GLint success = 0;
-  GL_CHECK(glGetShaderiv(handle, GL_COMPILE_STATUS, &success));
+  glGetShaderiv(handle, GL_COMPILE_STATUS, &success);
   if (success == GL_FALSE) {
     GLchar log[2048];
-    GL_CHECK(glGetShaderInfoLog(handle, sizeof(log), 0, log));
-    GL_CHECK(glDeleteShader(handle));
+    glGetShaderInfoLog(handle, sizeof(log), 0, log);
+    glDeleteShader(handle);
     LOG(ERROR) << "Shader " << shader->name << ": Error compiling "
                << GLEnumToString(shader_kind) << " shader: " << log;
     return false;
@@ -62,17 +62,17 @@ uint32_t LinkShader(uint32_t vert_handle, uint32_t frag_handle) {
   }
 
   // Link 'em.
-  GL_CHECK(glAttachShader(prog_handle, vert_handle));
-  GL_CHECK(glAttachShader(prog_handle, frag_handle));
-  GL_CHECK(glLinkProgram(prog_handle));
+  glAttachShader(prog_handle, vert_handle);
+  glAttachShader(prog_handle, frag_handle);
+  glLinkProgram(prog_handle);
   glDeleteShader(vert_handle);
   glDeleteShader(frag_handle);
 
   GLint success = 0;
-  GL_CHECK(glGetProgramiv(prog_handle, GL_LINK_STATUS, &success));
+  glGetProgramiv(prog_handle, GL_LINK_STATUS, &success);
   if (success == GL_FALSE) {
     GLchar log[2048];
-    GL_CHECK(glGetProgramInfoLog(prog_handle, sizeof(log), 0, log));
+    glGetProgramInfoLog(prog_handle, sizeof(log), 0, log);
     LOG(ERROR) << "Could not link shader: " << log;
     return 0;
   }
@@ -89,15 +89,15 @@ bool LinkUniformBinding(const char* block_name, uint32_t prog_handle,
     return false;
   }
 
-  GL_CHECK(glUniformBlockBinding(prog_handle, block_index, binding));
+  glUniformBlockBinding(prog_handle, block_index, binding);
   return true;
 }
 
 // Create a uniform buffer and bind it.
 uint32_t BindBufferBase(uint32_t binding) {
   uint32_t ubo_handle = 0;
-  GL_CHECK(glGenBuffers(1, &ubo_handle));
-  GL_CHECK(glBindBufferBase(GL_UNIFORM_BUFFER, binding, ubo_handle));
+  glGenBuffers(1, &ubo_handle);
+  glBindBufferBase(GL_UNIFORM_BUFFER, binding, ubo_handle);
   return ubo_handle;
 }
 
@@ -184,18 +184,16 @@ void OpenGLUnstageShader(OpenGLRendererBackend* opengl, Shader* shader) {
 
 void DeleteShaderHandles(ShaderHandles* handles) {
   if (handles->program_handle > 0)
-    GL_CHECK(glDeleteProgram(handles->program_handle));
+    glDeleteProgram(handles->program_handle);
 
   if (handles->vert_ubo_handle > 0)
-    GL_CHECK(glDeleteBuffers(1, &handles->vert_ubo_handle));
+    glDeleteBuffers(1, &handles->vert_ubo_handle);
 
   if (handles->frag_ubo_handle > 0)
-    GL_CHECK(glDeleteBuffers(1, &handles->frag_ubo_handle));
+    glDeleteBuffers(1, &handles->frag_ubo_handle);
 
   *handles = {};    // Clear.
 }
-
-
 
 }  // namespace opengl
 }  // namespace warhol

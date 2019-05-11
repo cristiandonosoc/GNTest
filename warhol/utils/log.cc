@@ -4,36 +4,57 @@
 #include "warhol/utils/log.h"
 
 #include <iostream>
+#include <mutex>
 
 #include "warhol/platform/timing.h"
+#include "warhol/platform/platform.h"
+#include "warhol/utils/file.h"
 #include "warhol/utils/macros.h"
+#include "warhol/utils/string.h"
 
 namespace warhol {
 
 namespace {
 
+volatile bool kPrintToLog = true;
+
+FileHandle CreateLogFile() {
+  std::string path = StringPrintf("%s/latest.log",
+                                  GetCurrentExecutableDirectory().c_str());
+  return OpenFile(std::move(path));
+}
+
+
+void PrintToLog(const std::string& data) {
+  if (kPrintToLog) {
+    static FileHandle file = CreateLogFile();
+    WriteToFile(&file, (void*)data.c_str(), data.size());
+    Flush(&file);
+  }
+  std::cerr << data;
+  std::cerr.flush();
+}
+
 void AssertionFailed(Location loc,
                      const char* condition,
                      std::string message) {
   auto time = GetCurrentTime();
-  printf("[%s] Assertion failed at %s (%s:%d):\n",
-         TimeToString(time).c_str(),
-         loc.function,
-         loc.file,
-         loc.line);
+  PrintToLog(StringPrintf("[%s] Assertion failed at %s (%s:%d):\n",
+                          TimeToString(time).c_str(),
+                          loc.function,
+                          loc.file,
+                          loc.line));
 
   if (message.empty()) {
-    printf("\n    %s\n\n", condition);
+    PrintToLog(StringPrintf("\n    %s\n\n", condition));
   } else {
-    printf("\n    %s\n\n", condition);
-    printf("%s\n", message.c_str());
+    PrintToLog(StringPrintf("\n    %s\n\n%s\n", condition, message.c_str()));
   }
 
   LocationStack* stack = GetLocationStack();
-  printf("Printing contextual stack of size: %d\n", stack->size);
-  PrintLocationStack(stack);
-
-  fflush(stdout);
+  PrintToLog(StringPrintf("Printing contextual stack of size: %d\n",
+             stack->size));
+  PrintToLog(LocationStackToString(stack));
 
   SEGFAULT();
 }
@@ -83,8 +104,8 @@ LogEntry::LogEntry(const Location& location,
 LogEntry::~LogEntry() {
   os_ << std::endl;
   if (level_ != LogLevel::kASSERT) {
-    std::cerr << "[" << TimeToString(GetCurrentTime()) << "]" << os_.str();
-    std::cerr.flush();
+    PrintToLog(StringPrintf("[%s]", TimeToString(GetCurrentTime()).c_str()));
+    PrintToLog(os_.str());
   } else if (assert_) {
     AssertionFailed(location_, condition_, os_.str());
   }

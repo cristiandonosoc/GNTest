@@ -18,6 +18,56 @@
 namespace warhol {
 namespace opengl {
 
+// OpenGL Debug Callback -------------------------------------------------------
+
+#ifdef DEBUG_MODE
+
+namespace {
+
+void APIENTRY OpenGLDebugCallback(GLenum source, GLenum type, GLuint id,
+                                  GLenum severity, GLsizei length,
+                                  const GLchar* message,
+                                  const void* user_param) {
+  (void)user_param;
+  (void)length;
+  if (type == GL_DEBUG_TYPE_OTHER)
+    return;
+
+  std::stringstream ss;
+
+  ss << std::endl;
+  ss << "---------------------opengl-callback-start------------" << std::endl;
+  ss << "Source: " << GLEnumToString(source) << std::endl;
+  ss << "message: " << message << std::endl;
+  ss << "type: ";
+  switch (type) {
+    case GL_DEBUG_TYPE_ERROR: ss << "ERROR"; break;
+    case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: ss << "DEPRECATED_BEHAVIOR"; break;
+    case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: ss << "UNDEFINED_BEHAVIOR"; break;
+    case GL_DEBUG_TYPE_PORTABILITY: ss << "PORTABILITY"; break;
+    case GL_DEBUG_TYPE_PERFORMANCE: ss << "PERFORMANCE"; break;
+    case GL_DEBUG_TYPE_OTHER: ss << "OTHER"; break;
+  }
+  ss << std::endl;
+
+  ss << "id: " << id << std::endl;
+  ss << "severity: ";
+  switch (severity) {
+    case GL_DEBUG_SEVERITY_LOW: ss << "LOW"; break;
+    case GL_DEBUG_SEVERITY_MEDIUM: ss << "MEDIUM"; break;
+    case GL_DEBUG_SEVERITY_HIGH: ss << "HIGH"; break;
+    default: ss << "<unknown>"; break;
+  }
+  ss << std::endl;
+  ss << "---------------------opengl-callback-end--------------";
+
+  LOG(ERROR) << ss.str();
+}
+
+}  // namespace
+
+#endif
+
 // Backend Suscription ---------------------------------------------------------
 
 namespace {
@@ -62,18 +112,27 @@ bool OpenGLInit(OpenGLRendererBackend* opengl) {
     return false;
   }
 
-  glEnable(GL_DEPTH_TEST);
-
   uint32_t camera_ubo;
-  GL_CHECK(glGenBuffers(1, &camera_ubo));
+  glGenBuffers(1, &camera_ubo);
   opengl->camera_ubo = camera_ubo;
 
-  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, opengl->camera_ubo.value));
-  GL_CHECK(glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL,
-                        GL_STATIC_DRAW));
-  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, NULL));
+  glBindBuffer(GL_UNIFORM_BUFFER, opengl->camera_ubo.value);
+  glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+  glBindBuffer(GL_UNIFORM_BUFFER, NULL);
 
-  GL_CHECK(glBindBufferBase(GL_UNIFORM_BUFFER, 0, opengl->camera_ubo.value));
+  glBindBufferBase(GL_UNIFORM_BUFFER, 0, opengl->camera_ubo.value);
+
+#if DEBUG_MODE
+  if (glDebugMessageCallback) {
+    LOG(DEBUG) << "Have debug mode!";
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback(OpenGLDebugCallback, nullptr);
+
+    GLuint unused_ids = 0;
+    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0,
+                          &unused_ids, true);
+  }
+#endif
 
   opengl->loaded = true;
   return true;
@@ -103,7 +162,7 @@ void OpenGLShutdown(OpenGLRendererBackend* opengl) {
   opengl->loaded_meshes.clear();
 
   if (opengl->camera_ubo.has_value()) {
-    GL_CHECK(glDeleteBuffers(1, &opengl->camera_ubo.value));
+    glDeleteBuffers(1, &opengl->camera_ubo.value);
     opengl->camera_ubo = 0;
   }
   opengl->camera_ubo.clear();
@@ -174,11 +233,11 @@ void OpenGLRendererBackend::UnstageTexture(Texture* texture) {
 namespace {
 
 void OpenGLStartFrame(Renderer* renderer) {
-  GL_CHECK(glClearColor(renderer->clear_color.x,
-                        renderer->clear_color.y,
-                        renderer->clear_color.z,
-                        1.0f));
-  GL_CHECK(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+  glClearColor(renderer->clear_color.x,
+               renderer->clear_color.y,
+               renderer->clear_color.z,
+               1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 }  // namespace
@@ -196,9 +255,9 @@ void SetCameraMatrices(OpenGLRendererBackend* opengl, Camera* camera) {
     return;
 
   void* data = &camera->projection;
-  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, opengl->camera_ubo.value));
-  GL_CHECK(glBufferSubData(GL_UNIFORM_BUFFER, 0, 2 * sizeof(glm::mat4), data));
-  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, NULL));
+  glBindBuffer(GL_UNIFORM_BUFFER, opengl->camera_ubo.value);
+  glBufferSubData(GL_UNIFORM_BUFFER, 0, 2 * sizeof(glm::mat4), data);
+  glBindBuffer(GL_UNIFORM_BUFFER, NULL);
 
   opengl->last_set_camera = camera;
 }
@@ -207,11 +266,11 @@ void SetUniforms(Shader* shader, ShaderHandles* handles,
                  MeshRenderAction* action) {
   if (handles->vert_ubo_binding > -1) {
     ASSERT(handles->vert_ubo_handle > 0);
-    GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, handles->vert_ubo_handle));
-    GL_CHECK(glBufferData(GL_UNIFORM_BUFFER,
-                          shader->vert_ubo_size,
-                          action->vert_uniforms,
-                          GL_STREAM_DRAW));
+    glBindBuffer(GL_UNIFORM_BUFFER, handles->vert_ubo_handle);
+    glBufferData(GL_UNIFORM_BUFFER,
+                 shader->vert_ubo_size,
+                 action->vert_uniforms,
+                 GL_STREAM_DRAW);
   }
 
   if (handles->frag_ubo_binding > -1) {
@@ -222,7 +281,7 @@ void SetUniforms(Shader* shader, ShaderHandles* handles,
     /*     GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), action->frag_values)); */
   }
 
-  GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, NULL));
+  glBindBuffer(GL_UNIFORM_BUFFER, NULL);
 }
 
 #define SET_GL_CONFIG(flag, gl_name) \
@@ -264,7 +323,7 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
 
 
     MeshHandles& handles = mesh_it->second;
-    GL_CHECK(glBindVertexArray(handles.vao));
+    glBindVertexArray(handles.vao);
 
     for (int i = 0; i < command->shader->texture_count; i++) {
       Texture* texture = action.textures + i;
@@ -272,8 +331,8 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
       ASSERT(tex_it != opengl->loaded_textures.end());
 
       uint32_t tex_handle = tex_it->second.tex_handle;
-      GL_CHECK(glActiveTexture(GL_TEXTURE0));
-      GL_CHECK(glBindTexture(GL_TEXTURE_2D, tex_handle));
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, tex_handle);
     }
 
     // Set scissoring. We check if the rectangle is non zero.
@@ -282,11 +341,9 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
                 (int)action.scissor.z, (int)action.scissor.w);
     }
 
-
-    GL_CHECK(glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT,
-                            (void*)offset));
+    glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, (void*)offset);
   }
-  GL_CHECK(glBindVertexArray(NULL));
+  glBindVertexArray(NULL);
 }
 
 void ValidateRenderCommands(List<RenderCommand>* commands) {
@@ -311,7 +368,7 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
     ASSERT(shader_it != opengl->loaded_shaders.end());
     ShaderHandles& shader_handles = shader_it->second;
 
-    GL_CHECK(glUseProgram(shader_handles.program_handle));
+    glUseProgram(shader_handles.program_handle);
 
     SetConfigs(&command.config);
     SetCameraMatrices(opengl, command.camera);
@@ -326,7 +383,7 @@ void OpenGLExecuteCommands(OpenGLRendererBackend* opengl,
         NOT_REACHED() << "Invalid render command type.";
     }
 
-    GL_CHECK(glUseProgram(NULL));
+    glUseProgram(NULL);
   }
 }
 

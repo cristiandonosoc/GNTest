@@ -12,9 +12,8 @@ namespace test{
 TEST_CASE("List") {
   SECTION("PushIntoListFromMemoryPool Without Value") {
     MemoryPool pool;
-    InitMemoryPool(&pool, KILOBYTES(1));
 
-    auto list = CreateList<size_t>(&pool);
+    auto list = CreateList<size_t>(KILOBYTES(2));
 
     std::vector<size_t> values(5);
     for (size_t i = 0; i < values.size(); i++) {
@@ -34,9 +33,8 @@ TEST_CASE("List") {
 
   SECTION("PushIntoListFromMemoryPool With Value") {
     MemoryPool pool;
-    InitMemoryPool(&pool, KILOBYTES(1));
 
-    auto list = CreateList<size_t>(&pool);
+    auto list = CreateList<size_t>(KILOBYTES(2));
     std::vector<size_t> values(5);
     for (size_t i = 0; i < values.size(); i++) {
       values[i] = i * i + 1;
