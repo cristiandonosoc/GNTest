@@ -15,8 +15,12 @@ layout (std140) uniform Camera {
   mat4 view;
 } camera;
 
+layout (std140) uniform VertUniforms {
+  mat4 model;
+} uniforms;
+
 // Code ------------------------------------------------------------------------
 
 void main() {
-  gl_Position = camera.proj * camera.view * vec4(in_pos, 1.0);
+  gl_Position = camera.proj * camera.view * uniforms.model * vec4(in_pos, 1.0);
 }

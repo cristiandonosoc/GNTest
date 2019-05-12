@@ -16,7 +16,7 @@ layout (std140) uniform FragUniforms {
 // Code ------------------------------------------------------------------------
 
 void main() {
-  // float i = gl_FragCoord.x / uniforms.screen_size.x;
-  // color = vec4(i * uniforms.sky_color1 + (1 - i) * uniforms.sky_color2, 1.0f);
-  color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+  float i = gl_FragCoord.x / uniforms.screen_size.x;
+  color = vec4(i * uniforms.sky_color1 + (1 - i) * uniforms.sky_color2, 1.0f);
+  // color = vec4(1.0f, 0.0f, 1.0f, 1.0f);
 }

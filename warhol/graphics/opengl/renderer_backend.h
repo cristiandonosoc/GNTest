@@ -62,6 +62,10 @@ struct OpenGLRendererBackend : public RendererBackend {
                        IndexRange vertex_range = {},
                        IndexRange index_range = {}) override;
 
+  bool ParseShader(Renderer*, BasePaths*,
+                   const std::string& vert_name,
+                   const std::string& frag_name,
+                   Shader* out) override;
   bool StageShader(Shader*) override;
   void UnstageShader(Shader*) override;
   bool IsShaderStaged(Shader*) override;

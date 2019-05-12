@@ -21,8 +21,9 @@ struct DrawerVertex {
 }  // namespace
 
 bool InitDrawer(Game* game, Drawer* drawer) {
-  if (!LoadShader(&game->paths, &game->renderer, "drawer", "square",
-                  &drawer->shader)) {
+  drawer->shader.name = "Drawer";
+  if (!RendererLoadShader(&game->renderer, &game->paths, "drawer", "square",
+                          &drawer->shader)) {
     LOG(ERROR) << "Could not load shader!";
     return false;
   }

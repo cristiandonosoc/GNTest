@@ -56,12 +56,12 @@ int main() {
     ResetMemoryPool(&memory_pool);
 
     TetrisNewFrame(&game, &tetris);
-    DoImguiUI(&game, &tetris);
+    /* DoImguiUI(&game, &tetris); */
 
     auto command_list = CreateList<RenderCommand>(KILOBYTES(16));
 
     Push(&command_list, TetrisEndFrame(&game, &tetris));
-    Push(&command_list, ImguiEndFrame(&game.imgui));
+    /* Push(&command_list, ImguiEndFrame(&game.imgui)); */
 
     EndFrame(&game, std::move(command_list));
   }

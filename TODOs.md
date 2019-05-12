@@ -19,3 +19,8 @@
   they're loaded. They should so it's easier to detect leaking and implement
   RAII semantics.
 - Define a type of an Indices instead of relying always on uint32_t
+
+## OpenGL
+
+- Add some uniform loading testing so that we don't get annoying surprises down
+  the line.

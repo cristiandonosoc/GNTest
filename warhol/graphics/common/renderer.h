@@ -17,6 +17,7 @@
 
 namespace warhol {
 
+struct BasePaths;
 struct Shader;
 struct Window;
 
@@ -74,7 +75,21 @@ bool RendererUploadMeshRange(Renderer*, Mesh*,
                              IndexRange vertex_range = {},
                              IndexRange index_range = {});
 
+// |shader_name| is the name identifier for this shader.
+// |vert_name| and |frag_name| are the actual filenames of the shaders (without
+// the .vert and .frag extensions).
+bool RendererParseShader(Renderer*, BasePaths*,
+                         const std::string& vert_name,
+                         const std::string& frag_name,
+                         Shader* out);
 bool RendererStageShader(Renderer*, Shader*);
+
+// Parse + Stage.
+bool RendererLoadShader(Renderer*, BasePaths*,
+                        const std::string& vert_name,
+                        const std::string& frag_name,
+                        Shader* out);
+
 void RendererUnstageShader(Renderer*, Shader*);
 bool RendererIsShaderStaged(Renderer*, Shader*);
 

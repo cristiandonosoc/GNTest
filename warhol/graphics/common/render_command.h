@@ -89,7 +89,7 @@ struct RenderCommandConfig {
 struct RenderCommand {
   RAII_CONSTRUCTORS(RenderCommand);
 
-  const char* name = nullptr;   // Useful for debugging purposes.
+  const char* name = "<not set>";   // Useful for debugging purposes.
 
   RenderCommandType type = RenderCommandType::kLast;
   RenderCommandConfig config;

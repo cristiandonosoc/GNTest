@@ -1,9 +1,0 @@
-#Include is a special directive that will define the macros that are used as
-#marking for parsing.
-
-#ifndef COMMON_GL
-#define COMMON_GL
-
-#define UNIFORM_BLOCK(block_name) layout(std140) uniform block_name {
-
-#endif

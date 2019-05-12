@@ -102,6 +102,16 @@ bool RendererUploadMeshRange(Renderer* renderer, Mesh* mesh,
 
 // Shader ----------------------------------------------------------------------
 
+bool RendererParseShader(Renderer* renderer,
+                         BasePaths* paths,
+                         const std::string& vert_name,
+                         const std::string& frag_name,
+                         Shader* out) {
+  ASSERT(Valid(renderer));
+  return renderer->backend->ParseShader(renderer, paths, vert_name,
+                                        frag_name, out);
+}
+
 bool RendererStageShader(Renderer* renderer, Shader* shader) {
   ASSERT(Valid(renderer));
   ASSERT(Valid(shader));
@@ -118,6 +128,17 @@ void RendererUnstageShader(Renderer* renderer, Shader* shader) {
 bool RendererIsShaderStaged(Renderer* renderer, Shader* shader) {
   ASSERT(Valid(renderer));
   return renderer->backend->IsShaderStaged(shader);
+}
+
+bool RendererLoadShader(Renderer* renderer, BasePaths* paths,
+                        const std::string& vert_name,
+                        const std::string& frag_name,
+                        Shader* out) {
+  if (!RendererParseShader(renderer, paths, vert_name, frag_name, out))
+    return false;
+  if (!RendererStageShader(renderer, out))
+    return false;
+  return true;
 }
 
 // Texture ---------------------------------------------------------------------

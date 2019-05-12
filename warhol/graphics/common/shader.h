@@ -14,9 +14,17 @@ namespace warhol {
 
 struct Renderer;
 
+// |offset| represents the offset in memory where this uniform is from the
+// beginning of the uniform block. This is using the std140 uniform block
+// layout rules:
+//
+// https://learnopengl.com/Advanced-OpenGL/Advanced-GLSL (Uniform block layout).
+// https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_uniform_buffer_object.txt
 struct Uniform {
   std::string name;
-  uint32_t size;      // In bytes.
+  uint32_t size = 0;        // In bytes.
+  uint32_t offset = 0;      // In bytes.
+  uint32_t alignment = 0;   // In bytes.
 };
 
 struct Shader {
@@ -45,22 +53,6 @@ inline bool Valid(Shader* shader) { return shader->uuid.value != 0; }
 inline bool Loaded(Shader* shader) {
   return !shader->vert_source.empty() && !shader->frag_source.empty();
 }
-
-// |shader_name| is the name identifier for this shader.
-// |vert_name| and |frag_name| are the actual filenames of the shaders (without
-// the .vert and .frag extensions).
-bool LoadShader(BasePaths*, Renderer*,
-                const std::string_view& shader_name,
-                const std::string_view& vert_name,
-                const std::string_view& frag_name,
-                Shader* out);
-
-// Same as the overload above, but assumes |vert_name| == |frag_name|, both
-// being |filename|.
-bool LoadShader(BasePaths*, Renderer*,
-                const std::string_view& shader_name,
-                const std::string_view& filename,
-                Shader*);
 
 void RemoveSources(Shader*);
 

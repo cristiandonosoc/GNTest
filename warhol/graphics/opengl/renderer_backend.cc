@@ -199,6 +199,14 @@ void OpenGLRendererBackend::UnstageMesh(Mesh* mesh) {
 
 // Shader Handling -------------------------------------------------------------
 
+bool OpenGLRendererBackend::ParseShader(Renderer*,
+                                        BasePaths* paths,
+                                        const std::string& vert_name,
+                                        const std::string& frag_name,
+                                        Shader* out) {
+  return OpenGLParseShader(paths, vert_name, frag_name, out);
+}
+
 bool OpenGLRendererBackend::StageShader(Shader* shader) {
   return OpenGLStageShader(this, shader);
 }
@@ -266,6 +274,8 @@ void SetUniforms(Shader* shader, ShaderHandles* handles,
                  MeshRenderAction* action) {
   if (handles->vert_ubo_binding > -1) {
     ASSERT(handles->vert_ubo_handle > 0);
+    ASSERT(action->vert_uniforms);
+
     glBindBuffer(GL_UNIFORM_BUFFER, handles->vert_ubo_handle);
     glBufferData(GL_UNIFORM_BUFFER,
                  shader->vert_ubo_size,
@@ -274,11 +284,14 @@ void SetUniforms(Shader* shader, ShaderHandles* handles,
   }
 
   if (handles->frag_ubo_binding > -1) {
-    NOT_IMPLEMENTED();
     ASSERT(handles->frag_ubo_handle > 0);
-    /* GL_CHECK(glBindBuffer(GL_UNIFORM_BUFFER, handles->frag_ubo_handle)); */
-    /* GL_CHECK(glBufferSubData( */
-    /*     GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), action->frag_values)); */
+    ASSERT(action->frag_uniforms);
+
+    glBindBuffer(GL_UNIFORM_BUFFER, handles->frag_ubo_handle);
+    glBufferData(GL_UNIFORM_BUFFER,
+                 shader->frag_ubo_size,
+                 action->frag_uniforms,
+                 GL_STREAM_DRAW);
   }
 
   glBindBuffer(GL_UNIFORM_BUFFER, NULL);
@@ -313,6 +326,7 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
   for (MeshRenderAction& action : command->mesh_actions) {
     size_t size = GetSize(action.index_range);
     size_t offset = GetOffset(action.index_range);
+    /* LOG(DEBUG) << ToString(action.index_range); */
     if (size == 0)
       continue;
 
@@ -320,7 +334,6 @@ void ExecuteMeshActions(OpenGLRendererBackend* opengl,
     ASSERT(mesh_it != opengl->loaded_meshes.end());
 
     SetUniforms(command->shader, shader_handles, &action);
-
 
     MeshHandles& handles = mesh_it->second;
     glBindVertexArray(handles.vao);

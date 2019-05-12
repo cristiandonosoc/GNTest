@@ -1,15 +1,206 @@
 // Copyright 2019, Cristián Donoso.
 // This code has a BSD license. See LICENSE.
 
-#include <stdint.h>
-
 #include "warhol/graphics/common/shader.h"
+
+#include <stdint.h>
+#include <third_party/cpptoml/cpptoml.h>
+
+#include "warhol/assets/asset_paths.h"
 #include "warhol/graphics/opengl/renderer_backend.h"
 #include "warhol/graphics/opengl/utils.h"
+#include "warhol/platform/path.h"
+#include "warhol/utils/file.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
 namespace opengl {
+
+
+// Parse Shader ----------------------------------------------------------------
+
+namespace {
+
+enum class SubShaderType {
+  kConfig,
+  kFragment,
+  kVertex,
+};
+
+std::vector<uint8_t> StringToSource(const std::string& str) {
+  std::vector<uint8_t> src;
+  src.reserve(str.size());
+  src.insert(src.end(), str.begin(), str.end());
+  return src;
+}
+
+uint32_t GetUniformsSize(const std::vector<Uniform>& uniforms) {
+  (void)uniforms;
+  NOT_IMPLEMENTED();
+  return 0;
+}
+
+std::optional<std::string> GetSubShaderPath(const std::string& basename,
+                             SubShaderType type) {
+  std::string shader_path;
+  if (type == SubShaderType::kVertex) {
+    return StringPrintf("%s.vert", basename.c_str());
+  } else if (type== SubShaderType::kFragment) {
+    return StringPrintf("%s.frag", basename.c_str());
+  } else if (type == SubShaderType::kConfig) {
+    return StringPrintf("%s.toml", basename.c_str());
+  }
+  LOG(ERROR) << "Invalid sub shader type.";
+
+  return std::nullopt;
+}
+
+std::optional<Uniform> ParseUniform(const std::string& name,
+                                    const std::string& type) {
+  Uniform uniform = {};
+  if (type == "float") {
+    uniform.size = 4;
+    uniform.alignment = 4;
+  } else if (type == "mat4") {
+    uniform.size = 64;
+    uniform.alignment = 16;
+  } else if (type == "vec3") {
+    uniform.size = 12;
+    uniform.alignment = 16;
+  } else {
+    NOT_REACHED() << "Uniform " << name << ": Unsupported type: " << type;
+    return std::nullopt;
+  }
+
+  return uniform;
+}
+
+uint32_t NextMultiple(uint32_t val, uint32_t multiple) {
+  if (multiple == 0)
+    return val;
+
+  uint32_t remainder = val % multiple;
+  if (remainder == 0)
+    return val;
+  return val + multiple - remainder;
+}
+
+std::optional<std::vector<Uniform>>
+ParseUniforms(std::shared_ptr<cpptoml::table> toml, SubShaderType type) {
+  const char* section_name = type == SubShaderType::kVertex ? "vert" : "frag";
+  auto table = toml->get_table_array(section_name);
+  if (!table)
+    return {};
+
+  uint32_t current_offset = 0;
+  std::vector<Uniform> uniforms;
+  for (const auto& entry : *table) {
+    auto name = entry->get_as<std::string>("name");
+    if (!name) {
+      LOG(ERROR) << "Could not find name in " << section_name;
+      return std::nullopt;
+    }
+
+    auto type = entry->get_as<std::string>("type");
+    if (!type) {
+      LOG(ERROR) << "Could not find type in " << section_name;
+      return std::nullopt;
+    }
+
+    auto uniform = ParseUniform(*name, *type);
+    if (!uniform) {
+      LOG(ERROR) << "Could not parse uniform " << *name;
+      return std::nullopt;
+    }
+
+    // Find next valid offset.
+    uint32_t next_offset = NextMultiple(current_offset, uniform->alignment);
+    uniform->offset = next_offset;
+    current_offset = uniform->offset + uniform->size;
+    uniforms.push_back(std::move(*uniform));
+  }
+
+  return uniforms;
+}
+
+struct ParseOut {
+  std::string source;
+  std::vector<Uniform> uniforms;
+};
+std::optional<ParseOut> ParseSubShader(const std::string& basename,
+                                       SubShaderType type) {
+  // Read the layout file.
+  auto layout_path = GetSubShaderPath(basename, SubShaderType::kConfig);
+  if (!layout_path)
+    return std::nullopt;
+
+  // Parse the uniforms.
+  std::vector<Uniform> uniforms;
+  try {
+    auto layout_toml = cpptoml::parse_file(*layout_path);
+    auto uniforms_opt = ParseUniforms(layout_toml, type);
+    if (!uniforms_opt) {
+      LOG(ERROR) << "Could not parse uniforms for " << basename;
+      return std::nullopt;
+    }
+    uniforms = std::move(*uniforms_opt);
+  } catch (const cpptoml::parse_exception& e) {
+    LOG(ERROR) << "Could not parse config file " << *layout_path << ": "
+               << e.what();
+    return std::nullopt;
+  }
+
+  auto shader_path = GetSubShaderPath(basename, type);
+  if (!shader_path)
+    return std::nullopt;
+
+  std::string source;
+  if (!ReadWholeFile(*shader_path, &source))
+    return std::nullopt;
+
+  ParseOut out;
+  out.source = std::move(source);
+  out.uniforms = std::move(uniforms);
+  return out;
+}
+
+}  // namespace
+
+bool OpenGLParseShader(BasePaths* paths,
+                       const std::string& vert_name,
+                       const std::string& frag_name,
+                       Shader* shader) {
+  auto vert_parse = ParseSubShader(
+      PathJoin({paths->shader, "opengl", vert_name}), SubShaderType::kVertex);
+  if (!vert_parse) {
+    LOG(ERROR) << "Could not parse vertex shader: " << vert_name;
+    return false;
+  }
+
+  auto frag_parse = ParseSubShader(PathJoin({paths->shader, "opengl", frag_name}),
+                      SubShaderType::kFragment);
+  if (!frag_parse) {
+    LOG(ERROR) << "Could not parse fragment shader: " << frag_name;
+    return false;
+  }
+
+  shader->uuid = GetNextShaderUUID();
+
+  shader->vert_source = StringToSource(std::move(vert_parse->source));
+  shader->vert_ubo_size = GetUniformsSize(vert_parse->uniforms);
+  shader->vert_uniforms = std::move(vert_parse->uniforms);
+
+  shader->frag_source = StringToSource(std::move(frag_parse->source));
+  shader->frag_ubo_size = GetUniformsSize(frag_parse->uniforms);
+  shader->frag_uniforms = std::move(frag_parse->uniforms);
+
+  // TODO(Cristian): Detect texture count.
+  shader->texture_count = 0;
+
+  return true;
+}
+
+// Stage Shader ----------------------------------------------------------------
 
 namespace {
 

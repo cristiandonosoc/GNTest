@@ -5,8 +5,11 @@
 
 #include <stdint.h>
 
+#include <string_view>
+
 namespace warhol {
 
+struct BasePaths;
 struct Shader;
 
 namespace opengl {
@@ -26,6 +29,11 @@ struct ShaderHandles {
   uint32_t frag_ubo_handle = 0;
   int frag_ubo_binding = -1;
 };
+
+bool OpenGLParseShader(BasePaths*,
+                       const std::string& vert_name,
+                       const std::string& frag_name,
+                       Shader* out);
 
 bool OpenGLStageShader(OpenGLRendererBackend* opengl, Shader* shader);
 void OpenGLUnstageShader(OpenGLRendererBackend* opengl, Shader* shader);

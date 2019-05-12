@@ -9,6 +9,7 @@
 
 namespace warhol {
 
+struct BasePaths;
 struct Mesh;
 struct Renderer;
 struct Shader;
@@ -34,6 +35,12 @@ struct RendererBackend {
                                IndexRange vertex_range = {},
                                IndexRange index_range = {}) = 0;
 
+  // Shader --------------------------------------------------------------------
+
+  virtual bool ParseShader(Renderer*, BasePaths*,
+                           const std::string& vert_name,
+                           const std::string& frag_name,
+                           Shader* out) = 0;
   virtual bool StageShader(Shader*) = 0;
   virtual void UnstageShader(Shader*) = 0;
   virtual bool IsShaderStaged(Shader*) = 0;
