@@ -1,0 +1,23 @@
+[direct]
+  vert = [
+    {name = "model", type = "mat4" },
+  ]
+
+[simple]
+  vert = [
+    {name = "model", type = "mat4" },
+  ]
+  frag = [
+    { name = "tex_sampler", type = "sampler2D" },
+  ]
+
+[square]
+  # Empty
+
+[skydome]
+  frag = [
+    { name = "screen_size", type = "ivec2" },
+    { name = "sky_color1", type = "vec3" },
+    { name = "sky_color2", type = "vec3" },
+  ]
+

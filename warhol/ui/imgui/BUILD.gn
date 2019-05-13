@@ -24,7 +24,7 @@ source_set("imgui") {
     "//warhol/window/common",
     "//warhol/input",
     "//warhol/utils",
-    "//warhol/graphics/common:render_command"
+    "//warhol/graphics/common:standalone"
   ]
 
   public_deps = [

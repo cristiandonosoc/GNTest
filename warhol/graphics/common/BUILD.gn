@@ -3,13 +3,15 @@
 
 # Separated for to stop code just needind the render command on depending
 # on graphics functionality such as stb of tiny_obj.
-source_set("render_command") {
+source_set("standalone") {
   public = [
+    "shader.h",
     "render_command.h",
   ]
 
   sources = [
     "render_command.cc",
+    "shader.cc",
   ]
 
   deps = [
@@ -24,7 +26,6 @@ source_set("common") {
     "renderer.h",
     "image.h",
     "mesh.h",
-    "shader.h",
     "texture.h",
   ]
 
@@ -33,12 +34,11 @@ source_set("common") {
     "mesh.cc",
     "renderer.cc",
     "renderer_backend.h",
-    "shader.cc",
     "texture.cc",
   ]
 
   deps = [
-    ":render_command",
+    ":standalone",
     "//warhol/containers",
     "//third_party/stb",
     "//third_party/tiny_obj_loader",

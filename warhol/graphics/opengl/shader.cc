@@ -57,32 +57,9 @@ std::optional<std::string> GetSubShaderPath(const std::string& basename,
 
 std::optional<Uniform> ParseUniform(const std::string& name,
                                     const std::string& type) {
-  Uniform uniform = {};
-  if (type == "float") {
-    uniform.size = 4;
-    uniform.alignment = 4;
-  } else if (type == "mat4") {
-    uniform.size = 64;
-    uniform.alignment = 16;
-  } else if (type == "vec3") {
-    uniform.size = 12;
-    uniform.alignment = 16;
-  } else {
-    NOT_REACHED() << "Uniform " << name << ": Unsupported type: " << type;
-    return std::nullopt;
-  }
-
-  return uniform;
-}
-
-uint32_t NextMultiple(uint32_t val, uint32_t multiple) {
-  if (multiple == 0)
-    return val;
-
-  uint32_t remainder = val % multiple;
-  if (remainder == 0)
-    return val;
-  return val + multiple - remainder;
+  (void)name; (void)type;
+  NOT_IMPLEMENTED();
+  return std::nullopt;
 }
 
 std::optional<std::vector<Uniform>>
@@ -92,7 +69,6 @@ ParseUniforms(std::shared_ptr<cpptoml::table> toml, SubShaderType type) {
   if (!table)
     return {};
 
-  uint32_t current_offset = 0;
   std::vector<Uniform> uniforms;
   for (const auto& entry : *table) {
     auto name = entry->get_as<std::string>("name");
@@ -112,12 +88,6 @@ ParseUniforms(std::shared_ptr<cpptoml::table> toml, SubShaderType type) {
       LOG(ERROR) << "Could not parse uniform " << *name;
       return std::nullopt;
     }
-
-    // Find next valid offset.
-    uint32_t next_offset = NextMultiple(current_offset, uniform->alignment);
-    uniform->offset = next_offset;
-    current_offset = uniform->offset + uniform->size;
-    uniforms.push_back(std::move(*uniform));
   }
 
   return uniforms;

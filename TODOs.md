@@ -24,3 +24,8 @@
 
 - Add some uniform loading testing so that we don't get annoying surprises down
   the line.
+
+## Shaders
+
+- Write a TOML python script that verifies that all the shaders are present in
+  the layouts.toml file.

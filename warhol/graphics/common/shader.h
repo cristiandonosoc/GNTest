@@ -14,18 +14,37 @@ namespace warhol {
 
 struct Renderer;
 
+enum class UniformType {
+  kBool, kInt, kFloat,
+
+  kInt2, kInt3, kInt4,
+  kUint2, kUint3, kUint4,
+
+  kVec2, kVec3, kVec4,
+  kMat4,
+
+  kLast,
+};
+
 // |offset| represents the offset in memory where this uniform is from the
-// beginning of the uniform block. This is using the std140 uniform block
-// layout rules:
+// beginning of the uniform block. This can be calculated calling into
+// CalculateUniformLayout with a set of uniforms that have been loaded.
+struct Uniform {
+  std::string name;
+  UniformType type = UniformType::kLast;
+  uint32_t alignment = 0;   // In bytes.
+  uint32_t offset = 0;      // In bytes.
+  uint32_t size = 0;        // In bytes.
+  // TODO: Support arrays.
+};
+
+inline bool Valid(Uniform* u) { return u->type != UniformType::kLast; }
+
+// This is using the std140 uniform block layout rules:
 //
 // https://learnopengl.com/Advanced-OpenGL/Advanced-GLSL (Uniform block layout).
 // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_uniform_buffer_object.txt
-struct Uniform {
-  std::string name;
-  uint32_t size = 0;        // In bytes.
-  uint32_t offset = 0;      // In bytes.
-  uint32_t alignment = 0;   // In bytes.
-};
+bool CalculateUniformLayout(std::vector<Uniform>* uniforms);
 
 struct Shader {
   ClearOnMove<uint64_t> uuid = 0;  // Set up by the renderer.

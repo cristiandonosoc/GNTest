@@ -12,6 +12,7 @@ source_set("tests_lib") {
     "optional.cc",
     "render_command.cc",
     "strings.cc",
+    "uniforms.cc",
   ]
 
   public_deps = [
@@ -19,7 +20,7 @@ source_set("tests_lib") {
   ]
 
   deps = [
-    "//warhol/graphics/common:render_command",
+    "//warhol/graphics/common:standalone",
     "//warhol/math",
     "//warhol/memory",
     "//warhol/utils",
