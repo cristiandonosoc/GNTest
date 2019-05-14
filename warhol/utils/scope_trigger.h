@@ -10,17 +10,18 @@
 namespace warhol {
 
 // Runs a callback when the variable goes out of scope.
-template <typename CALLBACK>
+template <typename CallbackType>
 struct ScopeTrigger {
-  ScopeTrigger(CALLBACK callback) : callback(std::move(callback)) {}
+  ScopeTrigger(CallbackType callback) : callback(std::move(callback)) {}
   ~ScopeTrigger() {
-    callback();
+    if (callback)
+      callback();
   }
 
   DELETE_COPY_AND_ASSIGN(ScopeTrigger);
   DELETE_MOVE_AND_ASSIGN(ScopeTrigger);
 
-  CALLBACK callback;
+  CallbackType callback;
 };
 
 }  // namespace warhol

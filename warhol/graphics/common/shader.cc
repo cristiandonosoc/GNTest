@@ -124,30 +124,6 @@ struct UniformLayout {
   uint32_t alignment = 0;
 };
 
-const std::map<UniformType, UniformLayout>& GetLayout() {
-  static std::map<UniformType, UniformLayout> layout = {
-    { UniformType::kBool, {4, 4}},
-    { UniformType::kInt, {4, 4}},
-    { UniformType::kFloat, {4, 4}},
-
-    { UniformType::kInt2, {8, 8}},
-    { UniformType::kInt3, {12, 16}},
-    { UniformType::kInt4, {16, 16}},
-
-    { UniformType::kUint2, {8, 8}},
-    { UniformType::kUint3, {12, 16}},
-    { UniformType::kUint4, {16, 16}},
-
-    { UniformType::kVec2, {8, 8}},
-    { UniformType::kVec3, {12, 16}},
-    { UniformType::kVec4, {16, 16}},
-
-    { UniformType::kMat4, {64, 16}},
-  };
-
-  return layout;
-}
-
 uint32_t NextMultiple(uint32_t val, uint32_t multiple) {
   if (multiple == 0)
     return val;
@@ -168,15 +144,8 @@ bool CalculateUniformLayout(std::vector<Uniform>* uniforms) {
       return false;
     }
 
-    const auto& uniforms_layout = GetLayout();
-    auto it = uniforms_layout.find(uniform.type);
-    if (it == uniforms_layout.end())
-      return false;
-
-    auto& layout = it->second;
-
-    uniform.size = layout.size;
-    uniform.alignment = layout.alignment;
+    uniform.size = GetSize(uniform.type);
+    uniform.alignment = GetAlignment(uniform.type);
 
     uint32_t next_start = NextMultiple(current_offset, uniform.alignment);
     uniform.offset = next_start;

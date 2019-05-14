@@ -24,13 +24,11 @@ source_set("standalone") {
 source_set("common") {
   public = [
     "renderer.h",
-    "image.h",
     "mesh.h",
     "texture.h",
   ]
 
   sources = [
-    "image.cc",
     "mesh.cc",
     "renderer.cc",
     "renderer_backend.h",
