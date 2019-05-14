@@ -7,9 +7,6 @@
   vert = [
     {name = "model", type = "mat4" },
   ]
-  frag = [
-    { name = "tex_sampler", type = "sampler2D" },
-  ]
 
 [square]
   # Empty

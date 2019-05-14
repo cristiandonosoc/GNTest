@@ -16,15 +16,19 @@ struct Renderer;
 
 enum class UniformType {
   kBool, kInt, kFloat,
-
   kInt2, kInt3, kInt4,
   kUint2, kUint3, kUint4,
-
   kVec2, kVec3, kVec4,
+  kIvec2, kIvec3, kIvec4,
+  kUvec2, kUvec3, kUvec4,
   kMat4,
-
   kLast,
 };
+uint32_t GetSize(UniformType);
+uint32_t GetAlignment(UniformType);
+
+// Returns kLast if string is not valid.
+UniformType FromString(const std::string&);
 
 // |offset| represents the offset in memory where this uniform is from the
 // beginning of the uniform block. This can be calculated calling into
@@ -35,7 +39,7 @@ struct Uniform {
   uint32_t alignment = 0;   // In bytes.
   uint32_t offset = 0;      // In bytes.
   uint32_t size = 0;        // In bytes.
-  // TODO: Support arrays.
+  // TODO(Cristian): Support arrays.
 };
 
 inline bool Valid(Uniform* u) { return u->type != UniformType::kLast; }
@@ -62,10 +66,8 @@ struct Shader {
 
   // Resetable state -----------------------------------------------------------
 
-  // The source will depend on what renderer backend is consuming this data.
-  // TODO: Use a memory pool for this.
-  std::vector<uint8_t> vert_source;
-  std::vector<uint8_t> frag_source;
+  std::string vert_source;
+  std::string frag_source;
 };
 
 inline bool Valid(Shader* shader) { return shader->uuid.value != 0; }

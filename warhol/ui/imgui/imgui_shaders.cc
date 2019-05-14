@@ -68,20 +68,9 @@ Shader GetOpenGLImguiShader() {
   shader.frag_ubo_size = 0;
   shader.texture_count = 1;
 
-  std::vector<uint8_t> src;
-
-  size_t vert_size = sizeof(kOpenGLVertex);
-  src.reserve(vert_size);
-  src.insert(src.end(), kOpenGLVertex, kOpenGLVertex + vert_size);
-  shader.vert_source = src;
-
-  src.clear();
-  size_t frag_size = sizeof(kOpenGLFragment);
-  src.reserve(frag_size);
-  src.insert(src.end(), kOpenGLFragment, kOpenGLFragment + frag_size);
-  shader.frag_source = src;
-
   shader.uuid = GetNextShaderUUID();
+  shader.vert_source = kOpenGLVertex;
+  shader.frag_source = kOpenGLFragment;
 
   return shader;
 }

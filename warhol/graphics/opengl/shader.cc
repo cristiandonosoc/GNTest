@@ -35,9 +35,10 @@ std::vector<uint8_t> StringToSource(const std::string& str) {
 }
 
 uint32_t GetUniformsSize(const std::vector<Uniform>& uniforms) {
-  (void)uniforms;
-  NOT_IMPLEMENTED();
-  return 0;
+  if (uniforms.empty())
+    return 0;
+  auto& back = uniforms.back();
+  return back.offset + back.size;
 }
 
 std::optional<std::string> GetSubShaderPath(const std::string& basename,
@@ -55,31 +56,39 @@ std::optional<std::string> GetSubShaderPath(const std::string& basename,
   return std::nullopt;
 }
 
+struct ShaderLayout {
+  std::vector<Uniform> vert_uniforms;
+  std::vector<Uniform> frag_uniforms;
+};
+
 std::optional<Uniform> ParseUniform(const std::string& name,
-                                    const std::string& type) {
-  (void)name; (void)type;
-  NOT_IMPLEMENTED();
-  return std::nullopt;
+                                    const std::string& type_str) {
+  UniformType type = FromString(type_str);
+  if (type == UniformType::kLast)
+    return std::nullopt;
+
+  Uniform uniform;
+  uniform.name = name;
+  uniform.type = type;
+  uniform.size = GetSize(type);
+  uniform.alignment = GetAlignment(type);
+
+  return uniform;
 }
 
 std::optional<std::vector<Uniform>>
-ParseUniforms(std::shared_ptr<cpptoml::table> toml, SubShaderType type) {
-  const char* section_name = type == SubShaderType::kVertex ? "vert" : "frag";
-  auto table = toml->get_table_array(section_name);
-  if (!table)
-    return {};
-
+ParseUniforms(std::shared_ptr<cpptoml::table_array> toml_table) {
   std::vector<Uniform> uniforms;
-  for (const auto& entry : *table) {
+  for (const auto& entry : *toml_table) {
     auto name = entry->get_as<std::string>("name");
     if (!name) {
-      LOG(ERROR) << "Could not find name in " << section_name;
+      LOG(ERROR) << "Could not find name in toml table";
       return std::nullopt;
     }
 
     auto type = entry->get_as<std::string>("type");
     if (!type) {
-      LOG(ERROR) << "Could not find type in " << section_name;
+      LOG(ERROR) << "Could not find type in toml table";
       return std::nullopt;
     }
 
@@ -93,44 +102,100 @@ ParseUniforms(std::shared_ptr<cpptoml::table> toml, SubShaderType type) {
   return uniforms;
 }
 
+std::map<std::string, ShaderLayout>& GetShaderLayouts() {
+  static std::map<std::string, ShaderLayout> layouts;
+  return layouts;
+}
+
+bool LoadShaderLayout(const std::string& layout_filepath) {
+  static std::set<std::string> loaded_files;
+  auto file_it = loaded_files.find(layout_filepath);
+  if (file_it != loaded_files.end()) {
+    LOG(DEBUG) << "Layout file " << layout_filepath << " already loaded!";
+    return true;
+  }
+  loaded_files.insert(layout_filepath);
+
+  auto& layouts = GetShaderLayouts();
+
+  try {
+    auto layout_file = cpptoml::parse_file(layout_filepath.c_str());
+    if (!layout_file) {
+      LOG(ERROR) << "Could not parse file " << layout_filepath;
+      return false;
+    }
+
+    for (const auto& [key, toml_entry] : *layout_file) {
+      auto entry_it = layouts.find(key);
+      if (entry_it != layouts.end()) {
+        LOG(ERROR) << "Shader layout for " << key << " already found!";
+        return false;
+      }
+
+      LOG(DEBUG) << "Loading layout for shader " << key;
+      auto& shader_layout = layouts[key];
+
+      // Parse vertex.
+      auto vert_entries = toml_entry->as_table()->get_table_array("vert");
+      if (vert_entries) {
+        if (auto uniforms = ParseUniforms(vert_entries); uniforms) {
+          shader_layout.vert_uniforms = std::move(*uniforms);
+        } else {
+          LOG(ERROR) << "Could not load vert entries for " << key;
+          return false;
+        }
+      }
+
+      // Parse fragment.
+      auto frag_entries = toml_entry->as_table()->get_table_array("frag");
+      if (frag_entries) {
+        if (auto uniforms = ParseUniforms(frag_entries); uniforms) {
+          shader_layout.vert_uniforms = std::move(*uniforms);
+        } else {
+          LOG(ERROR) << "Could not load vert entries for " << key;
+          return false;
+        }
+      }
+    }
+  } catch (cpptoml::parse_exception& e) {
+    LOG(ERROR) << "Error parsing toml file " << layout_filepath << ": "
+               << e.what();
+    return false;
+  }
+
+  return true;
+}
+
 struct ParseOut {
   std::string source;
   std::vector<Uniform> uniforms;
 };
-std::optional<ParseOut> ParseSubShader(const std::string& basename,
-                                       SubShaderType type) {
-  // Read the layout file.
-  auto layout_path = GetSubShaderPath(basename, SubShaderType::kConfig);
-  if (!layout_path)
-    return std::nullopt;
-
-  // Parse the uniforms.
-  std::vector<Uniform> uniforms;
-  try {
-    auto layout_toml = cpptoml::parse_file(*layout_path);
-    auto uniforms_opt = ParseUniforms(layout_toml, type);
-    if (!uniforms_opt) {
-      LOG(ERROR) << "Could not parse uniforms for " << basename;
-      return std::nullopt;
-    }
-    uniforms = std::move(*uniforms_opt);
-  } catch (const cpptoml::parse_exception& e) {
-    LOG(ERROR) << "Could not parse config file " << *layout_path << ": "
-               << e.what();
+std::optional<ParseOut>
+ParseSubShader(BasePaths* paths, const std::string& name, SubShaderType type) {
+  const auto& layouts = GetShaderLayouts();
+  auto layout_it = layouts.find(name);
+  if (layout_it == layouts.end()) {
+    NOT_REACHED() << "Could not find layout for " << name;
     return std::nullopt;
   }
 
-  auto shader_path = GetSubShaderPath(basename, type);
-  if (!shader_path)
-    return std::nullopt;
+  LOG(DEBUG) << "Found layout for " << name;
 
+  const char* ext = type == SubShaderType::kVertex ? "vert" : "frag";
+  std::string path = PathJoin({paths->shader,
+                               StringPrintf("%s.%s", name.c_str(), ext)});
   std::string source;
-  if (!ReadWholeFile(*shader_path, &source))
+  if (!ReadWholeFile(path, &source))
     return std::nullopt;
 
   ParseOut out;
   out.source = std::move(source);
-  out.uniforms = std::move(uniforms);
+  auto& layout = layout_it->second;
+  out.uniforms = type == SubShaderType::kVertex ? layout.vert_uniforms
+                                                : layout.frag_uniforms;
+
+  if (!CalculateUniformLayout(&out.uniforms))
+    return std::nullopt;
   return out;
 }
 
@@ -140,29 +205,31 @@ bool OpenGLParseShader(BasePaths* paths,
                        const std::string& vert_name,
                        const std::string& frag_name,
                        Shader* shader) {
-  auto vert_parse = ParseSubShader(
-      PathJoin({paths->shader, "opengl", vert_name}), SubShaderType::kVertex);
-  if (!vert_parse) {
+  if (!LoadShaderLayout(PathJoin({paths->shader, "layouts.toml"}))) {
+    NOT_REACHED() << "Parsing toml file.";
+    return false;
+  }
+  auto vert_out = ParseSubShader(paths, vert_name, SubShaderType::kVertex);
+  if (!vert_out) {
     LOG(ERROR) << "Could not parse vertex shader: " << vert_name;
     return false;
   }
 
-  auto frag_parse = ParseSubShader(PathJoin({paths->shader, "opengl", frag_name}),
-                      SubShaderType::kFragment);
-  if (!frag_parse) {
+  auto frag_out = ParseSubShader(paths, frag_name, SubShaderType::kFragment);
+  if (!frag_out) {
     LOG(ERROR) << "Could not parse fragment shader: " << frag_name;
     return false;
   }
 
   shader->uuid = GetNextShaderUUID();
 
-  shader->vert_source = StringToSource(std::move(vert_parse->source));
-  shader->vert_ubo_size = GetUniformsSize(vert_parse->uniforms);
-  shader->vert_uniforms = std::move(vert_parse->uniforms);
+  shader->vert_source = std::move(vert_out->source);
+  shader->vert_ubo_size = GetUniformsSize(vert_out->uniforms);
+  shader->vert_uniforms = std::move(vert_out->uniforms);
 
-  shader->frag_source = StringToSource(std::move(frag_parse->source));
-  shader->frag_ubo_size = GetUniformsSize(frag_parse->uniforms);
-  shader->frag_uniforms = std::move(frag_parse->uniforms);
+  shader->frag_source = std::move(frag_out->source);
+  shader->frag_ubo_size = GetUniformsSize(frag_out->uniforms);
+  shader->frag_uniforms = std::move(frag_out->uniforms);
 
   // TODO(Cristian): Detect texture count.
   shader->texture_count = 0;
