@@ -84,4 +84,6 @@ T Clamp(T val, T min, T max) {
   return val;
 }
 
+uint32_t NextMultiple(uint32_t val, uint32_t multiple);
+
 }  // namespace warhol

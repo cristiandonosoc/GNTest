@@ -48,6 +48,8 @@ void ShutdownMemoryPool(MemoryPool*);
 // Pushes arbitraty data into the memory pool.
 uint8_t* Push(MemoryPool*, uint8_t* data, size_t size);
 
+uint8_t* Reserve(MemoryPool*, size_t size);
+
 template <typename T>
 T* Push(MemoryPool* pool, T* data, size_t count) {
   return (T*)Push(pool, (uint8_t*)data, sizeof(T) * count);

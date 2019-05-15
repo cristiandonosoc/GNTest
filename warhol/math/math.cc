@@ -37,4 +37,14 @@ Pair<float> EulerFromDirectionDeg(const Vec3& direction) {
   return {rad2deg(pitch), rad2deg(yaw)};
 }
 
+uint32_t NextMultiple(uint32_t val, uint32_t multiple) {
+  if (multiple == 0)
+    return val;
+
+  uint32_t remainder = val % multiple;
+  if (remainder == 0)
+    return val;
+  return val + multiple - remainder;
+}
+
 }  // namespace warhol

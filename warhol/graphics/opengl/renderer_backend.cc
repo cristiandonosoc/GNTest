@@ -124,7 +124,6 @@ bool OpenGLInit(OpenGLRendererBackend* opengl) {
 
 #if DEBUG_MODE
   if (glDebugMessageCallback) {
-    LOG(DEBUG) << "Have debug mode!";
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback(OpenGLDebugCallback, nullptr);
 

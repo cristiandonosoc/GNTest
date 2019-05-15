@@ -29,3 +29,5 @@
 
 - Write a TOML python script that verifies that all the shaders are present in
   the layouts.toml file.
+- Have a way to easily set the correct value for an uniform in within an uniform
+  block. Right now it's very manual and error prone if the shader changes layout.

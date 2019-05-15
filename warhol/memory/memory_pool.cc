@@ -52,4 +52,13 @@ uint8_t* Push(MemoryPool* pool, uint8_t* data, size_t size) {
   return return_ptr;
 }
 
+uint8_t* Reserve(MemoryPool* pool, size_t size) {
+  ASSERT(Valid(pool));
+  ASSERT(pool->current + size < pool->data.get() + pool->size);
+
+  uint8_t* ptr = pool->current;
+  pool->current += size;
+  return ptr;
+}
+
 }  // namespace warhol

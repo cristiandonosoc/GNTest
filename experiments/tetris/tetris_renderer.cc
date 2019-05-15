@@ -55,6 +55,22 @@ void AddQuad(Mesh* mesh, Window* window) {
 
 namespace {
 
+template <typename T>
+uint8_t* SetAndAdvance(uint8_t* ptr, T val) {
+  T* t_ptr = (T*)ptr;
+  *t_ptr++ = val;
+  return (uint8_t*)t_ptr;
+}
+
+template <typename T>
+uint8_t* SetAndAdvance(uint8_t* ptr, T* values, size_t count) {
+  T* t_ptr = (T*)ptr;
+  for (size_t i = 0; i < count; i++) {
+    *t_ptr++ = values[i];
+  }
+  return (uint8_t*)t_ptr;
+}
+
 bool InitBackgroundLogic(Game* game, TetrisRenderer* tetris_renderer) {
   tetris_renderer->camera.projection = glm::mat4(1.0f);
   tetris_renderer->camera.view = glm::mat4(1.0f);
@@ -66,6 +82,9 @@ bool InitBackgroundLogic(Game* game, TetrisRenderer* tetris_renderer) {
     LOG(ERROR) << "Could not load shader!";
     return false;
   }
+
+  LOG(DEBUG) << "Shader: " << tetris_renderer->shader.uuid.value
+             << ", frag size: " << tetris_renderer->shader.frag_ubo_size;
 
   // Initialize the mesh.
   tetris_renderer->mesh.name = "TetrisBackgroundMesh";
@@ -95,19 +114,24 @@ bool InitBackgroundLogic(Game* game, TetrisRenderer* tetris_renderer) {
   InitMemoryPool(&tetris_renderer->pool, KILOBYTES(2));
 
   // Add the fragment uniforms.
-  uint8_t* frag_ptr = tetris_renderer->pool.current;
-  Push(&tetris_renderer->pool, (float)game->window.width);
-  Push(&tetris_renderer->pool, (float)game->window.height);
+  uint8_t* frag_ptr = Reserve(&tetris_renderer->pool,
+                              tetris_renderer->shader.frag_ubo_size);
+
+  uint8_t* cur_ptr = frag_ptr;
+  cur_ptr = SetAndAdvance(cur_ptr, game->window.width);
+  cur_ptr = SetAndAdvance(cur_ptr, game->window.height);
+  cur_ptr += 8;
+
   float sky_color1[3] = {0.1f, 0.5f, 0.4f};
+  cur_ptr = SetAndAdvance(cur_ptr, sky_color1, ARRAY_SIZE(sky_color1));
   float sky_color2[3] = {0.4f, 0.33f, 0.11f};
-  Push(&tetris_renderer->pool, sky_color1, ARRAY_SIZE(sky_color1));
-  Push(&tetris_renderer->pool, sky_color2, ARRAY_SIZE(sky_color2));
+  cur_ptr = SetAndAdvance(cur_ptr, sky_color2, ARRAY_SIZE(sky_color2));
+
+  /* Push(&tetris_renderer->pool, (float)game->window.width); */
+  /* Push(&tetris_renderer->pool, (float)game->window.height); */
+  /* Push(&tetris_renderer->pool, sky_color1, ARRAY_SIZE(sky_color1)); */
+  /* Push(&tetris_renderer->pool, sky_color2, ARRAY_SIZE(sky_color2)); */
   tetris_renderer->background_frag_uniform = frag_ptr;
-
-
-  float* p = (float*)tetris_renderer->background_frag_uniform;
-  LOG(DEBUG) << "INITIAL FRAG: " << p[0] << ", " << p[1] << ", " << 1025.f;
-
 
   return true;
 }
@@ -307,9 +331,9 @@ RenderCommand GetTetrisRenderCommand(Game* game, Tetris* tetris) {
   SCOPE_LOCATION();
   tetris->dimensions = GetTetrisScreenDimensions(game, tetris);
 
-  /* return DrawBackground(&tetris->renderer); */
-  DrawBoard(game, tetris);
-  return DrawerEndFrame(&tetris->renderer.drawer);
+  return DrawBackground(&tetris->renderer);
+  /* DrawBoard(game, tetris); */
+  /* return DrawerEndFrame(&tetris->renderer.drawer); */
 }
 
 // Screen Dimensions -----------------------------------------------------------

@@ -124,16 +124,6 @@ struct UniformLayout {
   uint32_t alignment = 0;
 };
 
-uint32_t NextMultiple(uint32_t val, uint32_t multiple) {
-  if (multiple == 0)
-    return val;
-
-  uint32_t remainder = val % multiple;
-  if (remainder == 0)
-    return val;
-  return val + multiple - remainder;
-}
-
 }  // namespace
 
 bool CalculateUniformLayout(std::vector<Uniform>* uniforms) {
@@ -148,6 +138,9 @@ bool CalculateUniformLayout(std::vector<Uniform>* uniforms) {
     uniform.alignment = GetAlignment(uniform.type);
 
     uint32_t next_start = NextMultiple(current_offset, uniform.alignment);
+
+    LOG(DEBUG) << "CURRENT OFFSET: " << current_offset
+               << ", NEXT OFFSET: " << next_start;
     uniform.offset = next_start;
     current_offset = uniform.offset + uniform.size;
   }

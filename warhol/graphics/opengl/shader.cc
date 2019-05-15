@@ -24,10 +24,18 @@ namespace opengl {
 namespace {
 
 enum class SubShaderType {
-  kConfig,
-  kFragment,
-  kVertex,
+  kFrag,
+  kVert,
 };
+const char* ToString(SubShaderType type) {
+  switch (type) {
+    case SubShaderType::kFrag: return "frag";
+    case SubShaderType::kVert: return "vert";
+  }
+
+  NOT_REACHED();
+  return nullptr;
+}
 
 std::vector<uint8_t> StringToSource(const std::string& str) {
   std::vector<uint8_t> src;
@@ -40,22 +48,7 @@ uint32_t GetUniformsSize(const std::vector<Uniform>& uniforms) {
   if (uniforms.empty())
     return 0;
   auto& back = uniforms.back();
-  return back.offset + back.size;
-}
-
-std::optional<std::string> GetSubShaderPath(const std::string& basename,
-                             SubShaderType type) {
-  std::string shader_path;
-  if (type == SubShaderType::kVertex) {
-    return StringPrintf("%s.vert", basename.c_str());
-  } else if (type== SubShaderType::kFragment) {
-    return StringPrintf("%s.frag", basename.c_str());
-  } else if (type == SubShaderType::kConfig) {
-    return StringPrintf("%s.toml", basename.c_str());
-  }
-  LOG(ERROR) << "Invalid sub shader type.";
-
-  return std::nullopt;
+  return NextMultiple(back.offset + back.size, back.alignment);
 }
 
 struct ShaderLayout {
@@ -99,6 +92,8 @@ ParseUniforms(std::shared_ptr<cpptoml::table_array> toml_table) {
       LOG(ERROR) << "Could not parse uniform " << *name;
       return std::nullopt;
     }
+
+    uniforms.push_back(std::move(*uniform));
   }
 
   return uniforms;
@@ -112,10 +107,8 @@ std::map<std::string, ShaderLayout>& GetShaderLayouts() {
 bool LoadShaderLayout(const std::string& layout_filepath) {
   static std::set<std::string> loaded_files;
   auto file_it = loaded_files.find(layout_filepath);
-  if (file_it != loaded_files.end()) {
-    LOG(DEBUG) << "Layout file " << layout_filepath << " already loaded!";
+  if (file_it != loaded_files.end())
     return true;
-  }
   loaded_files.insert(layout_filepath);
 
   auto& layouts = GetShaderLayouts();
@@ -134,7 +127,6 @@ bool LoadShaderLayout(const std::string& layout_filepath) {
         return false;
       }
 
-      LOG(DEBUG) << "Loading layout for shader " << key;
       auto& shader_layout = layouts[key];
 
       // Parse vertex.
@@ -152,7 +144,7 @@ bool LoadShaderLayout(const std::string& layout_filepath) {
       auto frag_entries = toml_entry->as_table()->get_table_array("frag");
       if (frag_entries) {
         if (auto uniforms = ParseUniforms(frag_entries); uniforms) {
-          shader_layout.vert_uniforms = std::move(*uniforms);
+          shader_layout.frag_uniforms = std::move(*uniforms);
         } else {
           LOG(ERROR) << "Could not load vert entries for " << key;
           return false;
@@ -183,7 +175,7 @@ ParseSubShader(BasePaths* paths, const std::string& name, SubShaderType type) {
 
   LOG(DEBUG) << "Found layout for " << name;
 
-  const char* ext = type == SubShaderType::kVertex ? "vert" : "frag";
+  const char* ext = type == SubShaderType::kVert ? "vert" : "frag";
   std::string path = PathJoin({paths->shader,
                                StringPrintf("%s.%s", name.c_str(), ext)});
   std::string source;
@@ -193,8 +185,10 @@ ParseSubShader(BasePaths* paths, const std::string& name, SubShaderType type) {
   ParseOut out;
   out.source = std::move(source);
   auto& layout = layout_it->second;
-  out.uniforms = type == SubShaderType::kVertex ? layout.vert_uniforms
-                                                : layout.frag_uniforms;
+  out.uniforms = type == SubShaderType::kVert ? layout.vert_uniforms
+                                              : layout.frag_uniforms;
+
+  LOG(DEBUG) << ToString(type) << ": " << out.uniforms.size() << " uniforms.";
 
   if (!CalculateUniformLayout(&out.uniforms))
     return std::nullopt;
@@ -211,13 +205,13 @@ bool OpenGLParseShader(BasePaths* paths,
     NOT_REACHED() << "Parsing toml file.";
     return false;
   }
-  auto vert_out = ParseSubShader(paths, vert_name, SubShaderType::kVertex);
+  auto vert_out = ParseSubShader(paths, vert_name, SubShaderType::kVert);
   if (!vert_out) {
     LOG(ERROR) << "Could not parse vertex shader: " << vert_name;
     return false;
   }
 
-  auto frag_out = ParseSubShader(paths, frag_name, SubShaderType::kFragment);
+  auto frag_out = ParseSubShader(paths, frag_name, SubShaderType::kFrag);
   if (!frag_out) {
     LOG(ERROR) << "Could not parse fragment shader: " << frag_name;
     return false;
