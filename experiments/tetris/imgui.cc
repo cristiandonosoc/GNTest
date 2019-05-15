@@ -53,7 +53,9 @@ void SystemUI(Game* game, Tetris* tetris) {
   }
 
   if (ImGui::CollapsingHeader("Memory", ImGuiTreeNodeFlags_DefaultOpen)) {
-    for (MemoryPool* pool : game->memory_tracker.tracked_pools) {
+    const auto& memory_tracker = GetGlobalTracker();
+
+    for (auto [id, pool] : memory_tracker.tracked_pools) {
       float used_ratio = (float)Used(pool) / (float)pool->size;
       auto used_str = BytesToString(Used(pool));
       auto total_str = BytesToString(pool->size);
@@ -64,35 +66,35 @@ void SystemUI(Game* game, Tetris* tetris) {
       ImGui::Text("%s", pool->name);
     }
 
-    for (Mesh* mesh : game->memory_tracker.tracked_meshes) {
-      {
-        MemoryPool* pool = &mesh->vertices;
-        float used_ratio = (float)Used(pool) / (float)pool->size;
-        auto used_str = BytesToString(Used(pool));
-        auto total_str = BytesToString(pool->size);
-        auto bar = StringPrintf("%s/%s", used_str.c_str(), total_str.c_str());
+    /* for (Mesh* mesh : game->memory_tracker.tracked_meshes) { */
+    /*   { */
+    /*     MemoryPool* pool = &mesh->vertices; */
+    /*     float used_ratio = (float)Used(pool) / (float)pool->size; */
+    /*     auto used_str = BytesToString(Used(pool)); */
+    /*     auto total_str = BytesToString(pool->size); */
+    /*     auto bar = StringPrintf("%s/%s", used_str.c_str(), total_str.c_str()); */
 
-        ImGui::ProgressBar(used_ratio, {0, 0}, bar.c_str());
+    /*     ImGui::ProgressBar(used_ratio, {0, 0}, bar.c_str()); */
 
-        auto pool_name = StringPrintf("%s.%s", mesh->name, pool->name);
-        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-        ImGui::Text("%s", pool_name.c_str());
-      }
+    /*     auto pool_name = StringPrintf("%s.%s", mesh->name, pool->name); */
+    /*     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x); */
+    /*     ImGui::Text("%s", pool_name.c_str()); */
+    /*   } */
 
-      {
-        MemoryPool* pool = &mesh->indices;
-        float used_ratio = (float)Used(pool) / (float)pool->size;
-        auto used_str = BytesToString(Used(pool));
-        auto total_str = BytesToString(pool->size);
-        auto bar = StringPrintf("%s/%s", used_str.c_str(), total_str.c_str());
+      /* { */
+      /*   MemoryPool* pool = &mesh->indices; */
+      /*   float used_ratio = (float)Used(pool) / (float)pool->size; */
+      /*   auto used_str = BytesToString(Used(pool)); */
+      /*   auto total_str = BytesToString(pool->size); */
+      /*   auto bar = StringPrintf("%s/%s", used_str.c_str(), total_str.c_str()); */
 
-        ImGui::ProgressBar(used_ratio, {0, 0}, bar.c_str());
+      /*   ImGui::ProgressBar(used_ratio, {0, 0}, bar.c_str()); */
 
-        auto pool_name = StringPrintf("%s.%s", mesh->name, pool->name);
-        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-        ImGui::Text("%s", pool_name.c_str());
-      }
-    }
+      /*   auto pool_name = StringPrintf("%s.%s", mesh->name, pool->name); */
+      /*   ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x); */
+      /*   ImGui::Text("%s", pool_name.c_str()); */
+      /* } */
+    /* } */
   }
 
   ImGui::End();

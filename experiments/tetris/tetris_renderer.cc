@@ -307,9 +307,9 @@ RenderCommand GetTetrisRenderCommand(Game* game, Tetris* tetris) {
   SCOPE_LOCATION();
   tetris->dimensions = GetTetrisScreenDimensions(game, tetris);
 
-  return DrawBackground(&tetris->renderer);
-  /* DrawBoard(game, tetris); */
-  /* return DrawerEndFrame(&tetris->renderer.drawer); */
+  /* return DrawBackground(&tetris->renderer); */
+  DrawBoard(game, tetris);
+  return DrawerEndFrame(&tetris->renderer.drawer);
 }
 
 // Screen Dimensions -----------------------------------------------------------

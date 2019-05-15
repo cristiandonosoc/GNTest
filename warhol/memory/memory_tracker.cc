@@ -3,51 +3,112 @@
 
 #include "warhol/memory/memory_tracker.h"
 
+#include <atomic>
+#include <mutex>
+
 #include "warhol/graphics/common/mesh.h"
 #include "warhol/memory/memory_pool.h"
 #include "warhol/utils/log.h"
 
 namespace warhol {
 
-// MemoryPool ------------------------------------------------------------------
+// TrackToken ------------------------------------------------------------------
 
-template <>
-void Track<MemoryPool>(MemoryTracker* tracker, MemoryPool* pool) {
-  ASSERT(!Active(&pool->track_token));
-  tracker->tracked_pools.insert(pool);
-  pool->track_token.tracker = tracker;
-  pool->track_token.tracked = pool;
+namespace {
+
+void Clear(TrackToken* token) {
+  token->type = TrackType::kLast;
+  token->id = 0;
 }
 
-template <>
-void Untrack<MemoryPool>(MemoryTracker* tracker, MemoryPool* pool) {
-  ASSERT(Active(&pool->track_token));
-  auto it = tracker->tracked_pools.find(pool);
-  ASSERT(it != tracker->tracked_pools.end());
+}  // namespace
 
-  tracker->tracked_pools.erase(it);
-  Clear(&pool->track_token);
+TrackToken::~TrackToken() {
+  if (!Valid(this))
+    return;
+  Untrack(this);
 }
 
-// Mesh ------------------------------------------------------------------------
+TrackToken::TrackToken(TrackToken&& other) {
+  // If something is being tracker, it cannot move!
+  ASSERT(!Valid(&other));
 
-template <>
-void Track<Mesh>(MemoryTracker* tracker, Mesh* mesh) {
-  ASSERT(!Active(&mesh->track_token));
-  tracker->tracked_meshes.insert(mesh);
-
-  mesh->track_token.tracker = tracker;
-  mesh->track_token.tracked = mesh;
+  type = other.type;
+  id = other.id;
+  Clear(&other);
 }
 
-template <>
-void Untrack<Mesh>(MemoryTracker* tracker, Mesh* mesh) {
-  ASSERT(Active(&mesh->track_token));
-  auto it = tracker->tracked_meshes.find(mesh);
-  ASSERT(it != tracker->tracked_meshes.end());
+TrackToken& TrackToken::operator=(TrackToken&& other) {
+  if (this == &other)
+    return *this;
 
-  tracker->tracked_meshes.erase(it);
-  Clear(&mesh->track_token);
+  // If something is being tracker, it cannot move!
+  ASSERT(!Valid(&other));
+
+  type = other.type;
+  id = other.id;
+  Clear(&other);
+  return *this;
+}
+
+// MemoryTracker ---------------------------------------------------------------
+
+
+namespace {
+
+std::mutex gMutex;
+
+std::atomic<uint32_t> gNextMemoryPoolID = 1;
+
+MemoryTracker gMemoryTracker;
+
+}  // namespace
+
+const MemoryTracker& GetGlobalTracker() {
+  return gMemoryTracker;
+}
+
+
+void Track(MemoryPool* pool) {
+  uint32_t id = gNextMemoryPoolID++;
+
+  {
+    std::lock_guard<std::mutex> lock(gMutex);
+    gMemoryTracker.tracked_pools[id] = pool;
+  }
+
+  LOG(DEBUG) << "Tracking Memory Pool " << id;
+  pool->track_token.id = id;
+  pool->track_token.type = TrackType::kMemoryPool;
+}
+
+// Untrack
+
+namespace {
+
+
+
+}  // namespace
+
+void Untrack(TrackToken* token) {
+  LOG(DEBUG) << "Untracking "<< token->id;
+  ASSERT(Valid(token));
+  {
+    std::lock_guard<std::mutex> lock(gMutex);
+    switch (token->type) {
+      case TrackType::kMemoryPool: {
+        auto it = gMemoryTracker.tracked_pools.find(token->id);
+        ASSERT(it != gMemoryTracker.tracked_pools.end());
+        gMemoryTracker.tracked_pools.erase(it);
+        break;
+      }
+      case TrackType::kLast:
+        NOT_REACHED() << "Invalid track type: " << (uint32_t)token->type;
+        break;
+    }
+  }
+
+  Clear(token);
 }
 
 }  // namespace warhol

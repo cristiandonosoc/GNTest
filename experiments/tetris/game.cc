@@ -34,7 +34,7 @@ bool InitGame(Game* game,
     LOG(ERROR) << "Could not start imgui.";
     return false;
   }
-  TrackImguiMemory(&game->memory_tracker, &game->imgui);
+  /* TrackImguiMemory(&game->memory_tracker, &game->imgui); */
 
   game->input = InputState::Create();
 

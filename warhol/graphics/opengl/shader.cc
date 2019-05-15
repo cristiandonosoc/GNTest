@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <third_party/cpptoml/cpptoml.h>
 
+#include <set>
+
 #include "warhol/assets/asset_paths.h"
 #include "warhol/graphics/opengl/renderer_backend.h"
 #include "warhol/graphics/opengl/utils.h"

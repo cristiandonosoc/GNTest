@@ -1,9 +1,8 @@
 WARHOL_BASE=/mnt/c/Programming/projects/warhol
 
 
-make: FORCE
+make: test FORCE
 	ninja -C out
-	gdb -ex run out/tetris
 
 test: FORCE
 	ninja -C out tests

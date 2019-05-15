@@ -64,7 +64,6 @@ struct Mesh {
   // Attributes are in order of how they appear in the shader layout.
   std::vector<Attribute> attributes;
 
-  MemoryTrackToken<Mesh> track_token;
   bool loaded = false;
 };
 

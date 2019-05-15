@@ -21,7 +21,8 @@ struct MemoryPool {
   uint8_t* current = nullptr;     // Where the next byte will be taken from.
 
   std::unique_ptr<uint8_t[]> data;
-  MemoryTrackToken<MemoryPool> track_token;
+
+  TrackToken track_token;
 };
 
 inline uint8_t* Data(MemoryPool* pool) { return pool->data.get(); }

@@ -162,10 +162,10 @@ RenderCommand ImguiEndFrame(ImguiContext* imgui) {
   return ImguiGetRenderCommand(&imgui->imgui_renderer);
 }
 
-void TrackImguiMemory(MemoryTracker* tracker, ImguiContext* imgui) {
-  Track(tracker, &imgui->imgui_renderer.memory_pool);
-  Track(tracker, &imgui->imgui_renderer.mesh);
-}
+/* void TrackImguiMemory(MemoryTracker* tracker, ImguiContext* imgui) { */
+/*   Track(tracker, &imgui->imgui_renderer.memory_pool); */
+/*   Track(tracker, &imgui->imgui_renderer.mesh); */
+/* } */
 
 }  // namespace imgui
 }  // namespace warhol
