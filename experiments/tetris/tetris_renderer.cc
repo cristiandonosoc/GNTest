@@ -122,9 +122,9 @@ bool InitBackgroundLogic(Game* game, TetrisRenderer* tetris_renderer) {
   cur_ptr = SetAndAdvance(cur_ptr, game->window.height);
   cur_ptr += 8;
 
-  float sky_color1[3] = {0.1f, 0.5f, 0.4f};
+  float sky_color1[3] = {49.0f / 255.0f, 33.0f / 255.0f, 66.0f / 255.0f};
   cur_ptr = SetAndAdvance(cur_ptr, sky_color1, ARRAY_SIZE(sky_color1));
-  float sky_color2[3] = {0.4f, 0.33f, 0.11f};
+  float sky_color2[3] = {0.0f, 0.05f, 0.2f};
   cur_ptr = SetAndAdvance(cur_ptr, sky_color2, ARRAY_SIZE(sky_color2));
 
   /* Push(&tetris_renderer->pool, (float)game->window.width); */
