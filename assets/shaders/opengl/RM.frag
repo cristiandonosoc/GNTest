@@ -111,15 +111,24 @@ mat3 Rotate(vec3 angles) {
   vec3 c = cos(angles);
   vec3 s = sin(angles);
 
-  mat3 rotX = mat3(1.0, 0.0, 0.0, 0.0, c.x, s.x, 0.0, -s.x, c.x);
-  mat3 rotY = mat3(c.y, 0.0, -s.y, 0.0, 1.0, 0.0, s.y, 0.0, c.y);
-  mat3 rotZ = mat3(c.z, s.z, 0.0, -s.z, c.z, 0.0, 0.0, 0.0, 1.0);
+  mat3 rotX = mat3( 1.0,  0.0,  0.0,
+                    0.0,  c.x,  s.x,
+                    0.0, -s.x,  c.x);
+
+  mat3 rotY = mat3( c.y,  0.0, -s.y,
+                    0.0,  1.0,  0.0,
+                    s.y,  0.0,  c.y);
+
+  mat3 rotZ = mat3( c.z,  s.z,  0.0,
+                   -s.z,  c.z,  0.0,
+                    0.0,  0.0,  1.0);
+        //object = opU(object, -sdSphere(dir * dist, MAX_DIST, SKYDOME));
 
   return rotX * rotY * rotZ;
 }
 
 //==== Distance field operators/functions by iq. ====
-vec2 opU(vec2 d1, vec2 d2) {
+vec2 Min(vec2 d1, vec2 d2) {
   return (d1.x < d2.x) ? d1 : d2;
 }
 
@@ -172,14 +181,14 @@ vec2 sdColumn(vec3 p, float r, float id) {
 // Distance to the scene
 vec2 Scene(vec3 p) {
   vec2 d = vec2(MAX_DIST, SKYDOME);
-  // d = opU(opU(sdPlane(p, vec4(0, 0,-1, 0), FLOOR), d),
-  //        opU(sdPlane(p, vec4(0, 0.5,-1, 0), FLOOR), d)) ;
+  // d = Min(Min(sdPlane(p, vec4(0, 0,-1, 0), FLOOR), d),
+  //        Min(sdPlane(p, vec4(0, 0.5,-1, 0), FLOOR), d)) ;
 
-  // d = opU(sdPlane(p, vec4(0, 0,-1, 0), FLOOR), d);
-  // d = opU(sdBox(vec3(p.x-25.1, p.y, p.z-15.4), vec3(5.5, 0.5,15.5), OCTAGON),
-  // d); d = opU(sdBox(vec3(p.x-10.1, p.y-2., p.z-10.4), vec3(5.5, 0.5,15.5),
+  // d = Min(sdPlane(p, vec4(0, 0,-1, 0), FLOOR), d);
+  // d = Min(sdBox(vec3(p.x-25.1, p.y, p.z-15.4), vec3(5.5, 0.5,15.5), OCTAGON),
+  // d); d = Min(sdBox(vec3(p.x-10.1, p.y-2., p.z-10.4), vec3(5.5, 0.5,15.5),
   // OCTAGON), d);
-  // d = opU(sdOct(vec3(p.x-30.1, p.y, p.z+0.2*2.), 0.5, OCTAGON), d);
+  // d = Min(sdOct(vec3(p.x-30.1, p.y, p.z+0.2*2.), 0.5, OCTAGON), d);
 
   return d;
 }
@@ -202,7 +211,7 @@ MC MR(vec3 orig, vec3 dir) {
     vec2 object = Scene(orig + dir * dist);
 
     // Add the sky dome and have it follow the camera.
-    object = opU(object, -sdSphere(dir * dist, MAX_DIST, SKYDOME));
+    object = Min(object, -sdSphere(dir * dist, MAX_DIST, SKYDOME));
 
     dist += object.x * STEP_MULT;
 
@@ -248,8 +257,8 @@ vec3 Shade(MC hit, vec3 direction, vec3 camera) {
     sun -= smoothstep(0.1, 0.9, 0.5);
     vec3 sunCol = mix(SUN_COLOR_1, SUN_COLOR_2 * 1.2, hit.position.z / 2.5);
 
-    color =
-        mix(color, sunCol, sun) + texture(iChannel2, vec2(2.) * 0.1).rgb * 0.07;
+    color = mix(color, sunCol, sun) +
+            texture(iChannel2, vec2(2.) * 0.1).rgb * 0.07;
   }
 
   // if(hit.id == OCTAGON)
@@ -283,7 +292,6 @@ vec3 Shade(MC hit, vec3 direction, vec3 camera) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 res = iResolution.xy / iResolution.y;
-  float aspect = iResolution.x / iResolution.y;
   vec2 uv = fragCoord.xy / iResolution.y;
 
   // Camera stuff
